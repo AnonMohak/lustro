@@ -170,7 +170,11 @@ mod tests {
 
     #[test]
     fn recycles_and_restores_a_file() {
+        // The long form of the path: on CI, TEMP uses a short 8.3 name (RUNNER~1),
+        // but the Recycle Bin reports the long name.
         let root = temp("bin");
+        let long = fs::canonicalize(&root).unwrap();
+        let root = std::path::PathBuf::from(long.to_string_lossy().trim_start_matches("\\\\?\\"));
         let f = root.join(format!("lustro-recycle-test-{}.txt", std::process::id()));
         fs::write(&f, b"recycle me").unwrap();
         recycle(&f).unwrap();

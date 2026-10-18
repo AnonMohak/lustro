@@ -656,6 +656,22 @@ pub async fn delete_items(
     .map_err(|e| Error::Io(std::io::Error::other(e.to_string())))
 }
 
+/// Lower-case long form of a path, so short 8.3 names (`RUNNER~1`) match long ones.
+/// The item itself may be gone, so only its folder is resolved.
+fn long_lower(p: &str) -> String {
+    let path = std::path::Path::new(p);
+    if let (Some(parent), Some(name)) = (path.parent(), path.file_name())
+        && let Ok(full) = std::fs::canonicalize(parent)
+    {
+        let joined = full.join(name);
+        return joined
+            .to_string_lossy()
+            .trim_start_matches("\\\\?\\")
+            .to_lowercase();
+    }
+    p.to_lowercase()
+}
+
 /// The delete log, newest first. Recycle Bin entries that are gone from the bin
 /// are marked as not restorable.
 #[tauri::command]
@@ -667,10 +683,10 @@ pub async fn history(app: AppHandle) -> Vec<history::Entry> {
                 let in_bin: std::collections::HashSet<String> = trash::os_limited::list()
                     .unwrap_or_default()
                     .iter()
-                    .map(|i| i.original_path().to_string_lossy().to_lowercase())
+                    .map(|i| long_lower(&i.original_path().to_string_lossy()))
                     .collect();
                 for e in h.entries.iter_mut().filter(|e| e.restorable) {
-                    e.restorable = in_bin.contains(&e.path.to_lowercase());
+                    e.restorable = in_bin.contains(&long_lower(&e.path));
                 }
             }
             h.newest_first()
@@ -690,11 +706,11 @@ pub async fn restore(app: AppHandle, id: u64) -> Result<()> {
             .flatten()
             .ok_or(Error::NotInBin)?;
         let items = trash::os_limited::list().map_err(|e| Error::Restore(e.to_string()))?;
-        let target = entry.path.to_lowercase();
+        let target = long_lower(&entry.path);
         let deleted_at = entry.time / 1000;
         let item = items
             .into_iter()
-            .filter(|i| i.original_path().to_string_lossy().to_lowercase() == target)
+            .filter(|i| long_lower(&i.original_path().to_string_lossy()) == target)
             .min_by_key(|i| (i.time_deleted - deleted_at).abs());
         let Some(item) = item else {
             with_history(&app2, |h| {
