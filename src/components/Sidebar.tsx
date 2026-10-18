@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { driveIcon, driveName } from "../lib/drives";
 import { formatBytes, percent } from "../lib/format";
@@ -28,6 +29,16 @@ export function Sidebar() {
   const scans = useStore((s) => s.scans);
   const exploreRoot = useStore((s) => s.exploreRoot);
   const folders = Object.keys(scans).filter((r) => !/^[A-Z]:\\$/.test(r));
+  const favorites = useStore((s) => s.favorites);
+  const loadFavorites = useStore((s) => s.loadFavorites);
+  const setFavorite = useStore((s) => s.setFavorite);
+  const openFavorite = useStore((s) => s.openFavorite);
+  const treeVersion = useStore((s) => s.treeVersion);
+
+  // Sizes and scan positions change with every scan and delete.
+  useEffect(() => {
+    loadFavorites().catch(() => {});
+  }, [scans, treeVersion, loadFavorites]);
 
   return (
     <nav className="sidebar" aria-label="Main">
@@ -42,6 +53,34 @@ export function Sidebar() {
           <span className="lbl">{t(`nav.${id}`)}</span>
         </button>
       ))}
+
+      {favorites.length > 0 && (
+        <>
+          <div className="side-sec">
+            <span>{t("nav.favorites")}</span>
+          </div>
+          {favorites.map((f) => (
+            <button key={f.path} className="sbtn" title={f.path} onClick={() => openFavorite(f)}>
+              <Icon name="star" className="fill" />
+              <span className="lbl">{rootLabel(f.path)}</span>
+              {f.hits[0] && <span className="badge">{formatBytes(f.hits[0].size)}</span>}
+              <span
+                className="forget"
+                role="button"
+                tabIndex={0}
+                title={t("nav.unstar")}
+                aria-label={t("nav.unstar")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFavorite(f.path, false);
+                }}
+              >
+                <Icon name="x" />
+              </span>
+            </button>
+          ))}
+        </>
+      )}
 
       <div className="side-sec">
         <span>{t("nav.drives")}</span>

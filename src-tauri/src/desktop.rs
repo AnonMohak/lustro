@@ -137,6 +137,8 @@ pub fn set_settings(app: AppHandle, settings: Settings) -> Result<Settings> {
         settings::set_explorer_menu(settings.explorer_menu)?;
     }
     let mut s = settings;
+    // The Settings screen does not send favourites; set_favorite changes them.
+    s.favorites = old.favorites;
     s.low_space_percent = s.low_space_percent.clamp(1, 50);
     settings::save(&data_dir(&app), &s)?;
     if let Ok(mut cur) = app.state::<AppState>().settings.lock() {

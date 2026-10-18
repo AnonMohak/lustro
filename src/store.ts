@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api, type AppInfo, type DriveInfo, type ScanProgress, type ScanSummary } from "./lib/api";
+import { api, type AppInfo, type DriveInfo, type Favorite, type ScanProgress, type ScanSummary } from "./lib/api";
 import { normalizeRoot } from "./lib/scanText";
 
 export type Screen = "home" | "explore" | "files" | "dupes" | "clean" | "apps" | "history" | "search" | "settings";
@@ -29,6 +29,9 @@ interface State {
   scanning: { root: string; progress: ScanProgress | null } | null;
   /** The drive or folder that Explore shows. */
   exploreRoot: string | null;
+  /** A folder that Explore zooms into once it shows `root` (set by a favourite). */
+  exploreTarget: { root: string; id: number } | null;
+  favorites: Favorite[];
   dialog: DialogSpec | null;
   toast: Toast | null;
   /** Goes up after each delete, so views load the changed tree again. */
@@ -53,6 +56,10 @@ interface State {
   setDevAgeDays: (d: number) => void;
   /** Removes a scan from the list and deletes its saved cache. */
   forgetScan: (root: string) => Promise<void>;
+  loadFavorites: () => Promise<void>;
+  setFavorite: (path: string, on: boolean) => Promise<void>;
+  /** Opens a favourite in Explore, in the smallest scan that holds it. */
+  openFavorite: (f: Favorite) => void;
 }
 
 const THEME_KEY = "lustro.theme";
@@ -96,6 +103,8 @@ export const useStore = create<State>((set, get) => ({
   scans: {},
   scanning: null,
   exploreRoot: null,
+  exploreTarget: null,
+  favorites: [],
   dialog: null,
   toast: null,
   treeVersion: 0,
@@ -161,6 +170,19 @@ export const useStore = create<State>((set, get) => ({
     delete scans[root];
     const exploreRoot = get().exploreRoot === root ? (Object.keys(scans)[0] ?? null) : get().exploreRoot;
     set({ scans, exploreRoot });
+  },
+  loadFavorites: async () => set({ favorites: await api.favorites() }),
+  setFavorite: async (path, on) => {
+    try {
+      set({ favorites: await api.setFavorite(path, on) });
+    } catch (e) {
+      get().showToast(String(e), true);
+    }
+  },
+  openFavorite: (f) => {
+    const hit = f.hits[0];
+    if (hit) set({ exploreRoot: hit.root, exploreTarget: { root: hit.root, id: hit.id }, screen: "explore" });
+    else get().explore(f.path);
   },
   setDevAgeDays: (devAgeDays) => {
     try {

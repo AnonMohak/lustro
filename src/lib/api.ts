@@ -242,6 +242,18 @@ export interface BackendSettings {
   explorerMenu: boolean;
 }
 
+export interface FavoriteHit {
+  root: string;
+  id: number;
+  size: number;
+}
+
+export interface Favorite {
+  path: string;
+  /** The scans that hold the folder, the smallest scan first. Empty when no scan holds it. */
+  hits: FavoriteHit[];
+}
+
 export const ROOT_ID = 0;
 
 export const api = {
@@ -262,6 +274,8 @@ export const api = {
   saveExport: (kind: "csv" | "html", fileName: string, contents: string) =>
     invoke<string | null>("save_export", { kind, fileName, contents }),
   search: (args: SearchArgs) => invoke<SearchResult>("search", { args }),
+  favorites: () => invoke<Favorite[]>("favorites"),
+  setFavorite: (path: string, on: boolean) => invoke<Favorite[]>("set_favorite", { path, on }),
   revealPath: (path: string) => invoke<void>("reveal_path", { path }),
   takeStartupScan: () => invoke<string | null>("take_startup_scan"),
   deleteItems: (items: DeleteTarget[], permanent: boolean) =>

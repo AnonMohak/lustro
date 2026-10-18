@@ -15,6 +15,11 @@ import { useStore } from "../store";
 const CHILD_LIMIT = 1000;
 const ROW_H = 30;
 
+/** Any folder can be a favourite, except a drive root. */
+function canStar(root: string, n: NodeDto): boolean {
+  return n.isDir && !(n.id === ROOT_ID && /^[A-Z]:\\$/.test(root));
+}
+
 function ScanProgressView({ root }: { root: string }) {
   const { t } = useTranslation();
   const p = useStore((s) => s.scanning?.progress);
@@ -58,16 +63,20 @@ function TreePane({
   sel,
   expanded,
   kids,
+  favIds,
   onSelect,
   onToggle,
+  onStar,
 }: {
   root: string;
   rootNode: NodeDto | null;
   sel: number;
   expanded: Set<number>;
   kids: Map<number, NodeDto[]>;
+  favIds: Set<number>;
   onSelect: (n: NodeDto) => void;
   onToggle: (n: NodeDto) => void;
+  onStar: (id: number) => void;
 }) {
   const { t } = useTranslation();
   const [filter, setFilter] = useState("");
@@ -167,6 +176,21 @@ function TreePane({
                   {n.name}
                   {n.link && <Icon name="open" />}
                 </span>
+                {n.isDir ? (
+                  <button
+                    className={`star ${favIds.has(n.id) ? "on" : ""}`}
+                    title={t(favIds.has(n.id) ? "explore.unstar" : "explore.star")}
+                    aria-label={t(favIds.has(n.id) ? "explore.unstar" : "explore.star")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStar(n.id);
+                    }}
+                  >
+                    <Icon name="star" className={favIds.has(n.id) ? "fill" : undefined} />
+                  </button>
+                ) : (
+                  <span />
+                )}
                 <span className={`tsize ${n.denied ? "deny" : ""}`}>{n.denied ? t("scan.needsAdmin") : formatBytes(n.size)}</span>
                 <span className="tbar">
                   <i style={{ width: `${percent(n.size, r.parentSize)}%` }} />
@@ -215,12 +239,16 @@ function DetailPane({
   root,
   detail,
   rootSize,
+  starred,
   onDelete,
+  onStar,
 }: {
   root: string;
   detail: NodeDetail | null;
   rootSize: number;
+  starred: boolean;
   onDelete: (permanent: boolean) => void;
+  onStar: (id: number) => void;
 }) {
   const { t } = useTranslation();
   const showToast = useStore((s) => s.showToast);
@@ -319,6 +347,12 @@ function DetailPane({
               {t("explore.copyPath")}
             </button>
           </div>
+          {canStar(root, n) && (
+            <button className="btn sm block" onClick={() => onStar(n.id)}>
+              <Icon name="star" className={starred ? "fill" : undefined} />
+              {t(starred ? "explore.unstar" : "explore.star")}
+            </button>
+          )}
           {detail.protected ? (
             <div className="note lock">
               <Icon name="lock" />
@@ -385,8 +419,37 @@ function ExploreView({ root }: { root: string }) {
     setKids(new Map());
     setProtectedIds(new Set());
     api.nodeDetail(root, ROOT_ID).then((d) => setRootNode(d.node)).catch(() => {});
-    api.listChildren(root, ROOT_ID, CHILD_LIMIT).then((l) => setKids(new Map([[ROOT_ID, l]]))).catch(() => {});
+    // Merge, so that a favourite opened at the same time keeps its children.
+    api.listChildren(root, ROOT_ID, CHILD_LIMIT).then((l) => setKids((m) => new Map(m).set(ROOT_ID, l))).catch(() => {});
   }, [root, scanVersion]);
+
+  // A favourite from the sidebar: zoom into it and select it.
+  const target = useStore((s) => s.exploreTarget);
+  useEffect(() => {
+    if (!target || target.root !== root) return;
+    useStore.setState({ exploreTarget: null });
+    setZoom(target.id);
+    setSel(target.id);
+    setExpanded((s) => new Set(s).add(target.id));
+    api.listChildren(root, target.id, CHILD_LIMIT).then((l) => setKids((m) => new Map(m).set(target.id, l))).catch(() => {});
+  }, [target, root, scanVersion]);
+
+  const favorites = useStore((s) => s.favorites);
+  const setFavorite = useStore((s) => s.setFavorite);
+  const favIds = useMemo(
+    () => new Set(favorites.flatMap((f) => f.hits.filter((h) => h.root === root).map((h) => h.id))),
+    [favorites, root],
+  );
+  const toggleStar = useCallback(
+    (id: number) => {
+      const on = !favIds.has(id);
+      api
+        .nodeDetail(root, id)
+        .then((d) => setFavorite(d.path, on))
+        .catch((e) => showToast(String(e), true));
+    },
+    [root, favIds, setFavorite, showToast],
+  );
 
   // After a delete: load the open folders again, but keep the view.
   const expandedRef = useRef(expanded);
@@ -489,7 +552,7 @@ function ExploreView({ root }: { root: string }) {
 
   return (
     <>
-      <TreePane root={root} rootNode={rootNode} sel={sel} expanded={expanded} kids={kids} onSelect={onSelectRow} onToggle={onToggle} />
+      <TreePane root={root} rootNode={rootNode} sel={sel} expanded={expanded} kids={kids} favIds={favIds} onSelect={onSelectRow} onToggle={onToggle} onStar={toggleStar} />
       <main className="main">
       <div className="mhead">
         <button
@@ -590,7 +653,14 @@ function ExploreView({ root }: { root: string }) {
         <TypesView detail={zoomDetail} />
       ) : null}
       </main>
-      <DetailPane root={root} detail={selDetail} rootSize={rootNode?.size ?? 0} onDelete={deleteSelected} />
+      <DetailPane
+        root={root}
+        detail={selDetail}
+        rootSize={rootNode?.size ?? 0}
+        starred={selDetail ? favIds.has(selDetail.node.id) : false}
+        onDelete={deleteSelected}
+        onStar={toggleStar}
+      />
     </>
   );
 }

@@ -16,6 +16,8 @@ pub struct Settings {
     pub low_space_percent: u8,
     pub start_with_windows: bool,
     pub explorer_menu: bool,
+    /// Favourite folders in the sidebar, in the order the user added them.
+    pub favorites: Vec<String>,
 }
 
 impl Default for Settings {
@@ -26,6 +28,7 @@ impl Default for Settings {
             low_space_percent: 10,
             start_with_windows: false,
             explorer_menu: false,
+            favorites: Vec::new(),
         }
     }
 }

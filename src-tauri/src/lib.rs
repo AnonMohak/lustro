@@ -5,6 +5,7 @@ mod commands;
 mod desktop;
 mod dupes;
 mod error;
+mod favorites;
 mod live;
 mod ops;
 mod scan;
@@ -78,6 +79,8 @@ pub fn run() {
             tools_cmds::app_uninstall,
             desktop::get_settings,
             desktop::set_settings,
+            favorites::favorites,
+            favorites::set_favorite,
             desktop::save_export,
         ])
         .run(tauri::generate_context!())

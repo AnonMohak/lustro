@@ -22,6 +22,8 @@
     "drives": "Drives",
     "refreshDrives": "Refresh drives",
     "checkUpdates": "Check for updates",
+    "favorites": "Favourites",
+    "unstar": "Remove from favourites",
     "folders": "Scanned folders",
     "forget": "Remove from the list"
   },
@@ -167,6 +169,8 @@
     "reveal": "Show in Explorer",
     "copyPath": "Copy path",
     "copied": "Copied the path.",
+    "star": "Add to favourites",
+    "unstar": "Remove from favourites",
     "protected": "Protected system path. Lustro never deletes it.",
     "link": "This is a link to another folder. Lustro does not count its target.",
     "onlineOnly": "Online-only file. It uses no space on this PC.",
