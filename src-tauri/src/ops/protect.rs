@@ -42,12 +42,47 @@ const PROFILE_ITEMS: &[&str] = &[
     "appdata\\locallow",
 ];
 
+/// Places inside protected folders where the cleaner may delete the contents (never the folder itself).
+/// Paths are relative to a drive root, in lower case.
+const CLEANER_EXCEPTIONS: &[&str] = &[
+    "windows\\temp",
+    "windows\\softwaredistribution\\download",
+    "windows\\serviceprofiles\\networkservice\\appdata\\local\\microsoft\\windows\\deliveryoptimization\\cache",
+    "windows\\minidump",
+    "programdata\\microsoft\\windows\\wer\\reportarchive",
+    "programdata\\microsoft\\windows\\wer\\reportqueue",
+];
+
+/// Single protected files that the cleaner may delete.
+const CLEANER_FILES: &[&str] = &["windows\\memory.dmp"];
+
+fn normalize(path: &str) -> String {
+    let p = path.replace('/', "\\");
+    let p = p.strip_prefix("\\\\?\\").unwrap_or(&p);
+    p.trim_end_matches('\\').to_lowercase()
+}
+
+/// True when the cleaner may delete `path`: the path is not protected, or it lies
+/// inside one of the cleaner exceptions (but is not the exception folder itself).
+pub fn cleaner_may_delete(path: &str) -> bool {
+    if !is_protected(path) {
+        return true;
+    }
+    let p = normalize(path);
+    if p.len() < 4 || p.as_bytes()[1] != b':' {
+        return false;
+    }
+    let rel = &p[3..];
+    CLEANER_FILES.contains(&rel)
+        || CLEANER_EXCEPTIONS.iter().any(|e| {
+            rel.len() > e.len() + 1 && rel.starts_with(e) && rel.as_bytes()[e.len()] == b'\\'
+        })
+}
+
 /// True when Lustro must not delete `path`.
 /// `path` is an absolute Windows path, for example `C:\Windows\System32`.
 pub fn is_protected(path: &str) -> bool {
-    let p = path.replace('/', "\\");
-    let p = p.strip_prefix("\\\\?\\").unwrap_or(&p);
-    let p = p.trim_end_matches('\\').to_lowercase();
+    let p = normalize(path);
     let b = p.as_bytes();
     // Anything that is not a plain drive path (network shares, device paths) is outside Lustro.
     if b.len() < 2 || !b[0].is_ascii_alphabetic() || b[1] != b':' {
@@ -102,7 +137,7 @@ pub fn is_protected(path: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::is_protected;
+    use super::{cleaner_may_delete, is_protected};
 
     #[test]
     fn system_paths_are_protected() {
@@ -157,5 +192,23 @@ mod tests {
         ] {
             assert!(!is_protected(p), "{p} must not be protected");
         }
+    }
+
+    #[test]
+    fn cleaner_exceptions() {
+        assert!(cleaner_may_delete("C:\\Windows\\Temp\\abc.tmp"));
+        assert!(cleaner_may_delete(
+            "C:\\Windows\\SoftwareDistribution\\Download\\x\\y.cab"
+        ));
+        assert!(cleaner_may_delete("C:\\Windows\\MEMORY.DMP"));
+        assert!(cleaner_may_delete("C:\\Users\\me\\AppData\\Local\\Temp\\a"));
+        assert!(
+            !cleaner_may_delete("C:\\Windows\\Temp"),
+            "the folder itself stays"
+        );
+        assert!(!cleaner_may_delete("C:\\Windows\\System32\\kernel32.dll"));
+        assert!(!cleaner_may_delete("C:\\Windows\\Temp2\\x"));
+        assert!(!cleaner_may_delete("C:\\"));
+        assert!(!cleaner_may_delete("C:\\Users\\me"));
     }
 }

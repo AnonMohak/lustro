@@ -225,5 +225,43 @@
       "cleaner": "Cleaner",
       "blocked": "Blocked"
     }
+  },
+  "clean": {
+    "title": "Clean up",
+    "rescan": "Rescan",
+    "measuring": "Measuring junk files…",
+    "measuringHint": "Lustro looks at temp folders, caches and logs. Nothing is deleted yet.",
+    "groups": {
+      "sys": "System junk",
+      "web": "Browsers",
+      "dev": "Dev junk",
+      "docker": "Docker and WSL",
+      "ide": "IDE caches"
+    },
+    "groupHint": "Safe items are selected. Items that need a choice are not.",
+    "selectNone": "Select none",
+    "selectSafe": "Select safe items",
+    "ofSelected": "{{sel}} of {{total}} selected",
+    "found": "{{size}} found",
+    "needsAdmin": "Needs admin",
+    "admin": "Admin",
+    "isOpen": "{{app}} is open",
+    "readFirst": "Read first",
+    "files_one": "1 file",
+    "files_other": "{{n}} files",
+    "selectedAll": "Selected in all groups",
+    "cleanBtn": "Clean {{size}}",
+    "nothing": "Nothing selected",
+    "permanentNote": "Cleaner items are deleted permanently. They are caches and temp files that apps make again.",
+    "adminNote_one": "1 item needs admin rights.",
+    "adminNote_other": "{{count}} items need admin rights.",
+    "confirmTitle": "Clean {{size}}?",
+    "confirmBody": "These items are deleted permanently. Apps make these caches again when they need them.",
+    "confirm": "Clean",
+    "running": "Cleaning…",
+    "doneToast": "Cleaned {{size}}.",
+    "doneSkipped": "Cleaned {{size}}. {{n}} files were in use and stayed.",
+    "skippedRule": "{{name}}: {{reason}}",
+    "pausesService": "Pauses {{service}}"
   }
 }

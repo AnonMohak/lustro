@@ -1,3 +1,5 @@
+mod clean;
+mod clean_cmds;
 mod commands;
 mod error;
 mod ops;
@@ -28,6 +30,8 @@ pub fn run() {
             commands::delete_items,
             commands::history,
             commands::restore,
+            clean_cmds::clean_scan,
+            clean_cmds::clean_run,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Lustro");

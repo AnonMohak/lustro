@@ -139,6 +139,29 @@ export interface HistoryEntry {
   restored: boolean;
 }
 
+export interface CleanRule {
+  id: string;
+  group: "sys" | "web" | "dev" | "docker" | "ide";
+  name: string;
+  desc: string;
+  bytes: number;
+  files: number;
+  safe: boolean;
+  admin: boolean;
+  warn: boolean;
+  running: string[];
+  service: string | null;
+}
+
+export interface CleanOutcome {
+  id: string;
+  name: string;
+  freedBytes: number;
+  deletedFiles: number;
+  skippedFiles: number;
+  skipped: string | null;
+}
+
 export const ROOT_ID = 0;
 
 export const api = {
@@ -159,4 +182,6 @@ export const api = {
     invoke<DeleteResult>("delete_items", { items, permanent }),
   history: () => invoke<HistoryEntry[]>("history"),
   restore: (id: number) => invoke<void>("restore", { id }),
+  cleanScan: () => invoke<CleanRule[]>("clean_scan"),
+  cleanRun: (ids: string[]) => invoke<CleanOutcome[]>("clean_run", { ids }),
 };

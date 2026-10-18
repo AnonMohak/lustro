@@ -538,7 +538,7 @@ fn data_dir(app: &AppHandle) -> Option<std::path::PathBuf> {
 }
 
 /// Runs `f` with the loaded delete log, then saves it.
-fn with_history<T>(app: &AppHandle, f: impl FnOnce(&mut History) -> T) -> Option<T> {
+pub fn with_history<T>(app: &AppHandle, f: impl FnOnce(&mut History) -> T) -> Option<T> {
     let state = app.state::<AppState>();
     let mut guard = state.history.lock().ok()?;
     if guard.is_none() {

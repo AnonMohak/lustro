@@ -320,5 +320,23 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 .leg span { display: inline-flex; align-items: center; gap: 5px; }
 .leg i { width: 8px; height: 8px; border-radius: 2px; background: var(--c); }
 
+/* grouped list rows (cleaner groups, duplicate groups) */
+.grow-row { display: flex; flex-direction: column; gap: 3px; width: 100%; padding: 9px 10px; border: 0; border-radius: 6px; background: none; text-align: left; cursor: pointer; }
+.grow-row:hover { background: var(--hover); }
+.grow-row.sel { background: var(--active); }
+.grow-row .t1 { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.grow-row .t1 b { display: flex; gap: 8px; align-items: center; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grow-row .t2 { font-size: 12px; color: var(--fg-3); display: flex; justify-content: space-between; gap: 8px; }
+
+/* cleaner items */
+.citem { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 14px; border-bottom: 1px solid var(--stroke); align-items: start; }
+.citem:last-child { border-bottom: 0; }
+.citem input { margin-top: 2px; }
+.citem .cn { font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; cursor: pointer; }
+.citem .cd { color: var(--fg-2); font-size: 12.5px; grid-column: 2 / 4; }
+.citem .cs { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+.citem.off .cn, .citem.off .cs { color: var(--fg-3); }
+.cmd { font-family: var(--f-mono); font-size: 11px; font-weight: 400; padding: 1px 6px; border-radius: 4px; background: var(--hover); color: var(--fg-2); }
+
 @media (max-width: 1240px) { .detail { display: none !important; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

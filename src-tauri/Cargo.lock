@@ -1769,6 +1769,7 @@ name = "lustro"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
+ "glob",
  "log",
  "rayon",
  "serde",
@@ -1777,6 +1778,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-dialog",
  "thiserror 2.0.21",
+ "toml 1.1.8+spec-1.1.0",
  "trash",
  "windows",
 ]

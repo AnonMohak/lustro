@@ -1,0 +1,173 @@
+# Lustro cleaner rules. Built into the app; the UI cannot add paths or commands.
+#
+# Fields:
+#   id         stable id (used in history and settings)
+#   group      "sys" | "web" | "dev" | "docker" | "ide"
+#   name, desc text for the UI (English; translations come later)
+#   paths      glob patterns. %VAR% is an environment variable. Each match is deleted
+#              (a folder is deleted with everything inside it).
+#   safe       true = selected by default
+#   admin      true = needs admin rights
+#   warn       true = show "Read first" (the user must choose it)
+#   min_age_h  only delete files older than this many hours (0 = all)
+#   process    skip the rule while one of these programs runs
+#   service    stop this Windows service while cleaning, then start it again
+#   special    built-in action instead of paths: "recycle-bin" | "windows-old"
+
+# ---------- System junk ----------
+
+[[rule]]
+id = "user-temp"
+group = "sys"
+name = "Your temporary files"
+desc = "Files that apps left in your temp folder. Files changed in the last 24 hours stay."
+paths = ['%TEMP%\*']
+safe = true
+min_age_h = 24
+
+[[rule]]
+id = "windows-temp"
+group = "sys"
+name = "Windows temporary files"
+desc = "C:\\Windows\\Temp. Files changed in the last 24 hours stay."
+paths = ['%WINDIR%\Temp\*']
+safe = true
+admin = true
+min_age_h = 24
+
+[[rule]]
+id = "wu-cache"
+group = "sys"
+name = "Windows Update cache"
+desc = "Updates that are already installed. Lustro pauses Windows Update while it cleans."
+paths = ['%WINDIR%\SoftwareDistribution\Download\*']
+safe = true
+admin = true
+service = "wuauserv"
+
+[[rule]]
+id = "delivery-optimization"
+group = "sys"
+name = "Delivery Optimization files"
+desc = "Update pieces that Windows shares with other PCs."
+paths = ['%WINDIR%\ServiceProfiles\NetworkService\AppData\Local\Microsoft\Windows\DeliveryOptimization\Cache\*']
+safe = true
+admin = true
+service = "DoSvc"
+
+[[rule]]
+id = "thumbnails"
+group = "sys"
+name = "Thumbnail cache"
+desc = "File Explorer makes new thumbnails when it needs them. Files in use stay."
+paths = ['%LOCALAPPDATA%\Microsoft\Windows\Explorer\thumbcache_*.db', '%LOCALAPPDATA%\Microsoft\Windows\Explorer\iconcache_*.db']
+safe = true
+
+[[rule]]
+id = "shader-cache"
+group = "sys"
+name = "DirectX shader cache"
+desc = "Games build their shaders again at the next start."
+paths = ['%LOCALAPPDATA%\D3DSCache\*', '%LOCALAPPDATA%\NVIDIA\DXCache\*', '%LOCALAPPDATA%\NVIDIA\GLCache\*', '%LOCALAPPDATA%\AMD\DxCache\*', '%LOCALAPPDATA%\AMD\DxcCache\*']
+safe = true
+
+[[rule]]
+id = "crash-dumps"
+group = "sys"
+name = "Crash dumps and error reports"
+desc = "Memory dumps and Windows Error Reporting files."
+paths = ['%LOCALAPPDATA%\CrashDumps\*', '%LOCALAPPDATA%\Microsoft\Windows\WER\ReportArchive\*', '%LOCALAPPDATA%\Microsoft\Windows\WER\ReportQueue\*', '%PROGRAMDATA%\Microsoft\Windows\WER\ReportArchive\*', '%PROGRAMDATA%\Microsoft\Windows\WER\ReportQueue\*', '%WINDIR%\Minidump\*', '%WINDIR%\MEMORY.DMP']
+safe = true
+
+[[rule]]
+id = "recycle-bin"
+group = "sys"
+name = "Recycle Bin"
+desc = "After this, you cannot restore these items."
+special = "recycle-bin"
+safe = false
+
+[[rule]]
+id = "windows-old"
+group = "sys"
+name = "Previous Windows installation"
+desc = "Windows.old. After this, you cannot go back to the previous Windows version."
+paths = ['%SYSTEMDRIVE%\Windows.old']
+special = "windows-old"
+admin = true
+warn = true
+safe = false
+
+# ---------- Browsers ----------
+
+[[rule]]
+id = "chrome-cache"
+group = "web"
+name = "Chrome cache"
+desc = "Cached web pages and images of all Chrome profiles."
+paths = ['%LOCALAPPDATA%\Google\Chrome\User Data\*\Cache', '%LOCALAPPDATA%\Google\Chrome\User Data\*\Code Cache', '%LOCALAPPDATA%\Google\Chrome\User Data\*\GPUCache', '%LOCALAPPDATA%\Google\Chrome\User Data\ShaderCache']
+safe = true
+process = ["chrome.exe"]
+
+[[rule]]
+id = "edge-cache"
+group = "web"
+name = "Edge cache"
+desc = "Cached web pages and images of all Edge profiles."
+paths = ['%LOCALAPPDATA%\Microsoft\Edge\User Data\*\Cache', '%LOCALAPPDATA%\Microsoft\Edge\User Data\*\Code Cache', '%LOCALAPPDATA%\Microsoft\Edge\User Data\*\GPUCache', '%LOCALAPPDATA%\Microsoft\Edge\User Data\ShaderCache']
+safe = true
+process = ["msedge.exe"]
+
+[[rule]]
+id = "brave-cache"
+group = "web"
+name = "Brave cache"
+desc = "Cached web pages and images of all Brave profiles."
+paths = ['%LOCALAPPDATA%\BraveSoftware\Brave-Browser\User Data\*\Cache', '%LOCALAPPDATA%\BraveSoftware\Brave-Browser\User Data\*\Code Cache', '%LOCALAPPDATA%\BraveSoftware\Brave-Browser\User Data\*\GPUCache']
+safe = true
+process = ["brave.exe"]
+
+[[rule]]
+id = "firefox-cache"
+group = "web"
+name = "Firefox cache"
+desc = "Cached web pages and images of all Firefox profiles."
+paths = ['%LOCALAPPDATA%\Mozilla\Firefox\Profiles\*\cache2', '%LOCALAPPDATA%\Mozilla\Firefox\Profiles\*\startupCache']
+safe = true
+process = ["firefox.exe"]
+
+[[rule]]
+id = "chrome-history"
+group = "web"
+name = "Chrome history and cookies"
+desc = "Signs you out of websites. Passwords, bookmarks and extensions stay."
+paths = ['%LOCALAPPDATA%\Google\Chrome\User Data\*\History', '%LOCALAPPDATA%\Google\Chrome\User Data\*\History-journal', '%LOCALAPPDATA%\Google\Chrome\User Data\*\Network\Cookies', '%LOCALAPPDATA%\Google\Chrome\User Data\*\Network\Cookies-journal']
+warn = true
+process = ["chrome.exe"]
+
+[[rule]]
+id = "edge-history"
+group = "web"
+name = "Edge history and cookies"
+desc = "Signs you out of websites. Passwords, favorites and extensions stay."
+paths = ['%LOCALAPPDATA%\Microsoft\Edge\User Data\*\History', '%LOCALAPPDATA%\Microsoft\Edge\User Data\*\History-journal', '%LOCALAPPDATA%\Microsoft\Edge\User Data\*\Network\Cookies', '%LOCALAPPDATA%\Microsoft\Edge\User Data\*\Network\Cookies-journal']
+warn = true
+process = ["msedge.exe"]
+
+[[rule]]
+id = "brave-history"
+group = "web"
+name = "Brave history and cookies"
+desc = "Signs you out of websites. Passwords, bookmarks and extensions stay."
+paths = ['%LOCALAPPDATA%\BraveSoftware\Brave-Browser\User Data\*\History', '%LOCALAPPDATA%\BraveSoftware\Brave-Browser\User Data\*\Network\Cookies']
+warn = true
+process = ["brave.exe"]
+
+[[rule]]
+id = "firefox-history"
+group = "web"
+name = "Firefox cookies and form history"
+desc = "Signs you out of websites. Browsing history, passwords and bookmarks stay (Firefox keeps history together with bookmarks)."
+paths = ['%APPDATA%\Mozilla\Firefox\Profiles\*\cookies.sqlite', '%APPDATA%\Mozilla\Firefox\Profiles\*\formhistory.sqlite']
+warn = true
+process = ["firefox.exe"]
