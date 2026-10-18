@@ -74,6 +74,10 @@ cd src-tauri
 cargo test --profile perf -- --ignored usn_sees_new_file mft_matches_walk --nocapture
 ```
 
+## Screenshots
+
+The README screenshots show a demo folder, not real user data. `scripts/make-demo.ps1 -Root "C:\Users\you\Lustro Demo"` makes that folder from sparse files: about 117 GB in size, but almost no space on the disk. Scan it with "Scan a folder", then delete it.
+
 ## Release
 
 Push a tag like `v1.0.1`. The release workflow builds the installer, signs the update package, and makes a draft release with `latest.json`. Publish the draft on GitHub; then installed copies update.
