@@ -1,3 +1,5 @@
+<p align="center"><img src="branding/lustro-logo.svg" width="128" height="128" alt="Lustro logo"></p>
+
 # Lustro
 
 Lustro is a free and open source storage manager for Windows 11. It scans your drives, shows what uses the space, and helps you remove what you do not need.
@@ -84,7 +86,7 @@ Push a tag like `v1.0.1`. The release workflow builds the installer, signs the u
 
 ## Logo
 
-The logo is a placeholder. To change it, replace `src/assets/logo.svg` and run `npm run icons`. The app, the window, the tray and the installer all use this one file.
+The logo is an "L" of two tiles with a sparkle: the treemap and the clean-up in one mark. The source is `src/assets/logo.svg` (a copy is in `branding/lustro-logo.svg`). After a change, run `npm run icons`: the app, the window, the tray and the installer all use this one file. `branding/social-preview.png` is the GitHub social preview.
 
 ## Tech
 

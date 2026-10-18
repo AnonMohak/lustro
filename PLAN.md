@@ -4,13 +4,13 @@ Lustro is a Windows 11 storage manager. It scans drives, shows what uses the spa
 
 ## Status
 
-Milestones M0 to M10 are done. Lustro v1.0.0 is published on [GitHub Releases](https://github.com/AnonMohak/lustro/releases) and tested with and without admin rights. The [README](README.md) describes the features. The git history and the closed GitHub milestones record the work.
+Milestones M0 to M11 are done. Lustro v1.0.0 is published on [GitHub Releases](https://github.com/AnonMohak/lustro/releases) and tested with and without admin rights. v1.0.1 adds the final logo (M11). The [README](README.md) describes the features. The git history and the closed GitHub milestones record the work.
 
 ## Facts for later work
 
 - **Updater signing key:** `%USERPROFILE%\.tauri\lustro-updater.key` (back it up) and the `TAURI_SIGNING_PRIVATE_KEY` repo secret. Without this key, installed copies cannot update.
 - **Release steps:** change the version in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`. Push a tag such as `v1.0.1`. The release workflow makes a draft release with `latest.json`. Publish the draft; installed copies then update.
-- **Logo file:** `src/assets/logo.svg`. Run `npm run icons` after a change.
+- **Logo file:** `src/assets/logo.svg` (copy in `branding/`). Run `npm run icons` after a change.
 
 ## Open risks
 
@@ -24,14 +24,6 @@ Milestones M0 to M10 are done. Lustro v1.0.0 is published on [GitHub Releases](h
 ## Extra work (optional)
 
 These milestones are not part of v1.0.0. Do them in this order, when you want them.
-
-### M11 — Real logo
-
-- You provide the logo as an SVG file (or a PNG of at least 1024 × 1024 pixels).
-- Replace `src/assets/logo.svg` and run `npm run icons`. This makes the window, tray, taskbar and installer icons.
-- Check the logo at 16 px (tray and title bar) and on light and dark backgrounds.
-- Release v1.0.1. Installed copies get the new logo through the auto-update.
-- **Exit:** the new logo shows in the app, the tray, the Start menu and the installer.
 
 ### M12 — Code signing
 

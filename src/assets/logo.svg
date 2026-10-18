@@ -1,13 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <!-- Placeholder Lustro logo. Replace this file, then run `npm run icons`. -->
+  <!-- Lustro logo: an "L" of two tiles and a sparkle. To change it, edit src/assets/logo.svg and run `npm run icons`. -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#262c3d"/>
-      <stop offset="1" stop-color="#121520"/>
+      <stop offset="0" stop-color="#2a3147"/>
+      <stop offset="1" stop-color="#11141d"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9aa9ff"/>
+      <stop offset="1" stop-color="#6276f0"/>
+    </linearGradient>
+    <linearGradient id="cyan" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6fdcea"/>
+      <stop offset="1" stop-color="#2aa1b6"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset="1" stop-color="#e9a03a"/>
     </linearGradient>
   </defs>
   <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
-  <rect x="176" y="176" width="312" height="672" rx="56" fill="#7b8fff"/>
-  <rect x="536" y="176" width="312" height="376" rx="56" fill="#3cbccf"/>
-  <rect x="536" y="600" width="312" height="248" rx="56" fill="#f2b65a"/>
+  <rect x="6" y="6" width="1012" height="1012" rx="218" fill="none" stroke="#fff" stroke-opacity=".07" stroke-width="12"/>
+  <rect x="176" y="176" width="312" height="672" rx="60" fill="url(#blue)"/>
+  <rect x="176" y="176" width="312" height="672" rx="60" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="6"/>
+  <rect x="536" y="600" width="312" height="248" rx="60" fill="url(#gold)"/>
+  <rect x="536" y="600" width="312" height="248" rx="60" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="6"/>
+  <path fill="url(#cyan)" d="M692,220 Q718.88,361.12 860,388 Q718.88,414.88 692,556 Q665.12,414.88 524,388 Q665.12,361.12 692,220Z"/>
 </svg>
