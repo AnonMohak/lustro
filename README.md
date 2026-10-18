@@ -88,7 +88,7 @@ The logo is a placeholder. To change it, replace `src/assets/logo.svg` and run `
 
 ## Tech
 
-Tauri 2, Rust, React, TypeScript. The plan and the design notes are in [`PLAN.md`](PLAN.md); the original design mockup is in [`mockup/index.html`](mockup/index.html).
+Tauri 2, Rust, React, TypeScript. The open and optional work is in [`PLAN.md`](PLAN.md); the original design mockup is in [`mockup/index.html`](mockup/index.html).
 
 ## License
 
