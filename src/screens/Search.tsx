@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../components/Icon";
+import { Select } from "../components/Select";
 import { api, KINDS, type Kind, type SearchHit, type SearchResult } from "../lib/api";
 import { confirmDelete } from "../lib/deleteFlow";
 import { filesCsv, saveExport } from "../lib/exporters";
@@ -74,21 +75,20 @@ export function Search() {
           style={{ flex: 1, minWidth: 220, height: 36, fontSize: 14 }}
         />
         <div className="chips">
-          <select className={`fchip ${minSize ? "on" : ""}`} value={minSize} aria-label={t("search.size")} onChange={(e) => setMinSize(Number(e.target.value))}>
-            {SIZES.map(([v, l]) => (
-              <option key={v} value={v}>
-                {v === 0 ? t("search.anySize") : `≥ ${l}`}
-              </option>
-            ))}
-          </select>
-          <select className={`fchip ${kind !== "all" ? "on" : ""}`} value={kind} aria-label={t("files.type")} onChange={(e) => setKind(e.target.value as Kind | "all")}>
-            <option value="all">{t("search.anyType")}</option>
-            {KINDS.map((k) => (
-              <option key={k} value={k}>
-                {t(`kind.${k}`)}
-              </option>
-            ))}
-          </select>
+          <Select
+            className={`fchip ${minSize ? "on" : ""}`}
+            value={minSize}
+            ariaLabel={t("search.size")}
+            options={SIZES.map(([v, l]) => ({ value: v, label: v === 0 ? t("search.anySize") : `≥ ${l}` }))}
+            onChange={setMinSize}
+          />
+          <Select<Kind | "all">
+            className={`fchip ${kind !== "all" ? "on" : ""}`}
+            value={kind}
+            ariaLabel={t("files.type")}
+            options={[{ value: "all", label: t("search.anyType") }, ...KINDS.map((k) => ({ value: k, label: t(`kind.${k}`) }))]}
+            onChange={setKind}
+          />
           <button className={`fchip ${folders ? "on" : ""}`} onClick={() => setFolders(!folders)}>
             {folders && <Icon name="check" />}
             {t("search.folders")}

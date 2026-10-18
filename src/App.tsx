@@ -6,6 +6,7 @@ import { Dialog, Toast } from "./components/Overlays";
 import { Sidebar } from "./components/Sidebar";
 import { StatusBar } from "./components/StatusBar";
 import { TitleBar } from "./components/TitleBar";
+import { Tooltip } from "./components/Tooltip";
 import { api, type ScanErrorEvent, type ScanProgress, type ScanSummary } from "./lib/api";
 import { formatCount, formatDuration } from "./lib/format";
 import { rootLabel } from "./lib/scanText";
@@ -122,6 +123,7 @@ export default function App() {
       <StatusBar />
       <Dialog />
       <Toast />
+      <Tooltip />
     </div>
   );
 }

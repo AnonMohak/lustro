@@ -2,6 +2,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../components/Icon";
+import { Select } from "../components/Select";
 import { api, type DupeGroup, type DupeProgress } from "../lib/api";
 import { confirmDelete } from "../lib/deleteFlow";
 import { formatBytes, formatCount, percent } from "../lib/format";
@@ -115,13 +116,13 @@ export function Dupes() {
               <p>{t("dupes.intro")}</p>
               <div className="row" style={{ justifyContent: "center" }}>
                 <span className="muted">{t("dupes.minSize")}</span>
-                <select className="text" id="dupeMin" value={minSize} onChange={(e) => setMinSize(Number(e.target.value))}>
-                  {SIZES.map(([v, l]) => (
-                    <option key={v} value={v}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                  id="dupeMin"
+                  ariaLabel={t("dupes.minSize")}
+                  value={minSize}
+                  options={SIZES.map(([v, l]) => ({ value: v, label: l }))}
+                  onChange={setMinSize}
+                />
                 <button className="btn accent" onClick={start}>
                   {t("dupes.find")}
                 </button>

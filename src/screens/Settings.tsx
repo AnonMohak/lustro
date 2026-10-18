@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../components/Icon";
+import { Select } from "../components/Select";
 import { api, type BackendSettings } from "../lib/api";
 import { autoUpdateOn, checkForUpdates, setAutoUpdate } from "../lib/updates";
 
@@ -75,15 +76,16 @@ export function Settings() {
             <div>{t("settings.defaultDelete")}</div>
             <div className="sd">{t("settings.defaultDeleteHint")}</div>
           </div>
-          <select
-            className="text"
+          <Select<"recycle" | "permanent">
             id="setDelete"
+            ariaLabel={t("settings.defaultDelete")}
             value={deleteMode}
-            onChange={(e) => setDeleteMode(e.target.value as "recycle" | "permanent")}
-          >
-            <option value="recycle">{t("del.recycle")}</option>
-            <option value="permanent">{t("del.permanent")}</option>
-          </select>
+            options={[
+              { value: "recycle", label: t("del.recycle") },
+              { value: "permanent", label: t("del.permanent") },
+            ]}
+            onChange={setDeleteMode}
+          />
         </div>
         <div className="srow">
           <div>
@@ -114,13 +116,13 @@ export function Settings() {
             <div>{t("settings.devAge")}</div>
             <div className="sd">{t("settings.devAgeHint")}</div>
           </div>
-          <select className="text" id="setDevAge" value={devAgeDays} onChange={(e) => setDevAgeDays(Number(e.target.value))}>
-            {[7, 14, 30, 60, 90, 180].map((d) => (
-              <option key={d} value={d}>
-                {t("settings.days", { count: d })}
-              </option>
-            ))}
-          </select>
+          <Select
+            id="setDevAge"
+            ariaLabel={t("settings.devAge")}
+            value={devAgeDays}
+            options={[7, 14, 30, 60, 90, 180].map((d) => ({ value: d, label: t("settings.days", { count: d }) }))}
+            onChange={setDevAgeDays}
+          />
         </div>
       </div>
 
@@ -139,19 +141,14 @@ export function Settings() {
               <div>{t("settings.lowSpace")}</div>
               <div className="sd">{t("settings.lowSpaceHint")}</div>
             </div>
-            <select
-              className="text"
+            <Select
               id="setLowPct"
+              ariaLabel={t("settings.lowSpace")}
               value={backend.lowSpacePercent}
               disabled={!backend.lowSpaceAlert}
-              onChange={(e) => update({ lowSpacePercent: Number(e.target.value) })}
-            >
-              {[5, 10, 15, 20].map((n) => (
-                <option key={n} value={n}>
-                  {t("settings.percentFree", { n })}
-                </option>
-              ))}
-            </select>
+              options={[5, 10, 15, 20].map((n) => ({ value: n, label: t("settings.percentFree", { n }) }))}
+              onChange={(n) => update({ lowSpacePercent: n })}
+            />
             <Switch id="setLow" on={backend.lowSpaceAlert} onChange={(v) => update({ lowSpaceAlert: v })} />
           </div>
           <div className="srow">

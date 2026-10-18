@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../components/Icon";
+import { Select } from "../components/Select";
 import { api, KINDS, type FileHit, type Kind } from "../lib/api";
 import { confirmDelete } from "../lib/deleteFlow";
 import { filesCsv, saveExport } from "../lib/exporters";
@@ -121,32 +122,20 @@ export function Files() {
                 {t("files.minSize")}
               </button>
             )}
-            <select
+            <Select<Kind | "all">
               className={`fchip ${kind !== "all" ? "on" : ""}`}
               value={kind}
-              aria-label={t("files.type")}
-              onChange={(e) => setKind(e.target.value as Kind | "all")}
-            >
-              <option value="all">{t("files.allTypes")}</option>
-              {KINDS.map((k) => (
-                <option key={k} value={k}>
-                  {t(`kind.${k}`)}
-                </option>
-              ))}
-            </select>
-            <select
+              ariaLabel={t("files.type")}
+              options={[{ value: "all", label: t("files.allTypes") }, ...KINDS.map((k) => ({ value: k, label: t(`kind.${k}`) }))]}
+              onChange={setKind}
+            />
+            <Select
               className={`fchip ${scope !== "all" ? "on" : ""}`}
               value={scope}
-              aria-label={t("files.scope")}
-              onChange={(e) => setScope(e.target.value)}
-            >
-              <option value="all">{t("files.allScans")}</option>
-              {Object.keys(scans).map((r) => (
-                <option key={r} value={r}>
-                  {rootLabel(r)}
-                </option>
-              ))}
-            </select>
+              ariaLabel={t("files.scope")}
+              options={[{ value: "all", label: t("files.allScans") }, ...Object.keys(scans).map((r) => ({ value: r, label: rootLabel(r) }))]}
+              onChange={setScope}
+            />
             <button className={`fchip ${hideProtected ? "on" : ""}`} onClick={() => setHideProtected(!hideProtected)}>
               {hideProtected && <Icon name="check" />}
               {t("files.hideProtected")}

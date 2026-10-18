@@ -310,10 +310,46 @@ td.r, th.r { text-align: right; }
 .fchip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 14px; border: 1px solid var(--stroke); background: var(--ctl); font-size: 12.5px; cursor: pointer; }
 .fchip.on { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
 .fchip .i { width: 13px; height: 13px; }
-select.fchip { padding-right: 6px; color: var(--fg); font: inherit; font-size: 12.5px; }
-select.fchip option { background: var(--popup); color: var(--fg); }
-input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; cursor: pointer; }
-input[type="checkbox"]:disabled { cursor: not-allowed; }
+/* checkboxes, drawn in the app style (the switch in Settings has its own look) */
+input[type="checkbox"]:not(.switch > input) { appearance: none; width: 16px; height: 16px; margin: 0; flex: none; display: inline-grid; place-content: center; border: 1px solid var(--fg-3); border-radius: 4px; background: var(--ctl); cursor: pointer; transition: background .1s, border-color .1s; }
+input[type="checkbox"]:not(.switch > input):hover:not(:disabled) { border-color: var(--fg-2); background: var(--ctl-hover); }
+input[type="checkbox"]:not(.switch > input):checked { background: var(--accent); border-color: var(--accent); }
+input[type="checkbox"]:not(.switch > input):checked:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+input[type="checkbox"]:not(.switch > input)::after { content: ""; width: 8px; height: 4px; border: solid var(--accent-fg); border-width: 0 0 1.6px 1.6px; transform: translateY(-1px) rotate(-45deg); opacity: 0; }
+input[type="checkbox"]:not(.switch > input):checked::after { opacity: 1; }
+input[type="checkbox"]:not(.switch > input):disabled { opacity: .45; cursor: not-allowed; }
+input[type="checkbox"]:not(.switch > input):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* drop-down (components/Select.tsx) */
+.select { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; text-align: left; }
+.select .sv { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.select > .i { width: 12px; height: 12px; color: var(--fg-3); transform: rotate(90deg); transition: transform .12s; }
+.select.open > .i { transform: rotate(-90deg); }
+.select:disabled { opacity: .5; cursor: not-allowed; }
+.text.select { min-width: 140px; padding-right: 8px; }
+.text.select:hover:not(:disabled) { background: var(--ctl-hover); }
+.text.select.open { border-bottom: 2px solid var(--accent); }
+.fchip.select { padding-right: 8px; }
+.fchip.select:hover { background: var(--ctl-hover); }
+.fchip.select.on:hover { background: var(--accent-soft); }
+.fchip.on > .i { color: var(--accent); }
+.menu { position: fixed; z-index: 70; display: flex; flex-direction: column; gap: 1px; padding: 4px; border-radius: 8px; background: var(--popup); box-shadow: var(--shadow); overflow-y: auto; backdrop-filter: blur(20px) saturate(1.4); }
+.mi { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 0 12px 0 8px; border-radius: 5px; cursor: pointer; white-space: nowrap; }
+.mi.act { background: var(--hover); }
+.mi .i { width: 13px; height: 13px; color: var(--accent); visibility: hidden; }
+.mi.on .i { visibility: visible; }
+
+/* hover tooltip (components/Tooltip.tsx) */
+.tip { position: fixed; z-index: 80; max-width: 420px; padding: 5px 9px; border-radius: 6px; background: var(--popup); box-shadow: var(--shadow); font-size: 12px; line-height: 1.4; color: var(--fg); overflow-wrap: anywhere; backdrop-filter: blur(20px) saturate(1.4); white-space: pre-line; pointer-events: none; animation: tip-in .1s ease-out; }
+@keyframes tip-in { from { opacity: 0; } }
+
+/* scrollbars: thin and themed, like Windows 11 apps */
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-button { display: none; }
+::-webkit-scrollbar-thumb { min-height: 32px; border: 4px solid transparent; border-radius: 6px; background: var(--stroke-2) padding-box; }
+::-webkit-scrollbar-thumb:hover { border-width: 3px; background-color: var(--fg-3); }
+::-webkit-scrollbar-thumb:active { border-width: 3px; background-color: var(--fg-2); }
 .actbar { position: sticky; bottom: 0; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; background: var(--popup); border: 1px solid var(--stroke); box-shadow: 0 8px 24px rgba(0,0,0,.12); flex-wrap: wrap; }
 .actbar .grow { flex: 1; }
 .leg { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--fg-2); }
