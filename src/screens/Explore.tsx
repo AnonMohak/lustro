@@ -5,6 +5,7 @@ import { Treemap } from "../components/Treemap";
 import { api, ROOT_ID, type NodeDetail, type NodeDto, type TreemapNode } from "../lib/api";
 import { requestAdmin } from "../lib/admin";
 import { confirmDelete } from "../lib/deleteFlow";
+import { saveExport, scanReportHtml } from "../lib/exporters";
 import { driveIcon, driveName } from "../lib/drives";
 import { formatBytes, formatCount, percent } from "../lib/format";
 import { KIND_ICON, kindColor, sortedBreakdown } from "../lib/kinds";
@@ -523,6 +524,19 @@ function ExploreView({ root }: { root: string }) {
             {t("explore.types")}
           </button>
         </div>
+        <button
+          className="btn sm"
+          disabled={!summary}
+          onClick={() =>
+            summary &&
+            scanReportHtml(summary)
+              .then((html) => saveExport("html", `Lustro report ${rootLabel(root).replace(/[:\\/]/g, "")}.html`, html))
+              .catch((e) => showToast(String(e), true))
+          }
+        >
+          <Icon name="export" />
+          {t("export.report")}
+        </button>
         <button className="btn sm" onClick={() => startScan(root)}>
           <Icon name="refresh" />
           {t("drive.rescan")}

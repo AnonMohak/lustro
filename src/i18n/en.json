@@ -93,7 +93,17 @@
     "devAge": "Select project folders after",
     "devAgeHint": "Lustro selects node_modules, target and similar folders only in projects with no change for this many days.",
     "days_one": "1 day",
-    "days_other": "{{count}} days"
+    "days_other": "{{count}} days",
+    "windows": "Alerts and Windows",
+    "keepInTray": "Keep Lustro in the tray",
+    "keepInTrayHint": "Closing the window keeps Lustro running in the tray, so it can warn you about low space.",
+    "lowSpace": "Low space alert",
+    "lowSpaceHint": "Sends a Windows notification when a drive has less free space than this. Once a day per drive.",
+    "percentFree": "{{n}}% free",
+    "startWithWindows": "Start with Windows",
+    "startWithWindowsHint": "Starts in the tray, without admin rights.",
+    "explorerMenu": "“Analyze with Lustro” in File Explorer",
+    "explorerMenuHint": "Adds the command to the right-click menu of folders and drives (under “Show more options”)."
   },
   "soon": {
     "title": "{{screen}} is not ready yet",
@@ -359,5 +369,14 @@
     "on": "Live updates on",
     "off": "Live updates need admin",
     "stale": "The change journal of {{root}} was reset. Lustro scans it again."
+  },
+  "export": {
+    "saved": "Saved {{path}}.",
+    "csv": "Export CSV",
+    "report": "Export report",
+    "byType": "Space by file type",
+    "topFolders": "Biggest folders",
+    "topFiles": "Biggest files",
+    "footer": "Made with Lustro."
   }
 }

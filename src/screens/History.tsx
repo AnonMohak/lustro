@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../components/Icon";
 import { api, type HistoryEntry } from "../lib/api";
+import { saveExport, toCsv } from "../lib/exporters";
 import { formatBytes } from "../lib/format";
 import { useStore } from "../store";
 
@@ -56,6 +57,24 @@ export function History() {
           <h2>{t("history.title")}</h2>
           <p>{t("history.summary", { size: formatBytes(freed) })}</p>
         </div>
+        <button
+          className="btn sm"
+          disabled={!list || list.length === 0}
+          onClick={() =>
+            list &&
+            saveExport(
+              "csv",
+              "Lustro history.csv",
+              toCsv(
+                ["Time", "Action", "Path", "Size (bytes)", "Size", "Result"],
+                list.map((h) => [new Date(h.time).toISOString(), h.action, h.path, h.size, formatBytes(h.size), h.ok ? "OK" : (h.error ?? "Failed")]),
+              ),
+            )
+          }
+        >
+          <Icon name="export" />
+          {t("export.csv")}
+        </button>
       </div>
       {list && list.length === 0 ? (
         <div className="empty">

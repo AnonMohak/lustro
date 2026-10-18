@@ -234,6 +234,14 @@ export interface SearchArgs {
   limit?: number;
 }
 
+export interface BackendSettings {
+  keepInTray: boolean;
+  lowSpaceAlert: boolean;
+  lowSpacePercent: number;
+  startWithWindows: boolean;
+  explorerMenu: boolean;
+}
+
 export const ROOT_ID = 0;
 
 export const api = {
@@ -248,6 +256,10 @@ export const api = {
   nodeDetail: (root: string, id: number) => invoke<NodeDetail>("node_detail", { root, id }),
   treemap: (root: string, id: number, maxNodes?: number) => invoke<TreemapNode>("treemap", { root, id, maxNodes }),
   findFiles: (query: FindFilesQuery) => invoke<FileHit[]>("find_files", { query }),
+  getSettings: () => invoke<BackendSettings>("get_settings"),
+  setSettings: (settings: BackendSettings) => invoke<BackendSettings>("set_settings", { settings }),
+  saveExport: (kind: "csv" | "html", fileName: string, contents: string) =>
+    invoke<string | null>("save_export", { kind, fileName, contents }),
   search: (args: SearchArgs) => invoke<SearchResult>("search", { args }),
   revealPath: (path: string) => invoke<void>("reveal_path", { path }),
   takeStartupScan: () => invoke<string | null>("take_startup_scan"),

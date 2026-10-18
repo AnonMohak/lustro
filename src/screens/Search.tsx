@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Icon } from "../components/Icon";
 import { api, KINDS, type Kind, type SearchHit, type SearchResult } from "../lib/api";
 import { confirmDelete } from "../lib/deleteFlow";
+import { filesCsv, saveExport } from "../lib/exporters";
 import { formatBytes, formatCount } from "../lib/format";
 import { KIND_ICON, kindColor } from "../lib/kinds";
 import { useStore } from "../store";
@@ -95,7 +96,21 @@ export function Search() {
         </div>
       </div>
       {res && (
-        <div className="faint num">
+        <div className="row faint num">
+          <button
+            className="btn sm"
+            disabled={hits.length === 0}
+            onClick={() =>
+              saveExport(
+                "csv",
+                "Lustro search.csv",
+                filesCsv(hits.map((h) => ({ name: h.name, path: h.path, size: h.size, modified: h.modified, kind: h.isDir ? "Folder" : t(`kind.${h.kind}`) }))),
+              )
+            }
+          >
+            <Icon name="export" />
+            {t("export.csv")}
+          </button>
           {t("search.info", {
             shown: formatCount(hits.length),
             total: formatCount(res.total),

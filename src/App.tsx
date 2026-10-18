@@ -41,6 +41,8 @@ function useScanEvents() {
           }),
         );
       }),
+      // A second start of Lustro (Explorer menu) asks to scan a folder.
+      listen<string>("open-scan", (e) => st().startScan(e.payload)),
       // Live updates: the change journal changed a fast-scan tree.
       listen<ScanSummary>("tree-changed", (e) => st().afterDelete([e.payload])),
       listen<{ root: string }>("tree-stale", (e) => {

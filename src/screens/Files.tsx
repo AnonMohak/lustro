@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Icon } from "../components/Icon";
 import { api, KINDS, type FileHit, type Kind } from "../lib/api";
 import { confirmDelete } from "../lib/deleteFlow";
+import { filesCsv, saveExport } from "../lib/exporters";
 import { formatBytes, formatCount, timeAgo } from "../lib/format";
 import { KIND_ICON, kindColor } from "../lib/kinds";
 import { rootLabel } from "../lib/scanText";
@@ -88,6 +89,21 @@ export function Files() {
               <h2>{t("files.title")}</h2>
               <p>{tab === "size" ? t("files.largestHint") : t("files.oldestHint")}</p>
             </div>
+            <div className="row">
+            <button
+              className="btn sm"
+              disabled={rows.length === 0}
+              onClick={() =>
+                saveExport(
+                  "csv",
+                  tab === "size" ? "Lustro largest files.csv" : "Lustro oldest files.csv",
+                  filesCsv(rows.map((f) => ({ name: f.name, path: f.path, size: f.size, modified: f.modified, kind: t(`kind.${f.kind}`) }))),
+                )
+              }
+            >
+              <Icon name="export" />
+              {t("export.csv")}
+            </button>
             <div className="seg">
               <button className={tab === "size" ? "on" : ""} onClick={() => setTab("size")}>
                 {t("files.largest")}
@@ -95,6 +111,7 @@ export function Files() {
               <button className={tab === "age" ? "on" : ""} onClick={() => setTab("age")}>
                 {t("files.oldest")}
               </button>
+            </div>
             </div>
           </div>
           <div className="chips">

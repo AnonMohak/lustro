@@ -19,6 +19,7 @@
         "minWidth": 960,
         "minHeight": 620,
         "center": true,
+        "visible": false,
         "decorations": false,
         "transparent": true,
         "shadow": true,
@@ -50,6 +51,7 @@
     "windows": {
       "nsis": {
         "installMode": "currentUser",
+        "installerHooks": "./windows/hooks.nsh",
         "installerIcon": "icons/icon.ico"
       }
     }

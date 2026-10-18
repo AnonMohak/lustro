@@ -61,7 +61,12 @@ pub fn quote_arg(arg: &str) -> String {
 /// Windows shows the UAC prompt. The caller exits the current process on success.
 pub fn relaunch_elevated() -> Result<()> {
     let exe = std::env::current_exe()?;
-    let args: Vec<String> = std::env::args().skip(1).map(|a| quote_arg(&a)).collect();
+    let mut args: Vec<String> = std::env::args()
+        .skip(1)
+        .filter(|a| a != "--restarted")
+        .map(|a| quote_arg(&a))
+        .collect();
+    args.push("--restarted".into());
     let exe_w = wide(&exe.to_string_lossy());
     let args_w = wide(&args.join(" "));
     let verb = wide("runas");

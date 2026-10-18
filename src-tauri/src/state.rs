@@ -24,6 +24,8 @@ pub struct AppState {
     pub apps: Mutex<Vec<crate::apps::App>>,
     /// Live update watchers: root → generation. A new watcher bumps it; old ones stop.
     pub watch_gen: Mutex<HashMap<String, u64>>,
+    /// Backend settings (tray, alerts, Windows integration).
+    pub settings: Mutex<crate::settings::Settings>,
 }
 
 impl AppState {
