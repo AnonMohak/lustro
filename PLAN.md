@@ -4,7 +4,7 @@ Lustro is a Windows 11 storage manager. It scans drives, shows what uses the spa
 
 *Lustro* is Latin. It means "I purify" and also "I survey".
 
-Status: M0 (design mockup) is done and waits for review. See section 4.
+Status: M0 and M1 are done. See section 4.
 
 ---
 
@@ -51,7 +51,7 @@ Status: M0 (design mockup) is done and waits for review. See section 4.
 
 ## 2. Defaults that I chose (tell me to change any of them)
 
-1. **UI library:** Fluent UI React v9 (`@fluentui/react-components`). It is the Microsoft library for the Windows 11 look.
+1. **UI library:** own CSS components, ported from the approved mockup (`src/styles/app.css`). The plan first said Fluent UI React v9. The mockup look was approved, so Lustro keeps it and does not load Fluent UI.
 2. **License:** MIT.
 3. **Installer:** NSIS, per-user install. This install does not need admin. The auto-update also does not need admin.
 4. **Right-click menu:** The classic menu entry ("Show more options"). The Windows 11 top-level menu needs a signed MSIX package. Add it after code signing.
@@ -202,7 +202,7 @@ Each milestone ends with a commit and a push to `master`. Each milestone is also
 
 ### M1 — Project skeleton and CI
 
-- Tauri 2 + React + TypeScript + Vite project. Fluent UI React v9. i18next with an English file.
+- Tauri 2 + React + TypeScript + Vite project. Components from the mockup design. i18next with an English file. One placeholder logo (`src/assets/logo.svg`) for the window, the app icons and the installer.
 - Window with Mica, title bar, sidebar navigation, theme (System / Light / Dark).
 - `asInvoker` manifest. Elevation check and the "Run as admin" restart (`ShellExecuteW` with `runas`).
 - Drive list with used and free space (`GetLogicalDrives`, `GetDiskFreeSpaceExW`, `GetVolumeInformationW`).

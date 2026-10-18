@@ -1,0 +1,85 @@
+{
+  "app": {
+    "name": "Lustro"
+  },
+  "titlebar": {
+    "admin": "Administrator",
+    "runAsAdmin": "Run as admin",
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "close": "Close"
+  },
+  "nav": {
+    "search": "Search files",
+    "home": "Home",
+    "explore": "Explore",
+    "files": "Large and old files",
+    "dupes": "Duplicates",
+    "clean": "Clean up",
+    "apps": "Installed apps",
+    "history": "History",
+    "settings": "Settings",
+    "drives": "Drives",
+    "refreshDrives": "Refresh drives",
+    "checkUpdates": "Check for updates"
+  },
+  "drive": {
+    "localDisk": "Local Disk",
+    "nameWithLetter": "{{label}} ({{letter}}:)",
+    "free": "{{size}} free",
+    "usedOf": "used of {{total}}",
+    "full": "{{pct}}% full",
+    "kind": {
+      "ssd": "SSD",
+      "hdd": "HDD",
+      "removable": "USB drive",
+      "unknown": "Disk"
+    },
+    "fastScan": "Fast scan available as admin",
+    "folderWalk": "Folder walk only ({{fs}})",
+    "explore": "Explore"
+  },
+  "home": {
+    "title": "Storage",
+    "summary_other": "{{count}} drives · {{used}} used of {{total}}",
+    "summary_one": "1 drive · {{used}} used of {{total}}",
+    "noAdminTitle": "Lustro runs without admin rights.",
+    "noAdminBody": "Scans use the slower folder walk, and some system folders stay hidden.",
+    "loading": "Reading drives…",
+    "noDrives": "Lustro found no fixed or USB drives."
+  },
+  "admin": {
+    "dialogTitle": "Restart Lustro as administrator?",
+    "dialogBody1": "Windows shows a User Account Control prompt. Then Lustro restarts with admin rights.",
+    "dialogBody2": "With admin rights you get the fast scan, live updates, system folders and the system cleaner.",
+    "confirm": "Restart as admin",
+    "cancelled": "Lustro still runs without admin rights. You cancelled the Windows prompt.",
+    "failed": "Lustro could not restart as administrator: {{error}}"
+  },
+  "status": {
+    "admin": "Running as administrator",
+    "standard": "Running without admin rights",
+    "drives_one": "1 drive · {{free}} free",
+    "drives_other": "{{count}} drives · {{free}} free"
+  },
+  "settings": {
+    "title": "Settings",
+    "appearance": "Appearance",
+    "theme": "Theme",
+    "themeHint": "System follows the Windows light or dark setting.",
+    "themeSystem": "System",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "about": "About",
+    "version": "Lustro {{version}}",
+    "aboutHint": "Free and open source (MIT). Lustro is Latin for “I purify” and “I survey”."
+  },
+  "soon": {
+    "title": "{{screen}} is not ready yet",
+    "body": "This part of Lustro comes in milestone {{milestone}}. Follow the progress on GitHub."
+  },
+  "common": {
+    "cancel": "Cancel",
+    "ok": "OK"
+  }
+}

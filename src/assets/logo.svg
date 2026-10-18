@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Placeholder Lustro logo. Replace this file, then run `npm run icons`. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#262c3d"/>
+      <stop offset="1" stop-color="#121520"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
+  <rect x="176" y="176" width="312" height="672" rx="56" fill="#7b8fff"/>
+  <rect x="536" y="176" width="312" height="376" rx="56" fill="#3cbccf"/>
+  <rect x="536" y="600" width="312" height="248" rx="56" fill="#f2b65a"/>
+</svg>
