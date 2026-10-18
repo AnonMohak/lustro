@@ -1,15 +1,20 @@
+import { open } from "@tauri-apps/plugin-dialog";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../components/Icon";
 import { requestAdmin } from "../lib/admin";
 import { driveIcon, driveName } from "../lib/drives";
-import { formatBytes, percent } from "../lib/format";
+import { formatBytes, formatCount, formatDuration, percent, timeAgo } from "../lib/format";
+import { kindColor, sortedBreakdown } from "../lib/kinds";
 import { useStore } from "../store";
 
 export function Home() {
   const { t } = useTranslation();
   const drives = useStore((s) => s.drives);
+  const scans = useStore((s) => s.scans);
+  const scanning = useStore((s) => s.scanning);
   const isAdmin = useStore((s) => s.info?.isAdmin ?? false);
-  const go = useStore((s) => s.go);
+  const startScan = useStore((s) => s.startScan);
+  const explore = useStore((s) => s.explore);
 
   const total = drives?.reduce((a, d) => a + d.totalBytes, 0) ?? 0;
   const used = drives?.reduce((a, d) => a + d.totalBytes - d.freeBytes, 0) ?? 0;
@@ -25,6 +30,17 @@ export function Home() {
             </p>
           )}
         </div>
+        <button
+          className="btn"
+          disabled={!!scanning}
+          onClick={async () => {
+            const dir = await open({ directory: true, title: t("home.pickFolder") });
+            if (typeof dir === "string") startScan(dir);
+          }}
+        >
+          <Icon name="folder" />
+          {t("home.scanFolder")}
+        </button>
       </div>
 
       {!isAdmin && (
@@ -48,6 +64,8 @@ export function Home() {
         {drives?.map((d) => {
           const usedBytes = d.totalBytes - d.freeBytes;
           const pct = Math.round(percent(usedBytes, d.totalBytes));
+          const scan = scans[d.root];
+          const busy = scanning?.root === d.root;
           return (
             <div key={d.letter} className="card drive">
               <div className="dhead">
@@ -67,15 +85,51 @@ export function Home() {
                 <span className="of">{t("drive.usedOf", { total: formatBytes(d.totalBytes) })}</span>
               </div>
               <div className="dbar" role="img" aria-label={t("drive.full", { pct })}>
-                <i className={pct > 85 ? "warn" : ""} style={{ width: `${pct}%` }} />
+                {scan ? (
+                  sortedBreakdown(scan.breakdown).map(([k, v]) => (
+                    <i key={k} title={`${t(`kind.${k}`)}: ${formatBytes(v)}`} style={{ ["--c" as string]: kindColor(k), width: `${percent(v, d.totalBytes)}%` }} />
+                  ))
+                ) : (
+                  <i className={pct > 85 ? "warn" : ""} style={{ width: `${pct}%` }} />
+                )}
               </div>
+              {scan && (
+                <div className="leg">
+                  {sortedBreakdown(scan.breakdown)
+                    .slice(0, 4)
+                    .map(([k, v]) => (
+                      <span key={k} style={{ ["--c" as string]: kindColor(k) }}>
+                        <i />
+                        {t(`kind.${k}`)} {formatBytes(v)}
+                      </span>
+                    ))}
+                  <span className="faint">{t("drive.free", { size: formatBytes(d.freeBytes) })}</span>
+                </div>
+              )}
               <div className="dfoot">
                 <span>
-                  {d.supportsFastScan ? t("drive.fastScan") : t("drive.folderWalk", { fs: d.fileSystem })}
+                  {scan
+                    ? t("drive.scanned", {
+                        files: formatCount(scan.files),
+                        method: t(`scan.method.${scan.method}`),
+                        elapsed: formatDuration(scan.elapsedMs),
+                        ago: timeAgo(scan.scannedAt),
+                      })
+                    : d.supportsFastScan
+                      ? t("drive.fastScan")
+                      : t("drive.folderWalk", { fs: d.fileSystem })}
                 </span>
-                <button className="btn sm accent" onClick={() => go("explore")}>
-                  {t("drive.explore")}
-                </button>
+                <div className="row">
+                  <button className="btn sm" disabled={!!scanning} onClick={() => startScan(d.root)}>
+                    {busy ? <Icon name="refresh" className="spin" /> : null}
+                    {scan ? t("drive.rescan") : t("drive.scan")}
+                  </button>
+                  {scan && (
+                    <button className="btn sm accent" onClick={() => explore(d.root)}>
+                      {t("drive.explore")}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           );

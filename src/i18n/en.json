@@ -37,7 +37,11 @@
     },
     "fastScan": "Fast scan available as admin",
     "folderWalk": "Folder walk only ({{fs}})",
-    "explore": "Explore"
+    "explore": "Explore",
+    "scan": "Scan",
+    "rescan": "Rescan",
+    "notScanned": "Not scanned yet",
+    "scanned": "{{files}} files · {{method}} in {{elapsed}} · {{ago}}"
   },
   "home": {
     "title": "Storage",
@@ -46,7 +50,10 @@
     "noAdminTitle": "Lustro runs without admin rights.",
     "noAdminBody": "Scans use the slower folder walk, and some system folders stay hidden.",
     "loading": "Reading drives…",
-    "noDrives": "Lustro found no fixed or USB drives."
+    "noDrives": "Lustro found no fixed or USB drives.",
+    "typesTitle": "Space by type",
+    "scanFolder": "Scan a folder",
+    "pickFolder": "Pick a folder to scan"
   },
   "admin": {
     "dialogTitle": "Restart Lustro as administrator?",
@@ -81,5 +88,90 @@
   "common": {
     "cancel": "Cancel",
     "ok": "OK"
+  },
+  "scan": {
+    "method": {
+      "mft": "Fast scan (MFT)",
+      "walk": "Folder walk"
+    },
+    "scanning": "Scanning {{root}}",
+    "filesFound": "files found",
+    "foldersFound": "{{count}} folders",
+    "bytesFound": "{{size}} found",
+    "mftRead": "{{size}} of the file table read",
+    "starting": "Starting…",
+    "cancel": "Cancel",
+    "cancelled": "Scan cancelled.",
+    "failed": "The scan failed: {{error}}",
+    "doneToast": "Scanned {{root}}: {{files}} files in {{elapsed}}.",
+    "deniedNote_one": "Windows refused access to 1 folder. Run as admin to include it.",
+    "deniedNote_other": "Windows refused access to {{count}} folders. Run as admin to include them.",
+    "pickTitle": "Pick a drive to explore",
+    "pickBody": "Lustro scans the drive and shows what uses the space.",
+    "notScannedTitle": "{{root}} is not scanned yet",
+    "notScannedBody": "Scan the drive to see its folders and files.",
+    "summary": "{{files}} files · {{size}} · {{method}} in {{elapsed}} · {{ago}}",
+    "up": "Up one level",
+    "items": "{{count}} items",
+    "empty": "This folder is empty.",
+    "needsAdmin": "Needs admin",
+    "link": "Link (not followed)"
+  },
+  "kind": {
+    "other": "Other",
+    "video": "Videos and music",
+    "image": "Pictures",
+    "doc": "Documents",
+    "app": "Apps",
+    "game": "Games",
+    "archive": "Archives and disk images",
+    "system": "System",
+    "dev": "Dev"
+  },
+  "explore": {
+    "filter": "Filter folders",
+    "treemap": "Treemap",
+    "types": "File types",
+    "hint": "Click to select. Double-click to zoom in.",
+    "typesIn": "Space by file type in",
+    "moreItems": "{{count}} more items",
+    "folder": "Folder",
+    "file": "File",
+    "onDisk": "On disk",
+    "items": "Items",
+    "modified": "Modified",
+    "share": "Share of {{root}}",
+    "inside": "Inside",
+    "open": "Open",
+    "reveal": "Show in Explorer",
+    "copyPath": "Copy path",
+    "copied": "Copied the path.",
+    "protected": "Protected system path. Lustro never deletes it.",
+    "link": "This is a link to another folder. Lustro does not count its target.",
+    "onlineOnly": "Online-only file. It uses no space on this PC.",
+    "denied": "Windows lets only admins read this folder.",
+    "selectHint": "Select a folder or a file.",
+    "noData": "Loading…"
+  },
+  "files": {
+    "title": "Large and old files",
+    "largest": "Largest",
+    "oldest": "Oldest",
+    "largestHint": "The biggest files on all scanned drives.",
+    "oldestHint": "Files that nobody changed for more than 1 year.",
+    "minSize": "1 GB or larger",
+    "hideProtected": "Hide protected files",
+    "allTypes": "All types",
+    "name": "Name",
+    "size": "Size",
+    "modified": "Modified",
+    "type": "Type",
+    "none": "No files match these filters.",
+    "noScans": "Scan a drive first. Then this list shows its biggest and oldest files.",
+    "selected": "Selected",
+    "filesCount_one": "1 file",
+    "filesCount_other": "{{count}} files",
+    "binNote": "Files in the Recycle Bin still use space. Empty the bin, or use Shift+Delete to delete permanently.",
+    "protected": "Protected"
   }
 }

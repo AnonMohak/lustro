@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api, type AppInfo, type DriveInfo } from "./lib/api";
+import { api, type AppInfo, type DriveInfo, type ScanProgress, type ScanSummary } from "./lib/api";
 
 export type Screen = "home" | "explore" | "files" | "dupes" | "clean" | "apps" | "history" | "search" | "settings";
 export type Theme = "system" | "light" | "dark";
@@ -22,12 +22,24 @@ interface State {
   theme: Theme;
   info: AppInfo | null;
   drives: DriveInfo[] | null;
+  /** Finished scans by root path, for example "C:\". */
+  scans: Record<string, ScanSummary>;
+  /** The running scan. `progress` is null until the first progress event. */
+  scanning: { root: string; progress: ScanProgress | null } | null;
+  /** The drive or folder that Explore shows. */
+  exploreRoot: string | null;
   dialog: DialogSpec | null;
   toast: Toast | null;
   go: (screen: Screen) => void;
   setTheme: (theme: Theme) => void;
   loadInfo: () => Promise<void>;
   loadDrives: () => Promise<void>;
+  loadCachedScans: () => Promise<void>;
+  explore: (root: string) => void;
+  startScan: (root: string) => Promise<void>;
+  onScanProgress: (p: ScanProgress) => void;
+  onScanDone: (s: ScanSummary) => void;
+  onScanEnded: () => void;
   openDialog: (d: DialogSpec) => void;
   closeDialog: () => void;
   showToast: (message: string, error?: boolean) => void;
@@ -47,11 +59,14 @@ function savedTheme(): Theme {
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
-export const useStore = create<State>((set) => ({
+export const useStore = create<State>((set, get) => ({
   screen: "home",
   theme: savedTheme(),
   info: null,
   drives: null,
+  scans: {},
+  scanning: null,
+  exploreRoot: null,
   dialog: null,
   toast: null,
   go: (screen) => set({ screen }),
@@ -65,6 +80,28 @@ export const useStore = create<State>((set) => ({
   },
   loadInfo: async () => set({ info: await api.appInfo() }),
   loadDrives: async () => set({ drives: await api.listDrives() }),
+  loadCachedScans: async () => {
+    const list = await api.loadCachedScans();
+    const scans = { ...get().scans };
+    for (const s of list) scans[s.root] ??= s;
+    set({ scans, exploreRoot: get().exploreRoot ?? list[0]?.root ?? null });
+  },
+  explore: (root) => set({ exploreRoot: root, screen: "explore" }),
+  startScan: async (root) => {
+    set({ scanning: { root, progress: null }, exploreRoot: root, screen: "explore" });
+    try {
+      await api.startScan(root);
+    } catch (e) {
+      set({ scanning: null });
+      get().showToast(String(e), true);
+    }
+  },
+  onScanProgress: (p) => {
+    const s = get().scanning;
+    if (s) set({ scanning: { root: s.root, progress: p } });
+  },
+  onScanDone: (summary) => set({ scans: { ...get().scans, [summary.root]: summary }, scanning: null }),
+  onScanEnded: () => set({ scanning: null }),
   openDialog: (dialog) => set({ dialog }),
   closeDialog: () => set({ dialog: null }),
   showToast: (message, error) => {

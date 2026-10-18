@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatBytes, percent } from "./format";
+import { formatBytes, formatDuration, percent, timeAgo } from "./format";
 
 describe("formatBytes", () => {
   it("shows small values in bytes", () => {
@@ -27,5 +27,26 @@ describe("percent", () => {
     expect(percent(50, 200)).toBe(25);
     expect(percent(5, 0)).toBe(0);
     expect(percent(300, 200)).toBe(100);
+  });
+});
+
+
+describe("formatDuration", () => {
+  it("picks a readable unit", () => {
+    expect(formatDuration(850)).toBe("850 ms");
+    expect(formatDuration(11_400)).toBe("11.4 s");
+    expect(formatDuration(161_000)).toBe("2 min 41 s");
+    expect(formatDuration(3_900_000)).toBe("1 h 5 min");
+  });
+});
+
+describe("timeAgo", () => {
+  const now = 1_800_000_000_000;
+  it("describes the past", () => {
+    expect(timeAgo(now - 5_000, now)).toBe("just now");
+    expect(timeAgo(now - 14 * 60_000, now)).toBe("14 min ago");
+    expect(timeAgo(now - 3 * 3_600_000, now)).toBe("3 h ago");
+    expect(timeAgo(now - 30 * 3_600_000, now)).toBe("yesterday");
+    expect(timeAgo(now - 72 * 3_600_000, now)).toBe("3 days ago");
   });
 });

@@ -5,6 +5,10 @@ use serde::{Serialize, Serializer};
 pub enum Error {
     #[error("The user cancelled the admin prompt.")]
     ElevationCancelled,
+    #[error("Another scan is running. Wait for it to finish, or cancel it.")]
+    Busy,
+    #[error("There is no scan for this drive or folder. Scan it first.")]
+    NoScan,
     #[error("{0}")]
     Windows(#[from] windows::core::Error),
     #[error("{0}")]

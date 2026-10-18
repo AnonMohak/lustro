@@ -20,6 +20,7 @@ export function Sidebar() {
   const go = useStore((s) => s.go);
   const drives = useStore((s) => s.drives);
   const loadDrives = useStore((s) => s.loadDrives);
+  const explore = useStore((s) => s.explore);
   const version = useStore((s) => s.info?.version);
 
   return (
@@ -50,7 +51,7 @@ export function Sidebar() {
       {drives?.map((d) => {
         const pct = percent(d.totalBytes - d.freeBytes, d.totalBytes);
         return (
-          <button key={d.letter} className="sbtn drv" title={driveName(d)} onClick={() => go("explore")}>
+          <button key={d.letter} className="sbtn drv" title={driveName(d)} onClick={() => explore(d.root)}>
             <Icon name={driveIcon(d)} />
             <span className="drive-meta">
               <span className="top">
