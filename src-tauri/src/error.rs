@@ -16,6 +16,8 @@ pub enum Error {
     #[error("Lustro could not restore the item: {0}")]
     Restore(String),
     #[error("{0}")]
+    Uninstall(String),
+    #[error("{0}")]
     Windows(#[from] windows::core::Error),
     #[error("{0}")]
     Io(#[from] std::io::Error),

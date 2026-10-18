@@ -350,3 +350,8 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 .sub .num { text-align: right; }
 .sub-name { display: flex; flex-direction: column; min-width: 0; }
 .sub-name .faint { font-size: 11px; }
+
+/* duplicate files */
+.dfile { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 11px 14px; border-bottom: 1px solid var(--stroke); }
+.dfile:last-child { border-bottom: 0; }
+.lhead > .btn { align-self: flex-start; }

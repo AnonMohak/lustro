@@ -108,6 +108,26 @@ impl Tree {
         out
     }
 
+    /// The node of an absolute path inside this scan (case-insensitive), if the scan has it.
+    pub fn find_path(&self, path: &str) -> Option<u32> {
+        let root = self.root_path.trim_end_matches('\\');
+        let p = path.trim_end_matches('\\');
+        if p.len() < root.len() || !p[..root.len()].eq_ignore_ascii_case(root) {
+            return None;
+        }
+        let rest = &p[root.len()..];
+        if !rest.is_empty() && !rest.starts_with('\\') {
+            return None;
+        }
+        let mut cur = Self::ROOT;
+        for part in rest.split('\\').filter(|s| !s.is_empty()) {
+            cur = self
+                .children(cur)
+                .find(|&c| self.name(c).eq_ignore_ascii_case(part))?;
+        }
+        Some(cur)
+    }
+
     /// Bytes for each `Kind` below a node.
     pub fn breakdown(&self, id: u32) -> [u64; KIND_COUNT] {
         let mut out = [0u64; KIND_COUNT];
@@ -421,6 +441,17 @@ pub(crate) mod tests {
         let a = t.children(me).next().unwrap();
         assert_eq!(t.path(0), "C:\\");
         assert_eq!(t.path(a), "C:\\Users\\me\\a.mp4");
+    }
+
+    #[test]
+    fn finds_paths() {
+        let t = sample();
+        let me = t.find_path("c:\\users\\ME").unwrap();
+        assert_eq!(t.name(me), "me");
+        assert_eq!(t.find_path("C:\\"), Some(Tree::ROOT));
+        assert_eq!(t.find_path("C:\\Users\\nobody"), None);
+        assert_eq!(t.find_path("D:\\Users"), None);
+        assert_eq!(t.find_path("C:\\UsersX"), None);
     }
 
     #[test]

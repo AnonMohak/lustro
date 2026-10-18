@@ -1,11 +1,14 @@
+mod apps;
 mod clean;
 mod clean_cmds;
 mod commands;
+mod dupes;
 mod error;
 mod ops;
 mod scan;
 mod state;
 mod system;
+mod tools_cmds;
 
 pub fn run() {
     tauri::Builder::default()
@@ -32,6 +35,11 @@ pub fn run() {
             commands::restore,
             clean_cmds::clean_scan,
             clean_cmds::clean_run,
+            tools_cmds::dupes_start,
+            tools_cmds::dupes_cancel,
+            tools_cmds::dupes_result,
+            tools_cmds::apps_list,
+            tools_cmds::app_uninstall,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Lustro");

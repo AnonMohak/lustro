@@ -172,6 +172,38 @@ export interface CleanOutcome {
   skipped: string | null;
 }
 
+export interface DupeFile {
+  root: string;
+  id: number;
+  path: string;
+  modified: number;
+}
+
+export interface DupeGroup {
+  size: number;
+  hash: string;
+  files: DupeFile[];
+}
+
+export interface DupeProgress {
+  totalBytes: number;
+  hashedBytes: number;
+  groups: number;
+}
+
+export interface InstalledApp {
+  id: string;
+  name: string;
+  publisher: string;
+  version: string;
+  source: "desktop" | "store";
+  size: number | null;
+  sizeFrom: "registry" | "folder" | "none";
+  installed: number;
+  lastUsed: number;
+  location: string;
+}
+
 export const ROOT_ID = 0;
 
 export const api = {
@@ -192,6 +224,11 @@ export const api = {
     invoke<DeleteResult>("delete_items", { items, permanent }),
   history: () => invoke<HistoryEntry[]>("history"),
   restore: (id: number) => invoke<void>("restore", { id }),
+  dupesStart: (minSize: number, includeAppData: boolean) => invoke<void>("dupes_start", { minSize, includeAppData }),
+  dupesCancel: () => invoke<void>("dupes_cancel"),
+  dupesResult: () => invoke<DupeGroup[] | null>("dupes_result"),
+  appsList: () => invoke<InstalledApp[]>("apps_list"),
+  appUninstall: (id: string) => invoke<void>("app_uninstall", { id }),
   cleanScan: (devAgeDays: number) => invoke<CleanRule[]>("clean_scan", { devAgeDays }),
   cleanRun: (ids: string[], items: Record<string, string[]>, devAgeDays: number) =>
     invoke<CleanOutcome[]>("clean_run", { ids, items, devAgeDays }),

@@ -11,7 +11,9 @@ import { api, type ScanErrorEvent, type ScanProgress, type ScanSummary } from ".
 import { formatCount, formatDuration } from "./lib/format";
 import { rootLabel } from "./lib/scanText";
 import { ComingSoon } from "./screens/ComingSoon";
+import { Apps } from "./screens/Apps";
 import { Clean } from "./screens/Clean";
+import { Dupes } from "./screens/Dupes";
 import { Explore } from "./screens/Explore";
 import { Files } from "./screens/Files";
 import { History } from "./screens/History";
@@ -20,8 +22,6 @@ import { Settings } from "./screens/Settings";
 import { useStore, type Screen } from "./store";
 
 const LATER: Partial<Record<Screen, [string, IconName]>> = {
-  dupes: ["M7", "dupe"],
-  apps: ["M7", "apps"],
   search: ["M8", "search"],
 };
 
@@ -101,7 +101,9 @@ export default function App() {
         {screen === "explore" && <Explore />}
         {screen === "files" && <Files />}
         {screen === "clean" && <Clean />}
-        {!["explore", "files", "clean"].includes(screen) && (
+        {screen === "dupes" && <Dupes />}
+        {screen === "apps" && <Apps />}
+        {!["explore", "files", "clean", "dupes", "apps"].includes(screen) && (
           <main className="main">
             {screen === "home" && <Home />}
             {screen === "settings" && <Settings />}

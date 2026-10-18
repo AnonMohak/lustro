@@ -16,6 +16,12 @@ pub struct AppState {
     pub startup_scan: Mutex<Option<String>>,
     /// The delete log, loaded on first use.
     pub history: Mutex<Option<History>>,
+    /// The running duplicate search, if any.
+    pub dupes_active: Mutex<Option<Arc<crate::dupes::DupeProgress>>>,
+    /// The last duplicate search result.
+    pub dupes: Mutex<Option<Vec<crate::dupes::DupeGroup>>>,
+    /// The last list of installed apps (uninstall picks from it).
+    pub apps: Mutex<Vec<crate::apps::App>>,
 }
 
 impl AppState {

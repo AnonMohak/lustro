@@ -623,6 +623,15 @@ pub async fn delete_items(
                     {
                         Arc::make_mut(t).remove(id);
                     }
+                    // Keep the saved duplicate result in step with the disk.
+                    if let Ok(mut d) = state.dupes.lock()
+                        && let Some(groups) = d.as_mut()
+                    {
+                        for g in groups.iter_mut() {
+                            g.files.retain(|f| !(f.root == root && f.id == id));
+                        }
+                        groups.retain(|g| g.files.len() > 1);
+                    }
                     if !changed.contains(&root) {
                         changed.push(root);
                     }
