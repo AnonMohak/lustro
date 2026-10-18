@@ -41,5 +41,10 @@ export function timeAgo(unixMs: number, now = Date.now()): string {
   const h = Math.floor(m / 60);
   if (h < 24) return `${h} h ago`;
   const d = Math.floor(h / 24);
-  return d === 1 ? "yesterday" : `${d} days ago`;
+  if (d < 60) return d === 1 ? "yesterday" : `${d} days ago`;
+  const months = Math.floor(d / 30.44);
+  if (months < 12) return `${months} months ago`;
+  const y = Math.floor(months / 12);
+  const rest = months % 12;
+  return rest ? `${y} yr ${rest} mo ago` : `${y} yr ago`;
 }

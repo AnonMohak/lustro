@@ -13,6 +13,7 @@ import { rootLabel } from "./lib/scanText";
 import { ComingSoon } from "./screens/ComingSoon";
 import { Explore } from "./screens/Explore";
 import { Files } from "./screens/Files";
+import { History } from "./screens/History";
 import { Home } from "./screens/Home";
 import { Settings } from "./screens/Settings";
 import { useStore, type Screen } from "./store";
@@ -21,7 +22,6 @@ const LATER: Partial<Record<Screen, [string, IconName]>> = {
   dupes: ["M7", "dupe"],
   clean: ["M5", "clean"],
   apps: ["M7", "apps"],
-  history: ["M4", "history"],
   search: ["M8", "search"],
 };
 
@@ -104,6 +104,7 @@ export default function App() {
           <main className="main">
             {screen === "home" && <Home />}
             {screen === "settings" && <Settings />}
+            {screen === "history" && <History />}
             {later && <ComingSoon screen={t(`nav.${screen}`)} milestone={later[0]} icon={later[1]} />}
           </main>
         )}

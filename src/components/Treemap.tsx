@@ -11,7 +11,7 @@ interface Tile extends Rect {
 
 const HEADER = 20;
 const PAD = 3;
-const MAX_DEPTH = 3;
+const MAX_DEPTH = 10;
 
 /** Lays out the nested treemap. Folders that are big enough show their children inside. */
 export function layoutTiles(root: TreemapNode, w: number, h: number): Tile[] {

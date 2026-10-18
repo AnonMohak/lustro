@@ -48,5 +48,8 @@ describe("timeAgo", () => {
     expect(timeAgo(now - 3 * 3_600_000, now)).toBe("3 h ago");
     expect(timeAgo(now - 30 * 3_600_000, now)).toBe("yesterday");
     expect(timeAgo(now - 72 * 3_600_000, now)).toBe("3 days ago");
+    expect(timeAgo(now - 100 * 86_400_000, now)).toBe("3 months ago");
+    expect(timeAgo(now - 500 * 86_400_000, now)).toBe("1 yr 4 mo ago");
+    expect(timeAgo(now - 731 * 86_400_000, now)).toBe("2 yr ago");
   });
 });

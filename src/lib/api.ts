@@ -91,6 +91,7 @@ export interface FileHit {
   root: string;
   id: number;
   name: string;
+  path: string;
   folder: string;
   size: number;
   modified: number;
@@ -109,6 +110,35 @@ export interface FindFilesQuery {
   limit?: number;
 }
 
+export interface DeleteTarget {
+  root: string;
+  id: number;
+}
+
+export interface DeleteResult {
+  deleted: number;
+  freedBytes: number;
+  failed: { path: string; message: string }[];
+  /** New totals of the scans that changed. */
+  summaries: ScanSummary[];
+}
+
+export type HistoryAction = "recycle" | "permanent" | "cleaner" | "blocked";
+
+export interface HistoryEntry {
+  id: number;
+  /** Unix time in milliseconds. */
+  time: number;
+  action: HistoryAction;
+  path: string;
+  size: number;
+  ok: boolean;
+  error?: string;
+  /** True while the item can come back from the Recycle Bin. */
+  restorable: boolean;
+  restored: boolean;
+}
+
 export const ROOT_ID = 0;
 
 export const api = {
@@ -125,4 +155,8 @@ export const api = {
   findFiles: (query: FindFilesQuery) => invoke<FileHit[]>("find_files", { query }),
   revealPath: (path: string) => invoke<void>("reveal_path", { path }),
   takeStartupScan: () => invoke<string | null>("take_startup_scan"),
+  deleteItems: (items: DeleteTarget[], permanent: boolean) =>
+    invoke<DeleteResult>("delete_items", { items, permanent }),
+  history: () => invoke<HistoryEntry[]>("history"),
+  restore: (id: number) => invoke<void>("restore", { id }),
 };

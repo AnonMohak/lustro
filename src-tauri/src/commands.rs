@@ -6,7 +6,8 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::error::{Error, Result};
-use crate::ops::protect;
+use crate::ops::history::{self, Action, History};
+use crate::ops::{delete, protect};
 use crate::scan::kind::{KIND_COUNT, Kind};
 use crate::scan::model::{Tree, flags};
 use crate::scan::{self, Progress, cache, query};
@@ -409,6 +410,7 @@ pub struct FileHit {
     root: String,
     id: u32,
     name: String,
+    path: String,
     folder: String,
     size: u64,
     modified: i64,
@@ -462,6 +464,7 @@ pub async fn find_files(app: AppHandle, query: FindFilesQuery) -> Result<Vec<Fil
                     root: t.root_path.clone(),
                     id,
                     name: t.name(id).to_string(),
+                    path: path.clone(),
                     folder: t.path(n.parent),
                     size: n.size,
                     modified: filetime_to_unix_ms(n.modified),
@@ -504,6 +507,214 @@ pub fn reveal_path(path: String) -> Result<()> {
 
 fn unix_ms_to_filetime(ms: i64) -> u64 {
     (ms.max(0) as u64) * 10_000 + 116_444_736_000_000_000
+}
+
+// ---------- delete, history, restore ----------
+
+#[derive(serde::Deserialize)]
+pub struct DeleteTarget {
+    root: String,
+    id: u32,
+}
+
+#[derive(Serialize)]
+pub struct Failed {
+    path: String,
+    message: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteResult {
+    deleted: u32,
+    freed_bytes: u64,
+    failed: Vec<Failed>,
+    /// New totals of the scans that changed.
+    summaries: Vec<ScanSummary>,
+}
+
+fn data_dir(app: &AppHandle) -> Option<std::path::PathBuf> {
+    app.path().app_local_data_dir().ok()
+}
+
+/// Runs `f` with the loaded delete log, then saves it.
+fn with_history<T>(app: &AppHandle, f: impl FnOnce(&mut History) -> T) -> Option<T> {
+    let state = app.state::<AppState>();
+    let mut guard = state.history.lock().ok()?;
+    if guard.is_none() {
+        *guard = Some(History::load(&data_dir(app)?));
+    }
+    let h = guard.as_mut()?;
+    let out = f(h);
+    if let Err(e) = h.save() {
+        log::warn!("Could not save the delete history: {e}");
+    }
+    Some(out)
+}
+
+/// Deletes scan items. Protected paths are refused and logged as blocked.
+#[tauri::command]
+pub async fn delete_items(
+    app: AppHandle,
+    items: Vec<DeleteTarget>,
+    permanent: bool,
+) -> Result<DeleteResult> {
+    // Resolve the items to paths while the trees are stable.
+    let mut targets: Vec<(String, u32, String, u64)> = Vec::new();
+    {
+        let state = app.state::<AppState>();
+        for it in &items {
+            let t = tree_of(&state, &it.root)?;
+            check_id(&t, it.id)?;
+            if it.id == Tree::ROOT {
+                return Err(Error::ScanRoot);
+            }
+            if t.node(it.id).parent == crate::scan::model::NONE {
+                continue; // already deleted
+            }
+            targets.push((
+                t.root_path.clone(),
+                it.id,
+                t.path(it.id),
+                t.node(it.id).size,
+            ));
+        }
+    }
+    // Skip items inside another selected folder: deleting the folder removes them too.
+    let folders: Vec<String> = targets
+        .iter()
+        .map(|t| format!("{}\\", t.2.trim_end_matches('\\').to_lowercase()))
+        .collect();
+    targets.retain(|t| {
+        let p = t.2.to_lowercase();
+        !folders
+            .iter()
+            .any(|f| p.starts_with(f.as_str()) && p.len() > f.len())
+    });
+
+    let app2 = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut result = DeleteResult {
+            deleted: 0,
+            freed_bytes: 0,
+            failed: Vec::new(),
+            summaries: Vec::new(),
+        };
+        let mut changed: Vec<String> = Vec::new();
+        for (root, id, path, size) in targets {
+            let p = std::path::Path::new(&path);
+            let outcome = if permanent {
+                delete::delete_permanent(p)
+            } else {
+                delete::recycle(p)
+            };
+            let action = match (&outcome, permanent) {
+                (Err(delete::DeleteError::Protected(_)), _) => Action::Blocked,
+                (_, true) => Action::Permanent,
+                (_, false) => Action::Recycle,
+            };
+            let logged = outcome.as_ref().map(|_| ()).map_err(|e| e.to_string());
+            with_history(&app2, |h| h.add(action, &path, size, logged));
+            match outcome {
+                Ok(()) | Err(delete::DeleteError::Missing(_)) => {
+                    let state = app2.state::<AppState>();
+                    if let Ok(mut trees) = state.trees.write()
+                        && let Some(t) = trees.get_mut(&root)
+                    {
+                        Arc::make_mut(t).remove(id);
+                    }
+                    if !changed.contains(&root) {
+                        changed.push(root);
+                    }
+                    if outcome.is_ok() {
+                        result.deleted += 1;
+                        result.freed_bytes += size;
+                    }
+                }
+                Err(e) => result.failed.push(Failed {
+                    path,
+                    message: e.to_string(),
+                }),
+            }
+        }
+        // New totals, and save the changed scans in the background.
+        let state = app2.state::<AppState>();
+        let trees: Vec<Arc<Tree>> = changed.iter().filter_map(|r| state.tree(r)).collect();
+        result.summaries = trees.iter().map(|t| summary(t)).collect();
+        if let Some(dir) = cache_dir(&app2) {
+            std::thread::spawn(move || {
+                for t in trees {
+                    if let Err(e) = cache::save(&t, &dir) {
+                        log::warn!("Could not save the scan cache: {e}");
+                    }
+                }
+            });
+        }
+        result
+    })
+    .await
+    .map_err(|e| Error::Io(std::io::Error::other(e.to_string())))
+}
+
+/// The delete log, newest first. Recycle Bin entries that are gone from the bin
+/// are marked as not restorable.
+#[tauri::command]
+pub async fn history(app: AppHandle) -> Vec<history::Entry> {
+    let app2 = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        with_history(&app2, |h| {
+            if h.entries.iter().any(|e| e.restorable) {
+                let in_bin: std::collections::HashSet<String> = trash::os_limited::list()
+                    .unwrap_or_default()
+                    .iter()
+                    .map(|i| i.original_path().to_string_lossy().to_lowercase())
+                    .collect();
+                for e in h.entries.iter_mut().filter(|e| e.restorable) {
+                    e.restorable = in_bin.contains(&e.path.to_lowercase());
+                }
+            }
+            h.newest_first()
+        })
+        .unwrap_or_default()
+    })
+    .await
+    .unwrap_or_default()
+}
+
+/// Moves a recycled item back to where it was.
+#[tauri::command]
+pub async fn restore(app: AppHandle, id: u64) -> Result<()> {
+    let app2 = app.clone();
+    tauri::async_runtime::spawn_blocking(move || -> Result<()> {
+        let entry = with_history(&app2, |h| h.entries.iter().find(|e| e.id == id).cloned())
+            .flatten()
+            .ok_or(Error::NotInBin)?;
+        let items = trash::os_limited::list().map_err(|e| Error::Restore(e.to_string()))?;
+        let target = entry.path.to_lowercase();
+        let deleted_at = entry.time / 1000;
+        let item = items
+            .into_iter()
+            .filter(|i| i.original_path().to_string_lossy().to_lowercase() == target)
+            .min_by_key(|i| (i.time_deleted - deleted_at).abs());
+        let Some(item) = item else {
+            with_history(&app2, |h| {
+                if let Some(e) = h.entries.iter_mut().find(|e| e.id == id) {
+                    e.restorable = false;
+                }
+            });
+            return Err(Error::NotInBin);
+        };
+        trash::os_limited::restore_all([item]).map_err(|e| Error::Restore(e.to_string()))?;
+        with_history(&app2, |h| {
+            if let Some(e) = h.entries.iter_mut().find(|e| e.id == id) {
+                e.restorable = false;
+                e.restored = true;
+            }
+        });
+        Ok(())
+    })
+    .await
+    .map_err(|e| Error::Io(std::io::Error::other(e.to_string())))?
 }
 
 #[cfg(test)]

@@ -18,3 +18,10 @@ export function rootLabel(root: string): string {
   const trimmed = root.replace(/\\+$/, "");
   return /^[A-Za-z]:$/.test(trimmed) ? trimmed : (trimmed.split("\\").pop() ?? trimmed);
 }
+
+/** Same rule as `normalize_root` in Rust: "c:" → "C:\", folders get one trailing backslash. */
+export function normalizeRoot(root: string): string {
+  const p = root.replace(/\//g, "\\");
+  if (/^[A-Za-z]:\\?$/.test(p)) return `${p[0].toUpperCase()}:\\`;
+  return `${p.replace(/\\+$/, "")}\\`;
+}

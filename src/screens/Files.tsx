@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../components/Icon";
 import { api, KINDS, type FileHit, type Kind } from "../lib/api";
-import { formatBytes, timeAgo } from "../lib/format";
+import { confirmDelete } from "../lib/deleteFlow";
+import { formatBytes, formatCount, timeAgo } from "../lib/format";
 import { KIND_ICON, kindColor } from "../lib/kinds";
+import { rootLabel } from "../lib/scanText";
 import { useStore } from "../store";
 
 const GB = 1024 ** 3;
@@ -18,8 +20,10 @@ export function Files() {
   const [bigOnly, setBigOnly] = useState(true);
   const [hideProtected, setHideProtected] = useState(false);
   const [kind, setKind] = useState<Kind | "all">("all");
+  const [scope, setScope] = useState<string>("all");
   const [hits, setHits] = useState<FileHit[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const treeVersion = useStore((s) => s.treeVersion);
   const scanVersion = Object.values(scans)
     .map((s) => s.scannedAt)
     .join(",");
@@ -33,6 +37,7 @@ export function Files() {
         minSize: tab === "size" && bigOnly ? GB : undefined,
         olderThan: tab === "age" ? Date.now() - YEAR_MS : undefined,
         kinds: kind === "all" ? undefined : [kind],
+        roots: scope === "all" ? undefined : [scope],
         limit: 300,
       })
       .then((h) => live && setHits(h))
@@ -40,7 +45,7 @@ export function Files() {
     return () => {
       live = false;
     };
-  }, [tab, bigOnly, kind, scanVersion, showToast]);
+  }, [tab, bigOnly, kind, scope, scanVersion, treeVersion, showToast]);
 
   const rows = useMemo(() => (hits ?? []).filter((f) => !(hideProtected && f.protected)), [hits, hideProtected]);
   const sel = rows.filter((f) => selected.has(key(f)));
@@ -57,6 +62,13 @@ export function Files() {
           <p>{t("files.noScans")}</p>
         </div>
       </main>
+    );
+
+  const runDelete = (permanent: boolean) =>
+    confirmDelete(
+      sel.map((f) => ({ root: f.root, id: f.id, name: f.name, path: f.path, size: f.size })),
+      permanent,
+      () => setSelected(new Set()),
     );
 
   const toggle = (f: FileHit) =>
@@ -105,6 +117,19 @@ export function Files() {
                 </option>
               ))}
             </select>
+            <select
+              className={`fchip ${scope !== "all" ? "on" : ""}`}
+              value={scope}
+              aria-label={t("files.scope")}
+              onChange={(e) => setScope(e.target.value)}
+            >
+              <option value="all">{t("files.allScans")}</option>
+              {Object.keys(scans).map((r) => (
+                <option key={r} value={r}>
+                  {rootLabel(r)}
+                </option>
+              ))}
+            </select>
             <button className={`fchip ${hideProtected ? "on" : ""}`} onClick={() => setHideProtected(!hideProtected)}>
               {hideProtected && <Icon name="check" />}
               {t("files.hideProtected")}
@@ -114,11 +139,13 @@ export function Files() {
             <table>
               <thead>
                 <tr>
-                  <th style={{ width: 36 }} />
+                  <th style={{ width: 40 }} />
                   <th>{t("files.name")}</th>
-                  <th className="r">{t("files.size")}</th>
-                  <th>{t("files.modified")}</th>
-                  <th>{t("files.type")}</th>
+                  <th className="r" style={{ width: 90 }}>
+                    {t("files.size")}
+                  </th>
+                  <th style={{ width: 120 }}>{t("files.modified")}</th>
+                  <th style={{ width: 150 }}>{t("files.type")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -156,7 +183,9 @@ export function Files() {
                               </span>
                             )}
                           </span>
-                          <span className="pt mono selectable">{f.folder}</span>
+                          <span className="pt mono selectable" title={f.folder}>
+                            {f.folder}
+                          </span>
                         </div>
                       </div>
                     </td>
@@ -171,6 +200,23 @@ export function Files() {
               </tbody>
             </table>
           </div>
+          {sel.length > 0 && (
+            <div className="actbar">
+              <b>{t("del.selectedCount", { n: formatCount(sel.length) })}</b>
+              <span className="muted num">{formatBytes(selSize)}</span>
+              <span className="grow" />
+              <button className="btn sm ghost" onClick={() => setSelected(new Set())}>
+                {t("del.clear")}
+              </button>
+              <button className="btn sm ghost danger" onClick={() => runDelete(true)}>
+                {t("del.permanent")}
+              </button>
+              <button className="btn sm accent" onClick={() => runDelete(false)}>
+                <Icon name="trash" />
+                {t("del.recycle")}
+              </button>
+            </div>
+          )}
         </div>
       </main>
       <aside className="detail">

@@ -25,7 +25,7 @@ pub struct TreemapNode {
 
 /// Nodes smaller than this share of the treemap area are merged into one "smaller items" block.
 const MIN_SHARE: f64 = 1.0 / 4000.0;
-const MAX_DEPTH: u32 = 4;
+const MAX_DEPTH: u32 = 12;
 const MAX_CHILDREN: usize = 300;
 
 /// A nested, pruned tree for the treemap of `id`. At most about `max_nodes` nodes.

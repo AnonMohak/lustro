@@ -4,7 +4,7 @@ Lustro is a Windows 11 storage manager. It scans drives, shows what uses the spa
 
 *Lustro* is Latin. It means "I purify" and also "I survey".
 
-Status: M0 and M1 are done. See section 4.
+Status: M0 to M4 are done. See section 4.
 
 ---
 
@@ -60,6 +60,7 @@ Status: M0 and M1 are done. See section 4.
 7. **Windows.old:** Show it as an admin cleaner item, unchecked by default.
 8. **Data location:** `%LOCALAPPDATA%\Lustro\` (cache, settings, delete history).
 9. **Cleaner delete:** the cleaner deletes its items permanently, not to the Recycle Bin. They are caches and temp files that apps make again.
+10. **Folder scans in the sidebar:** each scanned folder gets an entry under "Scanned folders".
 
 ---
 
@@ -124,7 +125,7 @@ Status: M0 and M1 are done. See section 4.
   - Each drive root, each user profile root, and the `Users` folder
   - Files with the System attribute in the folders above
 - **Exceptions:** cleaner rules can remove known safe junk inside protected folders, for example `C:\Windows\Temp` and `C:\Windows\SoftwareDistribution\Download`. The rule file lists these exceptions. Manual delete in the file tree is always blocked there.
-- **History:** SQLite (`rusqlite`) table: time, path, size, mode (bin/permanent), result.
+- **History:** a JSON file (`history.json`, last 5000 entries): time, path, size, action (Recycle Bin, permanent, cleaner, blocked), result. The plan first said SQLite; a JSON file is enough and needs no C library.
 - **Restore:** read the `$I` file in `$Recycle.Bin\<SID>\` to find the original path. Move the matching `$R` item back. If the item is no longer in the Recycle Bin, disable the button.
 
 ### 3.3 Cleaners
@@ -228,7 +229,7 @@ Each milestone ends with a commit and a push to `master`. Each milestone is also
 
 - Recycle Bin delete (`IFileOperation`) and permanent delete (long paths, no junction traversal).
 - Protected path rules in the backend. Confirm dialogs.
-- SQLite delete history. Restore from the Recycle Bin (`$I` / `$R` files).
+- Delete history (JSON). Restore from the Recycle Bin through the Windows shell (`trash` crate).
 - **Exit:** delete and restore work. Each protected path is blocked in tests. A junction delete never touches the target.
 
 ### M5 — System and browser cleaner

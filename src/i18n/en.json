@@ -21,7 +21,8 @@
     "settings": "Settings",
     "drives": "Drives",
     "refreshDrives": "Refresh drives",
-    "checkUpdates": "Check for updates"
+    "checkUpdates": "Check for updates",
+    "folders": "Scanned folders"
   },
   "drive": {
     "localDisk": "Local Disk",
@@ -79,7 +80,15 @@
     "themeDark": "Dark",
     "about": "About",
     "version": "Lustro {{version}}",
-    "aboutHint": "Free and open source (MIT). Lustro is Latin for “I purify” and “I survey”."
+    "aboutHint": "Free and open source (MIT). Lustro is Latin for “I purify” and “I survey”.",
+    "delete": "Delete",
+    "defaultDelete": "Default delete",
+    "defaultDeleteHint": "The Delete key uses this. Shift+Delete always deletes permanently.",
+    "askPermanent": "Ask before a permanent delete",
+    "askPermanentHint": "Always on. You cannot undo a permanent delete.",
+    "protectedTitle": "Protected system paths",
+    "protectedHint": "Windows, Program Files, the page file, drive roots and profile folders. Lustro never deletes them.",
+    "alwaysOn": "Always on"
   },
   "soon": {
     "title": "{{screen}} is not ready yet",
@@ -96,7 +105,7 @@
     },
     "scanning": "Scanning {{root}}",
     "filesFound": "files found",
-    "foldersFound": "{{count}} folders",
+    "foldersFound": "{{n}} folders",
     "bytesFound": "{{size}} found",
     "mftRead": "{{size}} of the file table read",
     "starting": "Starting…",
@@ -109,7 +118,7 @@
     "pickTitle": "Pick a drive to explore",
     "pickBody": "Lustro scans the drive and shows what uses the space.",
     "notScannedTitle": "{{root}} is not scanned yet",
-    "notScannedBody": "Scan the drive to see its folders and files.",
+    "notScannedBody": "Scan it to see its folders and files.",
     "summary": "{{files}} files · {{size}} · {{method}} in {{elapsed}} · {{ago}}",
     "up": "Up one level",
     "items": "{{count}} items",
@@ -151,7 +160,8 @@
     "onlineOnly": "Online-only file. It uses no space on this PC.",
     "denied": "Windows lets only admins read this folder.",
     "selectHint": "Select a folder or a file.",
-    "noData": "Loading…"
+    "noData": "Loading…",
+    "scanRoot": "This is the scanned folder. Open it to delete items inside."
   },
   "files": {
     "title": "Large and old files",
@@ -172,6 +182,48 @@
     "filesCount_one": "1 file",
     "filesCount_other": "{{count}} files",
     "binNote": "Files in the Recycle Bin still use space. Empty the bin, or use Shift+Delete to delete permanently.",
-    "protected": "Protected"
+    "protected": "Protected",
+    "scope": "Drive or folder",
+    "allScans": "All scans"
+  },
+  "del": {
+    "recycle": "Move to Recycle Bin",
+    "permanent": "Delete permanently",
+    "recycleTitleOne": "Move to Recycle Bin?",
+    "permanentTitleOne": "Delete permanently?",
+    "recycleNote": "You can restore it from History or from the Recycle Bin.",
+    "permanentWarn": "You cannot undo this. The item does not go to the Recycle Bin.",
+    "recycleConfirm": "Move to Recycle Bin",
+    "permanentConfirm": "Delete permanently",
+    "clear": "Clear",
+    "selectedCount": "{{n}} selected",
+    "doneRecycled_one": "Moved 1 item to the Recycle Bin ({{size}}).",
+    "doneRecycled_other": "Moved {{n}} items to the Recycle Bin ({{size}}).",
+    "doneDeleted_one": "Deleted 1 item permanently ({{size}} freed).",
+    "doneDeleted_other": "Deleted {{n}} items permanently ({{size}} freed).",
+    "recycleTitleMany": "Move {{n}} items to the Recycle Bin?",
+    "permanentTitleMany": "Delete {{n}} items permanently?",
+    "manyBody": "{{n}} items · {{size}}",
+    "partial": "Deleted {{ok}} of {{total}} items. The first problem: {{reason}}"
+  },
+  "history": {
+    "title": "History",
+    "summary": "{{size}} freed. Lustro keeps this log on this PC only.",
+    "empty": "Nothing deleted yet. Deleted items show here.",
+    "when": "When",
+    "action": "Action",
+    "item": "Item",
+    "size": "Size",
+    "restore": "Restore",
+    "restored": "Restored",
+    "restoredToast": "Restored {{name}}.",
+    "gone": "No longer in the Recycle Bin",
+    "blockedNote": "Protected system path",
+    "actions": {
+      "recycle": "Recycle Bin",
+      "permanent": "Permanent",
+      "cleaner": "Cleaner",
+      "blocked": "Blocked"
+    }
   }
 }

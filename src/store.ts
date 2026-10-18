@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { api, type AppInfo, type DriveInfo, type ScanProgress, type ScanSummary } from "./lib/api";
+import { normalizeRoot } from "./lib/scanText";
 
 export type Screen = "home" | "explore" | "files" | "dupes" | "clean" | "apps" | "history" | "search" | "settings";
 export type Theme = "system" | "light" | "dark";
@@ -30,6 +31,9 @@ interface State {
   exploreRoot: string | null;
   dialog: DialogSpec | null;
   toast: Toast | null;
+  /** Goes up after each delete, so views load the changed tree again. */
+  treeVersion: number;
+  deleteMode: "recycle" | "permanent";
   go: (screen: Screen) => void;
   setTheme: (theme: Theme) => void;
   loadInfo: () => Promise<void>;
@@ -43,9 +47,20 @@ interface State {
   openDialog: (d: DialogSpec) => void;
   closeDialog: () => void;
   showToast: (message: string, error?: boolean) => void;
+  afterDelete: (summaries: ScanSummary[]) => void;
+  setDeleteMode: (m: "recycle" | "permanent") => void;
 }
 
 const THEME_KEY = "lustro.theme";
+const DELETE_KEY = "lustro.deleteMode";
+
+function savedDeleteMode(): "recycle" | "permanent" {
+  try {
+    return localStorage.getItem(DELETE_KEY) === "permanent" ? "permanent" : "recycle";
+  } catch {
+    return "recycle";
+  }
+}
 
 function savedTheme(): Theme {
   try {
@@ -69,6 +84,8 @@ export const useStore = create<State>((set, get) => ({
   exploreRoot: null,
   dialog: null,
   toast: null,
+  treeVersion: 0,
+  deleteMode: savedDeleteMode(),
   go: (screen) => set({ screen }),
   setTheme: (theme) => {
     try {
@@ -86,8 +103,9 @@ export const useStore = create<State>((set, get) => ({
     for (const s of list) scans[s.root] ??= s;
     set({ scans, exploreRoot: get().exploreRoot ?? list[0]?.root ?? null });
   },
-  explore: (root) => set({ exploreRoot: root, screen: "explore" }),
-  startScan: async (root) => {
+  explore: (root) => set({ exploreRoot: normalizeRoot(root), screen: "explore" }),
+  startScan: async (path) => {
+    const root = normalizeRoot(path);
     set({ scanning: { root, progress: null }, exploreRoot: root, screen: "explore" });
     try {
       await api.startScan(root);
@@ -108,5 +126,18 @@ export const useStore = create<State>((set, get) => ({
     clearTimeout(toastTimer);
     set({ toast: { message, error } });
     toastTimer = setTimeout(() => set({ toast: null }), 4000);
+  },
+  afterDelete: (summaries) => {
+    const scans = { ...get().scans };
+    for (const s of summaries) scans[s.root] = s;
+    set({ scans, treeVersion: get().treeVersion + 1 });
+  },
+  setDeleteMode: (deleteMode) => {
+    try {
+      localStorage.setItem(DELETE_KEY, deleteMode);
+    } catch {
+      // Not saved; the choice still applies to this session.
+    }
+    set({ deleteMode });
   },
 }));

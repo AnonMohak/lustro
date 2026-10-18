@@ -54,6 +54,7 @@ pub enum ScanMethod {
     Walk = 2,
 }
 
+#[derive(Clone)]
 pub struct Tree {
     pub nodes: Vec<Node>,
     pub names: String,
@@ -120,6 +121,46 @@ impl Tree {
             }
         }
         out
+    }
+
+    /// Removes a node (after a delete): unlinks it and subtracts its totals from every ancestor.
+    /// Returns false for the root or a node that is already removed.
+    pub fn remove(&mut self, id: u32) -> bool {
+        if id == Self::ROOT || id as usize >= self.nodes.len() {
+            return false;
+        }
+        let n = self.nodes[id as usize];
+        if n.parent == NONE {
+            return false;
+        }
+        // Unlink from the parent's child list.
+        let parent = n.parent as usize;
+        if self.nodes[parent].first_child == id {
+            self.nodes[parent].first_child = n.next_sibling;
+        } else {
+            let mut c = self.nodes[parent].first_child;
+            while c != NONE {
+                let next = self.nodes[c as usize].next_sibling;
+                if next == id {
+                    self.nodes[c as usize].next_sibling = n.next_sibling;
+                    break;
+                }
+                c = next;
+            }
+        }
+        // Subtract the totals up to the root.
+        let mut cur = n.parent;
+        while cur != NONE {
+            let a = &mut self.nodes[cur as usize];
+            a.size = a.size.saturating_sub(n.size);
+            a.alloc = a.alloc.saturating_sub(n.alloc);
+            a.items = a.items.saturating_sub(n.items);
+            cur = a.parent;
+        }
+        let r = &mut self.nodes[id as usize];
+        r.parent = NONE;
+        r.next_sibling = NONE;
+        true
     }
 
     pub fn file_count(&self) -> u32 {
@@ -380,6 +421,31 @@ pub(crate) mod tests {
         let a = t.children(me).next().unwrap();
         assert_eq!(t.path(0), "C:\\");
         assert_eq!(t.path(a), "C:\\Users\\me\\a.mp4");
+    }
+
+    #[test]
+    fn remove_updates_ancestors() {
+        let mut t = sample();
+        let users = t.children(0).next().unwrap();
+        let me = t.children(users).next().unwrap();
+        let a = t.children(me).next().unwrap();
+        assert!(t.remove(a));
+        assert_eq!(t.total_size(), 100);
+        assert_eq!(t.file_count(), 3);
+        assert_eq!(t.node(users).size, 10);
+        assert_eq!(
+            t.children(me).map(|c| t.name(c)).collect::<Vec<_>>(),
+            ["b.txt"]
+        );
+        assert!(!t.remove(a), "already removed");
+        assert!(!t.remove(Tree::ROOT));
+        // Removing the first and last child keeps the list intact.
+        let pf = t
+            .children(0)
+            .find(|&c| t.name(c) == "pagefile.sys")
+            .unwrap();
+        assert!(t.remove(pf));
+        assert_eq!(t.children(0).count(), 2);
     }
 
     #[test]

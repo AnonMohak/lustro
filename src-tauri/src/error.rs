@@ -9,6 +9,12 @@ pub enum Error {
     Busy,
     #[error("There is no scan for this drive or folder. Scan it first.")]
     NoScan,
+    #[error("Lustro does not delete the scanned folder itself. Open it and pick the items inside.")]
+    ScanRoot,
+    #[error("This item is no longer in the Recycle Bin.")]
+    NotInBin,
+    #[error("Lustro could not restore the item: {0}")]
+    Restore(String),
     #[error("{0}")]
     Windows(#[from] windows::core::Error),
     #[error("{0}")]

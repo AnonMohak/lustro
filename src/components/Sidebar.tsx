@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { driveIcon, driveName } from "../lib/drives";
 import { formatBytes, percent } from "../lib/format";
+import { rootLabel } from "../lib/scanText";
 import { useStore, type Screen } from "../store";
 import { Icon, type IconName } from "./Icon";
 
@@ -22,6 +23,9 @@ export function Sidebar() {
   const loadDrives = useStore((s) => s.loadDrives);
   const explore = useStore((s) => s.explore);
   const version = useStore((s) => s.info?.version);
+  const scans = useStore((s) => s.scans);
+  const exploreRoot = useStore((s) => s.exploreRoot);
+  const folders = Object.keys(scans).filter((r) => !/^[A-Z]:\\$/.test(r));
 
   return (
     <nav className="sidebar" aria-label="Main">
@@ -65,6 +69,26 @@ export function Sidebar() {
           </button>
         );
       })}
+
+      {folders.length > 0 && (
+        <>
+          <div className="side-sec">
+            <span>{t("nav.folders")}</span>
+          </div>
+          {folders.map((r) => (
+            <button
+              key={r}
+              className={`sbtn ${screen === "explore" && exploreRoot === r ? "on" : ""}`}
+              title={r}
+              onClick={() => explore(r)}
+            >
+              <Icon name="folder" />
+              <span className="lbl">{rootLabel(r)}</span>
+              <span className="badge">{formatBytes(scans[r].totalBytes)}</span>
+            </button>
+          ))}
+        </>
+      )}
 
       <div className="grow" />
       <button className="sbtn" disabled title={t("nav.checkUpdates")}>

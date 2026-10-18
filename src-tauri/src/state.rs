@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 
+use crate::ops::history::History;
 use crate::scan::Progress;
 use crate::scan::model::Tree;
 
@@ -13,6 +14,8 @@ pub struct AppState {
     pub active: Mutex<Option<(String, Arc<Progress>)>>,
     /// Folder from `--scan <path>`, taken once by the UI.
     pub startup_scan: Mutex<Option<String>>,
+    /// The delete log, loaded on first use.
+    pub history: Mutex<Option<History>>,
 }
 
 impl AppState {

@@ -29,6 +29,7 @@ rayon = "1.12.0"
 bytemuck = { version = "1.25.2", features = ["derive", "extern_crate_alloc"] }
 log = "0.4.34"
 tauri-plugin-dialog = "2.8.3"
+trash = "5.2.9"
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

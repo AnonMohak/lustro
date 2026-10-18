@@ -4,6 +4,7 @@ import { Icon } from "../components/Icon";
 import { Treemap } from "../components/Treemap";
 import { api, ROOT_ID, type NodeDetail, type NodeDto, type TreemapNode } from "../lib/api";
 import { requestAdmin } from "../lib/admin";
+import { confirmDelete } from "../lib/deleteFlow";
 import { driveIcon, driveName } from "../lib/drives";
 import { formatBytes, formatCount, percent } from "../lib/format";
 import { KIND_ICON, kindColor, sortedBreakdown } from "../lib/kinds";
@@ -26,7 +27,7 @@ function ScanProgressView({ root }: { root: string }) {
         <>
           <div className="big">{formatCount(p.files)}</div>
           <p>
-            {t("scan.filesFound")} · {t("scan.foldersFound", { count: p.dirs })} ·{" "}
+            {t("scan.filesFound")} · {t("scan.foldersFound", { count: p.dirs, n: formatCount(p.dirs) })} ·{" "}
             {p.fast ? t("scan.mftRead", { size: formatBytes(p.bytes) }) : t("scan.bytesFound", { size: formatBytes(p.bytes) })}
           </p>
           <p className="mono faint scan-current" title={p.current}>
@@ -209,7 +210,17 @@ function TypesView({ detail }: { detail: NodeDetail }) {
   );
 }
 
-function DetailPane({ root, detail, rootSize }: { root: string; detail: NodeDetail | null; rootSize: number }) {
+function DetailPane({
+  root,
+  detail,
+  rootSize,
+  onDelete,
+}: {
+  root: string;
+  detail: NodeDetail | null;
+  rootSize: number;
+  onDelete: (permanent: boolean) => void;
+}) {
   const { t } = useTranslation();
   const showToast = useStore((s) => s.showToast);
   const isAdmin = useStore((s) => s.info?.isAdmin ?? false);
@@ -307,11 +318,21 @@ function DetailPane({ root, detail, rootSize }: { root: string; detail: NodeDeta
               {t("explore.copyPath")}
             </button>
           </div>
-          {detail.protected && (
+          {detail.protected || n.id === ROOT_ID ? (
             <div className="note lock">
               <Icon name="lock" />
-              <span>{t("explore.protected")}</span>
+              <span>{n.id === ROOT_ID && !detail.protected ? t("explore.scanRoot") : t("explore.protected")}</span>
             </div>
+          ) : (
+            <>
+              <button className="btn accent block" onClick={() => onDelete(false)}>
+                <Icon name="trash" />
+                {t("del.recycle")}
+              </button>
+              <button className="btn ghost danger block sm" onClick={() => onDelete(true)}>
+                {t("del.permanent")}
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -337,7 +358,9 @@ function ExploreView({ root }: { root: string }) {
   const [selDetail, setSelDetail] = useState<NodeDetail | null>(null);
   const [map, setMap] = useState<TreemapNode | null>(null);
   const [protectedIds, setProtectedIds] = useState<Set<number>>(new Set());
-  const version = summary?.scannedAt;
+  const treeVersion = useStore((s) => s.treeVersion);
+  const scanVersion = summary?.scannedAt;
+  const version = `${scanVersion}-${treeVersion}`;
 
   const loadKids = useCallback(
     async (id: number) => {
@@ -357,11 +380,23 @@ function ExploreView({ root }: { root: string }) {
     setProtectedIds(new Set());
     api.nodeDetail(root, ROOT_ID).then((d) => setRootNode(d.node)).catch(() => {});
     api.listChildren(root, ROOT_ID, CHILD_LIMIT).then((l) => setKids(new Map([[ROOT_ID, l]]))).catch(() => {});
-  }, [root, version]);
+  }, [root, scanVersion]);
+
+  // After a delete: load the open folders again, but keep the view.
+  const expandedRef = useRef(expanded);
+  expandedRef.current = expanded;
+  useEffect(() => {
+    if (treeVersion === 0) return;
+    const ids = [ROOT_ID, ...expandedRef.current];
+    api.nodeDetail(root, ROOT_ID).then((d) => setRootNode(d.node)).catch(() => {});
+    Promise.all(ids.map((id) => api.listChildren(root, id, CHILD_LIMIT).then((l) => [id, l] as const).catch(() => null)))
+      .then((pairs) => setKids(new Map(pairs.filter((p) => p !== null))))
+      .catch(() => {});
+  }, [root, treeVersion]);
 
   useEffect(() => {
     let live = true;
-    Promise.all([api.nodeDetail(root, zoom), api.treemap(root, zoom)])
+    Promise.all([api.nodeDetail(root, zoom), api.treemap(root, zoom, 5000)])
       .then(([d, m]) => {
         if (!live) return;
         setZoomDetail(d);
@@ -416,6 +451,31 @@ function ExploreView({ root }: { root: string }) {
     });
     loadKids(n.id).catch(() => {});
   };
+
+  const deleteSelected = useCallback(
+    (permanent: boolean) => {
+      const d = selDetail;
+      if (!d || d.protected || d.node.id === ROOT_ID) return;
+      const parentId = d.ancestors[d.ancestors.length - 2]?.id ?? ROOT_ID;
+      confirmDelete([{ root, id: d.node.id, name: d.node.name, path: d.path, size: d.node.size }], permanent, () => {
+        setSel(parentId);
+        if (zoom === d.node.id) setZoom(parentId);
+      });
+    },
+    [selDetail, root, zoom],
+  );
+
+  // Delete moves the selection to the Recycle Bin (or deletes it, per Settings). Shift+Delete deletes permanently.
+  const deleteMode = useStore((s) => s.deleteMode);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Delete" || e.target instanceof HTMLInputElement || useStore.getState().dialog) return;
+      e.preventDefault();
+      deleteSelected(e.shiftKey || deleteMode === "permanent");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [deleteSelected, deleteMode]);
 
   const isProtected = useCallback((id: number) => protectedIds.has(id), [protectedIds]);
   const crumbs = zoomDetail?.ancestors ?? [];
@@ -511,7 +571,7 @@ function ExploreView({ root }: { root: string }) {
         <TypesView detail={zoomDetail} />
       ) : null}
       </main>
-      <DetailPane root={root} detail={selDetail} rootSize={rootNode?.size ?? 0} />
+      <DetailPane root={root} detail={selDetail} rootSize={rootNode?.size ?? 0} onDelete={deleteSelected} />
     </>
   );
 }

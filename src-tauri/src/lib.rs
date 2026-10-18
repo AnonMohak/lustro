@@ -25,6 +25,9 @@ pub fn run() {
             commands::find_files,
             commands::reveal_path,
             commands::take_startup_scan,
+            commands::delete_items,
+            commands::history,
+            commands::restore,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Lustro");
