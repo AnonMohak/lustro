@@ -1,6 +1,6 @@
 [package]
 name = "lustro"
-version = "0.1.0"
+version = "1.0.0"
 description = "Storage manager for Windows 11"
 authors = ["Mohak"]
 license = "MIT"
@@ -36,6 +36,8 @@ blake3 = "1.8.7"
 winreg = "0.56.0"
 tauri-plugin-notification = "2.7.0"
 tauri-plugin-single-instance = "2.5.4"
+tauri-plugin-updater = "2.14.0"
+tauri-plugin-process = "2.4.0"
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

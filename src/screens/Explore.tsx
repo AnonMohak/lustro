@@ -319,10 +319,15 @@ function DetailPane({
               {t("explore.copyPath")}
             </button>
           </div>
-          {detail.protected || n.id === ROOT_ID ? (
+          {detail.protected ? (
             <div className="note lock">
               <Icon name="lock" />
-              <span>{n.id === ROOT_ID && !detail.protected ? t("explore.scanRoot") : t("explore.protected")}</span>
+              <span>{t("explore.protected")}</span>
+            </div>
+          ) : n.id === ROOT_ID ? (
+            <div className="note">
+              <Icon name="info" />
+              <span>{t("explore.scanRoot")}</span>
             </div>
           ) : (
             <>
@@ -527,6 +532,8 @@ function ExploreView({ root }: { root: string }) {
         <button
           className="btn sm"
           disabled={!summary}
+          title={t("export.report")}
+          aria-label={t("export.report")}
           onClick={() =>
             summary &&
             scanReportHtml(summary)
@@ -535,11 +542,9 @@ function ExploreView({ root }: { root: string }) {
           }
         >
           <Icon name="export" />
-          {t("export.report")}
         </button>
-        <button className="btn sm" onClick={() => startScan(root)}>
+        <button className="btn sm" title={t("drive.rescan")} aria-label={t("drive.rescan")} onClick={() => startScan(root)}>
           <Icon name="refresh" />
-          {t("drive.rescan")}
         </button>
       </div>
       {summary && (

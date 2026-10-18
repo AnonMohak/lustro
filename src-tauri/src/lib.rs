@@ -29,6 +29,8 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(state::AppState {
             startup_scan: std::sync::Mutex::new(commands::startup_scan_arg(
                 args.clone().into_iter(),
@@ -55,6 +57,7 @@ pub fn run() {
             commands::restart_as_admin,
             commands::start_scan,
             commands::cancel_scan,
+            commands::forget_scan,
             commands::load_cached_scans,
             commands::list_children,
             commands::node_detail,

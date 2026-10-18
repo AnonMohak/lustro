@@ -51,6 +51,8 @@ interface State {
   afterDelete: (summaries: ScanSummary[]) => void;
   setDeleteMode: (m: "recycle" | "permanent") => void;
   setDevAgeDays: (d: number) => void;
+  /** Removes a scan from the list and deletes its saved cache. */
+  forgetScan: (root: string) => Promise<void>;
 }
 
 const THEME_KEY = "lustro.theme";
@@ -152,6 +154,13 @@ export const useStore = create<State>((set, get) => ({
       // Not saved; the choice still applies to this session.
     }
     set({ deleteMode });
+  },
+  forgetScan: async (root) => {
+    await api.forgetScan(root);
+    const scans = { ...get().scans };
+    delete scans[root];
+    const exploreRoot = get().exploreRoot === root ? (Object.keys(scans)[0] ?? null) : get().exploreRoot;
+    set({ scans, exploreRoot });
   },
   setDevAgeDays: (devAgeDays) => {
     try {

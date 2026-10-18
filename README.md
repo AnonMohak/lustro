@@ -4,24 +4,52 @@ Lustro is a free and open source storage manager for Windows 11. It scans your d
 
 *Lustro* is Latin. It means "I purify" and also "I survey".
 
-> **Status:** early development. There is no release yet. The design mockup is in [`mockup/index.html`](mockup/index.html). Open the file in a browser. CI builds an installer for each push (see the Actions tab).
+![Explore: folder tree, treemap and details](docs/screenshots/explore-dark.png)
 
-## Planned features
+## Features
 
-- **Fast scan.** With admin rights, Lustro reads the NTFS Master File Table directly. A full drive takes seconds. Without admin rights, it walks the folders.
-- **Explore.** A folder tree sorted by size, a treemap, and a file type breakdown.
-- **Large and old files.** Find the biggest files and the files that nobody changed for a long time.
-- **Duplicates.** Find identical files by size and content hash.
-- **Clean up.** Temp files, Windows Update cache, browser caches, crash dumps, and dev junk (node_modules, Rust target folders, tool caches, Docker images, WSL disks, IDE caches).
-- **Installed apps.** See the size of each app and run its uninstaller.
-- **Safe delete.** Recycle Bin by default, a delete history with restore, and protected system paths that Lustro never deletes.
-- **Live updates, search, export, low space alert, and an Explorer right-click menu.**
+- **Fast scan.** As administrator, Lustro reads the NTFS Master File Table directly: 2.2 million files in about 13 seconds. Without admin rights, it walks the folders.
+- **Explore.** A folder tree sorted by size, a treemap that you can zoom into, a file type view, and a detail pane.
+- **Large and old files.** The biggest files and the files that nobody changed for more than a year, over all scans.
+- **Duplicates.** Files with the same size and the same BLAKE3 hash. Hard links count once. Lustro selects extra copies only of photos, videos, music, documents and archives outside program folders.
+- **Clean up.** Temp files, Windows Update cache, crash dumps, browser caches, the Recycle Bin, and dev junk: old `node_modules` and `target` folders, npm/pip/Cargo/NuGet caches, Docker images, WSL disks, IDE caches. You review every item first.
+- **Installed apps.** Size, install date and last use of desktop and Store apps. Uninstall runs the app's own uninstaller.
+- **Search.** Names in all scans, with `*` and `?` wildcards. 2 million names in less than 0.1 seconds.
+- **Live updates.** As administrator, the NTFS change journal keeps fast scans current without a rescan.
+- **Safe delete.** Recycle Bin by default, a history with restore, and protected system paths that Lustro never deletes.
+- **Windows integration.** Tray icon, low space alert, start with Windows, and "Analyze with Lustro" in the File Explorer menu (all optional).
+- **Export.** CSV lists and an HTML report of a scan.
 
-The full plan is in [`PLAN.md`](PLAN.md).
+| Light theme | Large and old files | Search |
+|---|---|---|
+| ![Light theme](docs/screenshots/explore-light.png) | ![Large and old files](docs/screenshots/large-files.png) | ![Search](docs/screenshots/search.png) |
 
-## Tech
+## Install
 
-Tauri 2, Rust, React, TypeScript.
+Download `Lustro_x.y.z_x64-setup.exe` from [Releases](https://github.com/AnonMohak/lustro/releases) and run it. The installer needs no admin rights. Lustro updates itself from GitHub Releases (you can turn this off in Settings).
+
+> **SmartScreen warning.** The installer is not code-signed yet, so Windows may show "Windows protected your PC". Choose **More info**, then **Run anyway**.
+
+## Admin rights
+
+Lustro starts as a normal user. Use **Run as admin** in the title bar to restart it with admin rights. You need them for:
+
+- the fast MFT scan and live updates,
+- folders that Windows hides from normal users (for example `System Volume Information`),
+- the system junk in `C:\Windows` (Windows temp, Windows Update cache, Windows.old).
+
+Everything else works without admin rights.
+
+## Safety
+
+- Lustro never deletes protected paths: `C:\Windows`, `Program Files`, the page file, drive roots, user profile folders and similar. The backend checks every path before it deletes.
+- Delete moves items to the Recycle Bin. A permanent delete always asks first.
+- Lustro removes junctions and symbolic links as links. It never deletes the files that they point to.
+- The cleaner deletes caches and temp files permanently. Apps make them again.
+
+## Privacy
+
+Lustro has no account, no telemetry and no ads. The only network request is the update check to GitHub, which you can turn off. Scans, history and settings stay in `%LOCALAPPDATA%\com.anonmohak.lustro`.
 
 ## Build from source
 
@@ -35,11 +63,28 @@ npm test              # frontend tests
 cd src-tauri; cargo test
 ```
 
+`npm run tauri build` also signs the update package, so it needs the updater key in `TAURI_SIGNING_PRIVATE_KEY`. Without the key, build with `npm run tauri build -- --config src-tauri/tauri.ci.conf.json`.
+
 If the Rust build fails with `link.exe` errors, another `link.exe` (from Git, Cygwin or MSYS) is earlier in your `PATH` than the MSVC linker. Remove those folders from `PATH` in that terminal, or build from a "Developer PowerShell for VS".
+
+Some tests need admin rights and are ignored by default. Run them in an elevated terminal:
+
+```powershell
+cd src-tauri
+cargo test --profile perf -- --ignored usn_sees_new_file mft_matches_walk --nocapture
+```
+
+## Release
+
+Push a tag like `v1.0.1`. The release workflow builds the installer, signs the update package, and makes a draft release with `latest.json`. Publish the draft on GitHub; then installed copies update.
 
 ## Logo
 
-The logo is a placeholder. To change it, replace `src/assets/logo.svg` and run `npm run icons`. The app, the window and the installer all use this one file.
+The logo is a placeholder. To change it, replace `src/assets/logo.svg` and run `npm run icons`. The app, the window, the tray and the installer all use this one file.
+
+## Tech
+
+Tauri 2, Rust, React, TypeScript. The plan and the design notes are in [`PLAN.md`](PLAN.md); the original design mockup is in [`mockup/index.html`](mockup/index.html).
 
 ## License
 

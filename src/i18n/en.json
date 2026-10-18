@@ -22,7 +22,8 @@
     "drives": "Drives",
     "refreshDrives": "Refresh drives",
     "checkUpdates": "Check for updates",
-    "folders": "Scanned folders"
+    "folders": "Scanned folders",
+    "forget": "Remove from the list"
   },
   "drive": {
     "localDisk": "Local Disk",
@@ -104,10 +105,6 @@
     "startWithWindowsHint": "Starts in the tray, without admin rights.",
     "explorerMenu": "“Analyze with Lustro” in File Explorer",
     "explorerMenuHint": "Adds the command to the right-click menu of folders and drives (under “Show more options”)."
-  },
-  "soon": {
-    "title": "{{screen}} is not ready yet",
-    "body": "This part of Lustro comes in milestone {{milestone}}. Follow the progress on GitHub."
   },
   "common": {
     "cancel": "Cancel",
@@ -378,5 +375,28 @@
     "topFolders": "Biggest folders",
     "topFiles": "Biggest files",
     "footer": "Made with Lustro."
+  },
+  "update": {
+    "upToDate": "Lustro is up to date.",
+    "available": "Lustro {{version}} is available",
+    "noNotes": "This version has fixes and improvements.",
+    "restartNote": "Lustro downloads the update, installs it and starts again.",
+    "install": "Install and restart",
+    "downloading": "Downloading the update…",
+    "failed": "The update check failed: {{error}}",
+    "auto": "Check for updates automatically",
+    "autoHint": "From GitHub Releases, when Lustro starts."
+  },
+  "time": {
+    "justNow": "just now",
+    "minutes": "{{n}} min ago",
+    "hours": "{{n}} h ago",
+    "yesterday": "yesterday",
+    "days": "{{n}} days ago",
+    "months": "{{n}} months ago",
+    "years": "{{y}} yr ago",
+    "yearsMonths": "{{y}} yr {{m}} mo ago",
+    "today": "Today, {{time}}",
+    "yesterdayAt": "Yesterday, {{time}}"
   }
 }

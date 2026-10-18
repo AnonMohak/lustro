@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { driveIcon, driveName } from "../lib/drives";
 import { formatBytes, percent } from "../lib/format";
 import { rootLabel } from "../lib/scanText";
+import { checkForUpdates } from "../lib/updates";
 import { useStore, type Screen } from "../store";
 import { Icon, type IconName } from "./Icon";
 
@@ -22,6 +23,7 @@ export function Sidebar() {
   const drives = useStore((s) => s.drives);
   const loadDrives = useStore((s) => s.loadDrives);
   const explore = useStore((s) => s.explore);
+  const forgetScan = useStore((s) => s.forgetScan);
   const version = useStore((s) => s.info?.version);
   const scans = useStore((s) => s.scans);
   const exploreRoot = useStore((s) => s.exploreRoot);
@@ -85,13 +87,26 @@ export function Sidebar() {
               <Icon name="folder" />
               <span className="lbl">{rootLabel(r)}</span>
               <span className="badge">{formatBytes(scans[r].totalBytes)}</span>
+              <span
+                className="forget"
+                role="button"
+                tabIndex={0}
+                title={t("nav.forget")}
+                aria-label={t("nav.forget")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  forgetScan(r);
+                }}
+              >
+                <Icon name="x" />
+              </span>
             </button>
           ))}
         </>
       )}
 
       <div className="grow" />
-      <button className="sbtn" disabled title={t("nav.checkUpdates")}>
+      <button className="sbtn" title={t("nav.checkUpdates")} onClick={() => checkForUpdates(true)}>
         <Icon name="refresh" />
         <span className="lbl">{t("nav.checkUpdates")}</span>
         {version && <span className="ver">v{version}</span>}

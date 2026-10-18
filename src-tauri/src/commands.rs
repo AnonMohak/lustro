@@ -210,6 +210,22 @@ pub fn cancel_scan(state: State<'_, AppState>) {
     }
 }
 
+/// Removes a scan from memory, stops its live updates and deletes its cache file.
+#[tauri::command]
+pub fn forget_scan(app: AppHandle, state: State<'_, AppState>, root: String) -> Result<()> {
+    let root = normalize_root(&root);
+    if let Ok(mut trees) = state.trees.write() {
+        trees.remove(&root);
+    }
+    if let Ok(mut g) = state.watch_gen.lock() {
+        *g.entry(root.clone()).or_insert(0) += 1; // stops the watcher
+    }
+    if let Some(dir) = cache_dir(&app) {
+        let _ = std::fs::remove_file(dir.join(cache::file_name(&root)));
+    }
+    Ok(())
+}
+
 /// Loads the saved scans from the last session and returns their summaries.
 #[tauri::command]
 pub async fn load_cached_scans(app: AppHandle) -> Vec<ScanSummary> {

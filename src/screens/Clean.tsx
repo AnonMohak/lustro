@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Icon, type IconName } from "../components/Icon";
 import { requestAdmin } from "../lib/admin";
 import { api, type CleanRule } from "../lib/api";
-import { formatBytes, formatCount } from "../lib/format";
+import { formatBytes, formatCount, timeAgo } from "../lib/format";
 import { useStore } from "../store";
 
 const GROUPS: { id: CleanRule["group"]; icon: IconName }[] = [
@@ -23,9 +23,7 @@ function shortPath(path: string): string {
 function ageText(days: number | null, t: (k: string, o?: Record<string, unknown>) => string): string {
   if (days === null) return "";
   if (days === 0) return t("clean.today");
-  if (days < 60) return t("clean.changed", { ago: `${days} days ago` });
-  if (days < 365) return t("clean.changed", { ago: `${Math.floor(days / 30)} months ago` });
-  return t("clean.changed", { ago: `${(days / 365).toFixed(1)} years ago` });
+  return t("clean.changed", { ago: timeAgo(Date.now() - days * 86_400_000) });
 }
 
 export function Clean() {

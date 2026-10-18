@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../components/Icon";
 import { api, type BackendSettings } from "../lib/api";
+import { autoUpdateOn, checkForUpdates, setAutoUpdate } from "../lib/updates";
 
 function Switch({ id, on, onChange }: { id: string; on: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -40,6 +41,7 @@ export function Settings() {
         api.getSettings().then(setBackend).catch(() => {});
       });
   };
+  const [autoUpdate, setAuto] = useState(autoUpdateOn());
   const devAgeDays = useStore((s) => s.devAgeDays);
   const setDevAgeDays = useStore((s) => s.setDevAgeDays);
 
@@ -176,6 +178,24 @@ export function Settings() {
             <div>{t("settings.version", { version })}</div>
             <div className="sd">{t("settings.aboutHint")}</div>
           </div>
+          <button className="btn sm" onClick={() => checkForUpdates(true)}>
+            <Icon name="refresh" />
+            {t("nav.checkUpdates")}
+          </button>
+        </div>
+        <div className="srow">
+          <div>
+            <div>{t("update.auto")}</div>
+            <div className="sd">{t("update.autoHint")}</div>
+          </div>
+          <Switch
+            id="setAutoUpdate"
+            on={autoUpdate}
+            onChange={(v) => {
+              setAuto(v);
+              setAutoUpdate(v);
+            }}
+          />
         </div>
       </div>
     </div>

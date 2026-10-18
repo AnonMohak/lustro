@@ -49,8 +49,9 @@ jobs:
         working-directory: src-tauri
         run: cargo test
 
+      # CI has no updater signing key (pull requests cannot read secrets), so it skips the update package.
       - name: Build installer
-        run: npm run tauri build
+        run: npm run tauri build -- --config src-tauri/tauri.ci.conf.json
 
       - uses: actions/upload-artifact@v4
         with:

@@ -250,6 +250,7 @@ export const api = {
   restartAsAdmin: () => invoke<void>("restart_as_admin"),
   startScan: (root: string) => invoke<void>("start_scan", { root }),
   cancelScan: () => invoke<void>("cancel_scan"),
+  forgetScan: (root: string) => invoke<void>("forget_scan", { root }),
   loadCachedScans: () => invoke<ScanSummary[]>("load_cached_scans"),
   listChildren: (root: string, id: number, limit?: number) =>
     invoke<NodeDto[]>("list_children", { root, id, limit }),

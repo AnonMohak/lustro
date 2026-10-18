@@ -2,7 +2,6 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import type { IconName } from "./components/Icon";
 import { Dialog, Toast } from "./components/Overlays";
 import { Sidebar } from "./components/Sidebar";
 import { StatusBar } from "./components/StatusBar";
@@ -10,7 +9,7 @@ import { TitleBar } from "./components/TitleBar";
 import { api, type ScanErrorEvent, type ScanProgress, type ScanSummary } from "./lib/api";
 import { formatCount, formatDuration } from "./lib/format";
 import { rootLabel } from "./lib/scanText";
-import { ComingSoon } from "./screens/ComingSoon";
+import { autoUpdateOn, checkForUpdates } from "./lib/updates";
 import { Apps } from "./screens/Apps";
 import { Clean } from "./screens/Clean";
 import { Dupes } from "./screens/Dupes";
@@ -20,10 +19,7 @@ import { History } from "./screens/History";
 import { Search } from "./screens/Search";
 import { Home } from "./screens/Home";
 import { Settings } from "./screens/Settings";
-import { useStore, type Screen } from "./store";
-
-const LATER: Partial<Record<Screen, [string, IconName]>> = {
-};
+import { useStore } from "./store";
 
 function useScanEvents() {
   const { t } = useTranslation();
@@ -73,7 +69,6 @@ function useTheme() {
 }
 
 export default function App() {
-  const { t } = useTranslation();
   const screen = useStore((s) => s.screen);
   const go = useStore((s) => s.go);
 
@@ -90,6 +85,8 @@ export default function App() {
         if (path) useStore.getState().startScan(path);
       })
       .catch(() => {});
+    // Quietly look for a new version a few seconds after start (release builds only).
+    const updateTimer = import.meta.env.PROD && autoUpdateOn() ? setTimeout(() => checkForUpdates(false), 5000) : undefined;
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -97,10 +94,12 @@ export default function App() {
       }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      clearTimeout(updateTimer);
+      window.removeEventListener("keydown", onKey);
+    };
   }, [go]);
 
-  const later = LATER[screen];
   return (
     <div className="app">
       <TitleBar />
@@ -117,7 +116,6 @@ export default function App() {
             {screen === "settings" && <Settings />}
             {screen === "history" && <History />}
             {screen === "search" && <Search />}
-            {later && <ComingSoon screen={t(`nav.${screen}`)} milestone={later[0]} icon={later[1]} />}
           </main>
         )}
       </div>

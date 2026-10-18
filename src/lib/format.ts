@@ -1,3 +1,5 @@
+import i18n from "../i18n";
+
 // Sizes use binary units (1 KB = 1024 bytes), the same as File Explorer.
 const UNITS = ["bytes", "KB", "MB", "GB", "TB", "PB"];
 
@@ -32,19 +34,20 @@ export function formatDuration(ms: number): string {
   return `${Math.floor(m / 60)} h ${m % 60} min`;
 }
 
-/** "just now", "14 min ago", "3 h ago", "2 days ago". */
+/** "just now", "14 min ago", "3 h ago", "2 days ago", "1 yr 4 mo ago" (translated). */
 export function timeAgo(unixMs: number, now = Date.now()): string {
+  const t = i18n.t.bind(i18n);
   const s = Math.max(0, (now - unixMs) / 1000);
-  if (s < 60) return "just now";
+  if (s < 60) return t("time.justNow");
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m} min ago`;
+  if (m < 60) return t("time.minutes", { n: m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h} h ago`;
+  if (h < 24) return t("time.hours", { n: h });
   const d = Math.floor(h / 24);
-  if (d < 60) return d === 1 ? "yesterday" : `${d} days ago`;
+  if (d < 60) return d === 1 ? t("time.yesterday") : t("time.days", { n: d });
   const months = Math.floor(d / 30.44);
-  if (months < 12) return `${months} months ago`;
+  if (months < 12) return t("time.months", { n: months });
   const y = Math.floor(months / 12);
   const rest = months % 12;
-  return rest ? `${y} yr ${rest} mo ago` : `${y} yr ago`;
+  return rest ? t("time.yearsMonths", { y, m: rest }) : t("time.years", { y });
 }

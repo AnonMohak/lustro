@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../components/Icon";
+import i18n from "../i18n";
 import { api, type HistoryEntry } from "../lib/api";
 import { saveExport, toCsv } from "../lib/exporters";
 import { formatBytes } from "../lib/format";
@@ -17,10 +18,10 @@ function when(ms: number): string {
   const d = new Date(ms);
   const today = new Date();
   const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-  if (d.toDateString() === today.toDateString()) return `Today, ${time}`;
+  if (d.toDateString() === today.toDateString()) return i18n.t("time.today", { time });
   const y = new Date(today);
   y.setDate(today.getDate() - 1);
-  if (d.toDateString() === y.toDateString()) return `Yesterday, ${time}`;
+  if (d.toDateString() === y.toDateString()) return i18n.t("time.yesterdayAt", { time });
   return `${d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}, ${time}`;
 }
 

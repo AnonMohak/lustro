@@ -4,7 +4,7 @@ Lustro is a Windows 11 storage manager. It scans drives, shows what uses the spa
 
 *Lustro* is Latin. It means "I purify" and also "I survey".
 
-Status: M0 to M9 are done. See section 4.
+Status: M0 to M10 are done. v1.0.0 is a draft release on GitHub; publish it after a test of the installer. See section 4.
 
 ---
 
@@ -268,7 +268,7 @@ Each milestone ends with a commit and a push to `master`. Each milestone is also
 
 ### M10 — Release v1.0.0
 
-- Tauri updater with its own signing key. `latest.json` on GitHub Releases.
+- Tauri updater with its own signing key (kept in `%USERPROFILE%\.tauri\lustro-updater.key` and the `TAURI_SIGNING_PRIVATE_KEY` repo secret). `latest.json` on GitHub Releases.
 - Release workflow on a version tag. README with screenshots. Translation check.
 - **Exit:** install from GitHub, update from an older version, uninstall without leftovers.
 
