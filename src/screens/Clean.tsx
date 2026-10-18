@@ -14,52 +14,106 @@ const GROUPS: { id: CleanRule["group"]; icon: IconName }[] = [
   { id: "ide", icon: "app" },
 ];
 
+/** The last three parts of a path, for example "…\\app\\web\\node_modules". */
+function shortPath(path: string): string {
+  const parts = path.split("\\");
+  return parts.length > 4 ? `…\\${parts.slice(-3).join("\\")}` : path;
+}
+
+function ageText(days: number | null, t: (k: string, o?: Record<string, unknown>) => string): string {
+  if (days === null) return "";
+  if (days === 0) return t("clean.today");
+  if (days < 60) return t("clean.changed", { ago: `${days} days ago` });
+  if (days < 365) return t("clean.changed", { ago: `${Math.floor(days / 30)} months ago` });
+  return t("clean.changed", { ago: `${(days / 365).toFixed(1)} years ago` });
+}
+
 export function Clean() {
   const { t } = useTranslation();
   const isAdmin = useStore((s) => s.info?.isAdmin ?? false);
   const showToast = useStore((s) => s.showToast);
   const openDialog = useStore((s) => s.openDialog);
+  const devAgeDays = useStore((s) => s.devAgeDays);
   const [rules, setRules] = useState<CleanRule[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  /** Picked item paths of rules that have items. */
+  const [picks, setPicks] = useState<Record<string, Set<string>>>({});
+  const [open, setOpen] = useState<Set<string>>(new Set());
   const [group, setGroup] = useState<CleanRule["group"]>("sys");
   const [busy, setBusy] = useState(false);
   const [reload, setReload] = useState(0);
 
-  const usable = (r: CleanRule) => (!r.admin || isAdmin) && r.running.length === 0;
+  const hasItems = (r: CleanRule) => r.items.length > 0;
+  const usable = (r: CleanRule) => (!r.admin || isAdmin) && r.running.length === 0 && !r.unavailable && r.bytes > 0;
 
   useEffect(() => {
     let live = true;
     setRules(null);
     api
-      .cleanScan()
+      .cleanScan(devAgeDays)
       .then((list) => {
         if (!live) return;
         setRules(list);
-        setSelected(new Set(list.filter((r) => r.safe && r.bytes > 0).map((r) => r.id)));
+        setSelected(new Set(list.filter((r) => r.safe && r.bytes > 0 && !hasItems(r)).map((r) => r.id)));
+        const p: Record<string, Set<string>> = {};
+        for (const r of list) if (hasItems(r)) p[r.id] = new Set(r.safe ? r.items.filter((i) => i.selected).map((i) => i.path) : []);
+        setPicks(p);
       })
       .catch((e) => showToast(String(e), true));
     return () => {
       live = false;
     };
-  }, [reload, showToast]);
+  }, [reload, devAgeDays, showToast]);
 
   const groups = useMemo(() => GROUPS.filter((g) => rules?.some((r) => r.group === g.id)), [rules]);
-  const isOn = (r: CleanRule) => selected.has(r.id) && usable(r);
-  const selBytes = (list: CleanRule[]) => list.filter(isOn).reduce((a, r) => a + r.bytes, 0);
+  const ruleBytes = (r: CleanRule) => {
+    if (!usable(r)) return 0;
+    if (hasItems(r)) return r.items.filter((i) => picks[r.id]?.has(i.path)).reduce((a, i) => a + i.bytes, 0);
+    return selected.has(r.id) ? r.bytes : 0;
+  };
+  const isOn = (r: CleanRule) => ruleBytes(r) > 0;
+  const selBytes = (list: CleanRule[]) => list.reduce((a, r) => a + ruleBytes(r), 0);
   const total = rules ? selBytes(rules) : 0;
   const adminCount = rules?.filter((r) => r.admin).length ?? 0;
 
-  const toggle = (id: string) =>
+  const toggleRule = (r: CleanRule) => {
+    if (hasItems(r)) {
+      setPicks((p) => ({ ...p, [r.id]: isOn(r) ? new Set() : new Set(r.items.map((i) => i.path)) }));
+      return;
+    }
     setSelected((s) => {
       const n = new Set(s);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
+      if (n.has(r.id)) n.delete(r.id);
+      else n.add(r.id);
       return n;
     });
+  };
+  const toggleItem = (r: CleanRule, path: string) =>
+    setPicks((p) => {
+      const n = new Set(p[r.id]);
+      if (n.has(path)) n.delete(path);
+      else n.add(path);
+      return { ...p, [r.id]: n };
+    });
+
+  const selectGroup = (safeOnly: boolean, items: CleanRule[]) => {
+    setSelected((s) => {
+      const n = new Set([...s].filter((id) => !items.some((r) => r.id === id)));
+      if (safeOnly) items.filter((r) => r.safe && r.bytes > 0 && !hasItems(r)).forEach((r) => n.add(r.id));
+      return n;
+    });
+    setPicks((p) => {
+      const n = { ...p };
+      for (const r of items.filter(hasItems)) n[r.id] = new Set(safeOnly && r.safe ? r.items.filter((i) => i.selected).map((i) => i.path) : []);
+      return n;
+    });
+  };
 
   const run = () => {
     if (!rules) return;
-    const ids = rules.filter(isOn).map((r) => r.id);
+    const chosen = rules.filter(isOn);
+    const items: Record<string, string[]> = {};
+    for (const r of chosen.filter(hasItems)) items[r.id] = [...(picks[r.id] ?? [])];
     openDialog({
       title: t("clean.confirmTitle", { size: formatBytes(total) }),
       body: [
@@ -73,7 +127,11 @@ export function Clean() {
       onConfirm: async () => {
         setBusy(true);
         try {
-          const res = await api.cleanRun(ids);
+          const res = await api.cleanRun(
+            chosen.map((r) => r.id),
+            items,
+            devAgeDays,
+          );
           const freed = res.reduce((a, r) => a + r.freedBytes, 0);
           const inUse = res.reduce((a, r) => a + r.skippedFiles, 0);
           const skipped = res.filter((r) => r.skipped);
@@ -145,22 +203,10 @@ export function Clean() {
               <p>{t("clean.groupHint")}</p>
             </div>
             <div className="row">
-              <button
-                className="btn sm ghost"
-                onClick={() => setSelected((s) => new Set([...s].filter((id) => !items.some((r) => r.id === id))))}
-              >
+              <button className="btn sm ghost" onClick={() => selectGroup(false, items)}>
                 {t("clean.selectNone")}
               </button>
-              <button
-                className="btn sm"
-                onClick={() =>
-                  setSelected((s) => {
-                    const n = new Set([...s].filter((id) => !items.some((r) => r.id === id)));
-                    items.filter((r) => r.safe && r.bytes > 0).forEach((r) => n.add(r.id));
-                    return n;
-                  })
-                }
-              >
+              <button className="btn sm" onClick={() => selectGroup(true, items)}>
                 {t("clean.selectSafe")}
               </button>
             </div>
@@ -168,15 +214,16 @@ export function Clean() {
           <div className="card">
             {items.map((r) => {
               const ok = usable(r);
+              const expanded = open.has(r.id);
               return (
                 <div key={r.id} className={`citem ${ok ? "" : "off"}`}>
                   <input
                     type="checkbox"
                     id={`rule-${r.id}`}
                     checked={isOn(r)}
-                    disabled={!ok || r.bytes === 0}
+                    disabled={!ok}
                     aria-label={r.name}
-                    onChange={() => toggle(r.id)}
+                    onChange={() => toggleRule(r)}
                   />
                   <label className="cn" htmlFor={`rule-${r.id}`}>
                     {r.name}
@@ -200,19 +247,59 @@ export function Clean() {
                     {r.service && <span className="cmd">{t("clean.pausesService", { service: r.service })}</span>}
                   </label>
                   <div className="cs">
-                    {formatBytes(r.bytes)}
+                    {formatBytes(hasItems(r) && ok ? ruleBytes(r) || r.bytes : r.bytes)}
                     <div className="faint" style={{ fontSize: 11.5, fontWeight: 400, textAlign: "right" }}>
-                      {t("clean.files", { count: r.files, n: formatCount(r.files) })}
+                      {hasItems(r)
+                        ? t("clean.folders", { count: r.items.length })
+                        : r.files > 0
+                          ? t("clean.files", { count: r.files, n: formatCount(r.files) })
+                          : ""}
                     </div>
                   </div>
                   <div className="cd">
-                    {r.desc}{" "}
+                    {r.unavailable ?? r.desc}{" "}
+                    {hasItems(r) && (
+                      <button
+                        className="linkbtn"
+                        onClick={() =>
+                          setOpen((s) => {
+                            const n = new Set(s);
+                            if (n.has(r.id)) n.delete(r.id);
+                            else n.add(r.id);
+                            return n;
+                          })
+                        }
+                      >
+                        {expanded ? t("clean.hideFolders") : t("clean.showFolders")}
+                      </button>
+                    )}{" "}
                     {r.admin && !isAdmin && (
                       <button className="linkbtn" onClick={requestAdmin}>
                         {t("titlebar.runAsAdmin")}
                       </button>
                     )}
                   </div>
+                  {hasItems(r) && expanded && (
+                    <div className="subs">
+                      {r.items.map((i) => (
+                        <label key={i.path} className="sub">
+                          <input
+                            type="checkbox"
+                            checked={picks[r.id]?.has(i.path) ?? false}
+                            disabled={!ok}
+                            onChange={() => toggleItem(r, i.path)}
+                          />
+                          <span className="sub-name">
+                            <span className="mono" title={i.path}>
+                              {shortPath(i.path)}
+                            </span>
+                            <span className="faint">{ageText(i.ageDays, t)}</span>
+                          </span>
+                          <span className="num">{formatBytes(i.bytes)}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}

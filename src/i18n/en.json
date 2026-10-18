@@ -88,7 +88,12 @@
     "askPermanentHint": "Always on. You cannot undo a permanent delete.",
     "protectedTitle": "Protected system paths",
     "protectedHint": "Windows, Program Files, the page file, drive roots and profile folders. Lustro never deletes them.",
-    "alwaysOn": "Always on"
+    "alwaysOn": "Always on",
+    "cleanup": "Clean up",
+    "devAge": "Select project folders after",
+    "devAgeHint": "Lustro selects node_modules, target and similar folders only in projects with no change for this many days.",
+    "days_one": "1 day",
+    "days_other": "{{count}} days"
   },
   "soon": {
     "title": "{{screen}} is not ready yet",
@@ -262,6 +267,12 @@
     "doneToast": "Cleaned {{size}}.",
     "doneSkipped": "Cleaned {{size}}. {{n}} files were in use and stayed.",
     "skippedRule": "{{name}}: {{reason}}",
-    "pausesService": "Pauses {{service}}"
+    "pausesService": "Pauses {{service}}",
+    "showFolders": "Show folders",
+    "hideFolders": "Hide folders",
+    "changed": "changed {{ago}}",
+    "today": "changed today",
+    "folders_one": "1 folder",
+    "folders_other": "{{count}} folders"
   }
 }

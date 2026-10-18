@@ -12,6 +12,8 @@ export function Settings() {
   const version = useStore((s) => s.info?.version ?? "");
   const deleteMode = useStore((s) => s.deleteMode);
   const setDeleteMode = useStore((s) => s.setDeleteMode);
+  const devAgeDays = useStore((s) => s.devAgeDays);
+  const setDevAgeDays = useStore((s) => s.setDevAgeDays);
 
   return (
     <div className="page" style={{ maxWidth: 820 }}>
@@ -72,6 +74,23 @@ export function Settings() {
             <Icon name="lock" />
             {t("settings.alwaysOn")}
           </span>
+        </div>
+      </div>
+
+      <h3 className="sec">{t("settings.cleanup")}</h3>
+      <div className="card set">
+        <div className="srow">
+          <div>
+            <div>{t("settings.devAge")}</div>
+            <div className="sd">{t("settings.devAgeHint")}</div>
+          </div>
+          <select className="text" id="setDevAge" value={devAgeDays} onChange={(e) => setDevAgeDays(Number(e.target.value))}>
+            {[7, 14, 30, 60, 90, 180].map((d) => (
+              <option key={d} value={d}>
+                {t("settings.days", { count: d })}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 

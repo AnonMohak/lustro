@@ -1,13 +1,16 @@
 //! Tauri commands for the cleaner.
 
+use std::collections::HashMap;
+
 use rayon::prelude::*;
 use serde::Serialize;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
-use crate::clean::{self, system};
+use crate::clean::{self, RuleItem, system};
 use crate::commands::with_history;
 use crate::error::{Error, Result};
 use crate::ops::history::Action;
+use crate::state::AppState;
 use crate::system::elevation;
 
 #[derive(Serialize)]
@@ -25,17 +28,35 @@ pub struct RuleResult {
     /// Programs from the rule that run now. The rule is skipped while they run.
     running: Vec<String>,
     service: Option<String>,
+    /// Folders that the user can pick one by one.
+    items: Vec<RuleItem>,
+    /// Why the rule cannot run now.
+    unavailable: Option<String>,
+}
+
+fn ctx(app: &AppHandle, dev_age_days: Option<u32>) -> clean::Ctx {
+    let state = app.state::<AppState>();
+    let trees = state
+        .trees
+        .read()
+        .map(|t| t.values().cloned().collect())
+        .unwrap_or_default();
+    clean::Ctx {
+        trees,
+        dev_age_days: dev_age_days.unwrap_or(30),
+    }
 }
 
 /// Measures every rule. This can take a while on a large temp folder.
 #[tauri::command]
-pub async fn clean_scan() -> Result<Vec<RuleResult>> {
-    tauri::async_runtime::spawn_blocking(|| {
+pub async fn clean_scan(app: AppHandle, dev_age_days: Option<u32>) -> Result<Vec<RuleResult>> {
+    let ctx = ctx(&app, dev_age_days);
+    tauri::async_runtime::spawn_blocking(move || {
         let running = system::running_processes();
         clean::rules()
             .into_par_iter()
             .map(|r| {
-                let m = clean::measure(&r);
+                let s = clean::scan_rule(&r, &ctx);
                 RuleResult {
                     running: r
                         .process
@@ -43,8 +64,10 @@ pub async fn clean_scan() -> Result<Vec<RuleResult>> {
                         .filter(|p| running.contains(&p.to_lowercase()))
                         .cloned()
                         .collect(),
-                    bytes: m.bytes,
-                    files: m.files,
+                    bytes: s.measure.bytes,
+                    files: s.measure.files,
+                    items: s.items,
+                    unavailable: s.unavailable,
                     id: r.id,
                     group: r.group,
                     name: r.name,
@@ -74,8 +97,16 @@ pub struct RuleOutcome {
 }
 
 /// Runs the chosen rules and logs each one in the history.
+/// `items` holds the picked paths of rules that have items.
 #[tauri::command]
-pub async fn clean_run(app: AppHandle, ids: Vec<String>) -> Result<Vec<RuleOutcome>> {
+pub async fn clean_run(
+    app: AppHandle,
+    ids: Vec<String>,
+    items: Option<HashMap<String, Vec<String>>>,
+    dev_age_days: Option<u32>,
+) -> Result<Vec<RuleOutcome>> {
+    let ctx = ctx(&app, dev_age_days);
+    let items = items.unwrap_or_default();
     tauri::async_runtime::spawn_blocking(move || {
         let admin = elevation::is_elevated();
         let running = system::running_processes();
@@ -104,7 +135,7 @@ pub async fn clean_run(app: AppHandle, ids: Vec<String>) -> Result<Vec<RuleOutco
                 });
                 continue;
             }
-            let r = clean::clean(rule);
+            let r = clean::clean_rule(rule, &ctx, items.get(&rule.id).map(|v| v.as_slice()));
             with_history(&app, |h| {
                 h.add(Action::Cleaner, &rule.name, r.freed_bytes, Ok(()))
             });

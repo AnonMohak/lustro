@@ -151,6 +151,16 @@ export interface CleanRule {
   warn: boolean;
   running: string[];
   service: string | null;
+  items: CleanItem[];
+  unavailable: string | null;
+}
+
+export interface CleanItem {
+  path: string;
+  bytes: number;
+  files: number;
+  ageDays: number | null;
+  selected: boolean;
 }
 
 export interface CleanOutcome {
@@ -182,6 +192,7 @@ export const api = {
     invoke<DeleteResult>("delete_items", { items, permanent }),
   history: () => invoke<HistoryEntry[]>("history"),
   restore: (id: number) => invoke<void>("restore", { id }),
-  cleanScan: () => invoke<CleanRule[]>("clean_scan"),
-  cleanRun: (ids: string[]) => invoke<CleanOutcome[]>("clean_run", { ids }),
+  cleanScan: (devAgeDays: number) => invoke<CleanRule[]>("clean_scan", { devAgeDays }),
+  cleanRun: (ids: string[], items: Record<string, string[]>, devAgeDays: number) =>
+    invoke<CleanOutcome[]>("clean_run", { ids, items, devAgeDays }),
 };

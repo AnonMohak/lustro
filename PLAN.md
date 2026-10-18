@@ -4,7 +4,7 @@ Lustro is a Windows 11 storage manager. It scans drives, shows what uses the spa
 
 *Lustro* is Latin. It means "I purify" and also "I survey".
 
-Status: M0 to M5 are done. See section 4.
+Status: M0 to M6 are done. See section 4.
 
 ---
 
@@ -242,7 +242,7 @@ Each milestone ends with a commit and a push to `master`. Each milestone is also
 ### M6 — Dev, Docker/WSL and IDE cleaner
 
 - Project folder finder (node_modules, target, bin/obj, .venv, __pycache__, build/dist, .gradle) with the 30-day rule.
-- Global tool caches with their official clean commands.
+- Global tool caches, deleted by path (the plan first said each tool's own clean command; deleting the cache folders gives the same result and works when the tool is not on PATH).
 - Docker prune commands. WSL `ext4.vhdx` compact (admin).
 - VS Code, JetBrains and Visual Studio caches.
 - **Exit:** active projects stay unchecked. Each command runs and its output shows in the UI.

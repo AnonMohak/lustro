@@ -34,6 +34,7 @@ interface State {
   /** Goes up after each delete, so views load the changed tree again. */
   treeVersion: number;
   deleteMode: "recycle" | "permanent";
+  devAgeDays: number;
   go: (screen: Screen) => void;
   setTheme: (theme: Theme) => void;
   loadInfo: () => Promise<void>;
@@ -49,10 +50,21 @@ interface State {
   showToast: (message: string, error?: boolean) => void;
   afterDelete: (summaries: ScanSummary[]) => void;
   setDeleteMode: (m: "recycle" | "permanent") => void;
+  setDevAgeDays: (d: number) => void;
 }
 
 const THEME_KEY = "lustro.theme";
 const DELETE_KEY = "lustro.deleteMode";
+const DEV_AGE_KEY = "lustro.devAgeDays";
+
+function savedDevAge(): number {
+  try {
+    const v = Number(localStorage.getItem(DEV_AGE_KEY));
+    return v > 0 ? v : 30;
+  } catch {
+    return 30;
+  }
+}
 
 function savedDeleteMode(): "recycle" | "permanent" {
   try {
@@ -86,6 +98,7 @@ export const useStore = create<State>((set, get) => ({
   toast: null,
   treeVersion: 0,
   deleteMode: savedDeleteMode(),
+  devAgeDays: savedDevAge(),
   go: (screen) => set({ screen }),
   setTheme: (theme) => {
     try {
@@ -139,5 +152,13 @@ export const useStore = create<State>((set, get) => ({
       // Not saved; the choice still applies to this session.
     }
     set({ deleteMode });
+  },
+  setDevAgeDays: (devAgeDays) => {
+    try {
+      localStorage.setItem(DEV_AGE_KEY, String(devAgeDays));
+    } catch {
+      // Not saved; the choice still applies to this session.
+    }
+    set({ devAgeDays });
   },
 }));

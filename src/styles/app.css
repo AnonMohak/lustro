@@ -340,3 +340,13 @@ input[type="checkbox"]:disabled { cursor: not-allowed; }
 
 @media (max-width: 1240px) { .detail { display: none !important; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* cleaner item lists (project folders, disks) */
+.subs { grid-column: 2 / 4; display: flex; flex-direction: column; border: 1px solid var(--stroke); border-radius: 6px; margin-top: 6px; overflow: hidden; max-height: 360px; overflow-y: auto; }
+.sub { display: grid; grid-template-columns: 18px minmax(0, 1fr) 76px; gap: 10px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--stroke); font-size: 12px; cursor: pointer; }
+.sub:last-child { border-bottom: 0; }
+.sub:hover { background: var(--hover); }
+.sub .mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-2); }
+.sub .num { text-align: right; }
+.sub-name { display: flex; flex-direction: column; min-width: 0; }
+.sub-name .faint { font-size: 11px; }

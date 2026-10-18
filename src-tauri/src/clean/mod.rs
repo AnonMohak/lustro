@@ -1,6 +1,12 @@
 //! The junk cleaner: rules from `rules.toml`, sizes of what they match, and the clean itself.
 
+pub mod dev;
 pub mod system;
+
+use std::sync::Arc;
+
+use crate::scan::model::Tree;
+pub use dev::RuleItem;
 
 use std::collections::HashSet;
 use std::fs;
@@ -121,7 +127,7 @@ fn min_age(rule: &Rule) -> Option<Duration> {
 
 /// Adds up one folder. `DirEntry::metadata` comes from the directory listing on Windows,
 /// so it costs no extra file open (unlike `symlink_metadata`). Subfolders run in parallel.
-fn measure_dir(path: &Path, age: Option<Duration>) -> Measure {
+pub(crate) fn measure_dir(path: &Path, age: Option<Duration>) -> Measure {
     let mut m = Measure::default();
     let mut dirs = Vec::new();
     for e in fs::read_dir(path).into_iter().flatten().flatten() {
@@ -255,6 +261,111 @@ fn clean_path(path: &Path, meta: &fs::Metadata, age: Option<Duration>, out: &mut
             out.deleted_files += 1;
         }
         Err(_) => out.skipped_files += 1,
+    }
+}
+
+/// What the special rules need: the scans (for project folders) and the age setting.
+pub struct Ctx {
+    pub trees: Vec<Arc<Tree>>,
+    pub dev_age_days: u32,
+}
+
+pub struct Scanned {
+    pub measure: Measure,
+    /// Folders the user picks one by one (project folders, disks, old IDE data).
+    pub items: Vec<RuleItem>,
+    /// Why the rule cannot run now, for example "Docker does not run".
+    pub unavailable: Option<String>,
+}
+
+fn sum(items: &[RuleItem]) -> Measure {
+    Measure {
+        bytes: items.iter().map(|i| i.bytes).sum(),
+        files: items.iter().map(|i| i.files).sum(),
+    }
+}
+
+/// Measures a rule, including the special rules.
+pub fn scan_rule(rule: &Rule, ctx: &Ctx) -> Scanned {
+    let with_items = |items: Vec<RuleItem>, unavailable: Option<String>| Scanned {
+        measure: sum(&items),
+        items,
+        unavailable,
+    };
+    match rule.special.as_deref() {
+        Some("dev-projects") => with_items(
+            dev::find_projects(&ctx.trees, ctx.dev_age_days),
+            ctx.trees.is_empty().then(|| {
+                "Scan a drive or folder first. Then Lustro finds the project folders in it.".into()
+            }),
+        ),
+        Some("wsl-compact") => with_items(dev::wsl_disks(), None),
+        Some("jetbrains-old") => with_items(dev::jetbrains_old(), None),
+        Some(kind @ ("docker-images" | "docker-build" | "docker-containers")) => {
+            match dev::docker_df() {
+                Some(df) => {
+                    let bytes = match kind {
+                        "docker-images" => df.images,
+                        "docker-build" => df.build_cache,
+                        _ => df.containers,
+                    };
+                    Scanned {
+                        measure: Measure { bytes, files: 0 },
+                        items: Vec::new(),
+                        unavailable: None,
+                    }
+                }
+                None => Scanned {
+                    measure: Measure::default(),
+                    items: Vec::new(),
+                    unavailable: Some("Docker is not installed or does not run.".into()),
+                },
+            }
+        }
+        _ => Scanned {
+            measure: measure(rule),
+            items: Vec::new(),
+            unavailable: None,
+        },
+    }
+}
+
+/// Runs a rule. For rules with items, `picked` names the chosen paths; the paths are
+/// matched against a fresh scan of the rule, so the UI cannot add other paths.
+pub fn clean_rule(rule: &Rule, ctx: &Ctx, picked: Option<&[String]>) -> CleanOutcome {
+    let mut out = CleanOutcome::default();
+    match rule.special.as_deref() {
+        Some(kind @ ("dev-projects" | "wsl-compact" | "jetbrains-old")) => {
+            let scanned = scan_rule(rule, ctx);
+            let chosen: Vec<RuleItem> = scanned
+                .items
+                .into_iter()
+                .filter(|i| match picked {
+                    Some(p) => p.iter().any(|x| x.eq_ignore_ascii_case(&i.path)),
+                    None => i.selected,
+                })
+                .collect();
+            if kind == "wsl-compact" {
+                let paths: Vec<String> = chosen.iter().map(|i| i.path.clone()).collect();
+                out.freed_bytes = dev::wsl_compact(&paths);
+                return out;
+            }
+            for item in chosen {
+                let p = Path::new(&item.path);
+                if let Ok(m) = fs::symlink_metadata(p) {
+                    clean_path(p, &m, None, &mut out);
+                }
+            }
+            out
+        }
+        Some(kind @ ("docker-images" | "docker-build" | "docker-containers")) => {
+            let before = scan_rule(rule, ctx).measure.bytes;
+            if dev::docker_prune(kind) {
+                out.freed_bytes = before;
+            }
+            out
+        }
+        _ => clean(rule),
     }
 }
 

@@ -171,3 +171,122 @@ desc = "Signs you out of websites. Browsing history, passwords and bookmarks sta
 paths = ['%APPDATA%\Mozilla\Firefox\Profiles\*\cookies.sqlite', '%APPDATA%\Mozilla\Firefox\Profiles\*\formhistory.sqlite']
 warn = true
 process = ["firefox.exe"]
+
+# ---------- Dev junk ----------
+# "dev-projects" finds node_modules, target, bin/obj and similar folders in your scans.
+
+[[rule]]
+id = "dev-projects"
+group = "dev"
+name = "Build and package folders in projects"
+desc = "node_modules, Rust target, .NET bin/obj, .venv, .next, .gradle. Projects with no change for 30 days are selected."
+special = "dev-projects"
+safe = true
+
+[[rule]]
+id = "npm-cache"
+group = "dev"
+name = "npm cache"
+desc = "Packages download again when you need them."
+paths = ['%LOCALAPPDATA%\npm-cache\_cacache', '%LOCALAPPDATA%\npm-cache\_npx']
+safe = true
+
+[[rule]]
+id = "yarn-pnpm-cache"
+group = "dev"
+name = "Yarn and pnpm caches"
+desc = "Packages download again when you need them."
+paths = ['%LOCALAPPDATA%\Yarn\Cache', '%LOCALAPPDATA%\pnpm-cache', '%LOCALAPPDATA%\pnpm\store']
+safe = true
+
+[[rule]]
+id = "pip-cache"
+group = "dev"
+name = "pip cache"
+desc = "Python packages download again when you need them."
+paths = ['%LOCALAPPDATA%\pip\cache']
+safe = true
+
+[[rule]]
+id = "cargo-cache"
+group = "dev"
+name = "Cargo registry cache"
+desc = "Crates download again at the next build."
+paths = ['%USERPROFILE%\.cargo\registry\cache', '%USERPROFILE%\.cargo\registry\src', '%USERPROFILE%\.cargo\git\checkouts']
+
+[[rule]]
+id = "nuget-cache"
+group = "dev"
+name = "NuGet caches"
+desc = "Packages download again at the next restore."
+paths = ['%LOCALAPPDATA%\NuGet\v3-cache', '%LOCALAPPDATA%\NuGet\plugins-cache', '%TEMP%\NuGetScratch', '%USERPROFILE%\.nuget\packages']
+
+[[rule]]
+id = "gradle-maven-cache"
+group = "dev"
+name = "Gradle and Maven caches"
+desc = "Dependencies download again at the next build."
+paths = ['%USERPROFILE%\.gradle\caches', '%USERPROFILE%\.m2\repository']
+
+# ---------- Docker and WSL ----------
+
+[[rule]]
+id = "docker-images"
+group = "docker"
+name = "Docker images that no container uses"
+desc = "Runs docker image prune -a. Images download again when you need them."
+special = "docker-images"
+safe = true
+
+[[rule]]
+id = "docker-build"
+group = "docker"
+name = "Docker build cache"
+desc = "Runs docker builder prune. Builds run slower one time."
+special = "docker-build"
+safe = true
+
+[[rule]]
+id = "docker-containers"
+group = "docker"
+name = "Stopped Docker containers"
+desc = "Runs docker container prune. The data inside these containers is lost."
+special = "docker-containers"
+warn = true
+
+[[rule]]
+id = "wsl-compact"
+group = "docker"
+name = "Compact WSL and Docker disks"
+desc = "Shrinks the virtual disks to the space that they use. Lustro shuts down WSL first. The size shows the disk files; the space freed is often less."
+special = "wsl-compact"
+admin = true
+warn = true
+
+# ---------- IDE caches ----------
+
+[[rule]]
+id = "vscode-cache"
+group = "ide"
+name = "VS Code cache"
+desc = "Caches, logs and downloaded extension packages. VS Code makes them again."
+paths = ['%APPDATA%\Code\Cache', '%APPDATA%\Code\CachedData', '%APPDATA%\Code\CachedExtensionVSIXs', '%APPDATA%\Code\Code Cache', '%APPDATA%\Code\GPUCache', '%APPDATA%\Code\logs', '%APPDATA%\Code - Insiders\Cache', '%APPDATA%\Code - Insiders\CachedData']
+safe = true
+process = ["code.exe", "code - insiders.exe"]
+
+[[rule]]
+id = "jetbrains-old"
+group = "ide"
+name = "JetBrains data of old versions"
+desc = "Caches and logs of IDE versions that a newer version replaced."
+special = "jetbrains-old"
+safe = true
+
+[[rule]]
+id = "visualstudio-cache"
+group = "ide"
+name = "Visual Studio component cache"
+desc = "Visual Studio builds it again at the next start."
+paths = ['%LOCALAPPDATA%\Microsoft\VisualStudio\*\ComponentModelCache']
+safe = true
+process = ["devenv.exe"]
