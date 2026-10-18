@@ -4,6 +4,7 @@ mod clean_cmds;
 mod commands;
 mod dupes;
 mod error;
+mod live;
 mod ops;
 mod scan;
 mod state;
@@ -28,6 +29,7 @@ pub fn run() {
             commands::node_detail,
             commands::treemap,
             commands::find_files,
+            commands::search,
             commands::reveal_path,
             commands::take_startup_scan,
             commands::delete_items,

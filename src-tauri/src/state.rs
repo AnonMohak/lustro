@@ -22,6 +22,8 @@ pub struct AppState {
     pub dupes: Mutex<Option<Vec<crate::dupes::DupeGroup>>>,
     /// The last list of installed apps (uninstall picks from it).
     pub apps: Mutex<Vec<crate::apps::App>>,
+    /// Live update watchers: root → generation. A new watcher bumps it; old ones stop.
+    pub watch_gen: Mutex<HashMap<String, u64>>,
 }
 
 impl AppState {

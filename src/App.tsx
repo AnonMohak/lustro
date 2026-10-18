@@ -17,12 +17,12 @@ import { Dupes } from "./screens/Dupes";
 import { Explore } from "./screens/Explore";
 import { Files } from "./screens/Files";
 import { History } from "./screens/History";
+import { Search } from "./screens/Search";
 import { Home } from "./screens/Home";
 import { Settings } from "./screens/Settings";
 import { useStore, type Screen } from "./store";
 
 const LATER: Partial<Record<Screen, [string, IconName]>> = {
-  search: ["M8", "search"],
 };
 
 function useScanEvents() {
@@ -40,6 +40,12 @@ function useScanEvents() {
             elapsed: formatDuration(e.payload.elapsedMs),
           }),
         );
+      }),
+      // Live updates: the change journal changed a fast-scan tree.
+      listen<ScanSummary>("tree-changed", (e) => st().afterDelete([e.payload])),
+      listen<{ root: string }>("tree-stale", (e) => {
+        st().showToast(t("live.stale", { root: rootLabel(e.payload.root) }));
+        st().startScan(e.payload.root);
       }),
       listen<ScanErrorEvent>("scan-error", (e) => {
         st().onScanEnded();
@@ -108,6 +114,7 @@ export default function App() {
             {screen === "home" && <Home />}
             {screen === "settings" && <Settings />}
             {screen === "history" && <History />}
+            {screen === "search" && <Search />}
             {later && <ComingSoon screen={t(`nav.${screen}`)} milestone={later[0]} icon={later[1]} />}
           </main>
         )}

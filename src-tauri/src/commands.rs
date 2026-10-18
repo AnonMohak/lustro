@@ -74,9 +74,11 @@ pub struct ScanSummary {
     elapsed_ms: u64,
     denied: u32,
     breakdown: [u64; KIND_COUNT],
+    /// True when the change journal can keep this scan current (fast scans).
+    live: bool,
 }
 
-fn summary(t: &Tree) -> ScanSummary {
+pub fn summary(t: &Tree) -> ScanSummary {
     ScanSummary {
         root: t.root_path.clone(),
         files: t.file_count(),
@@ -87,6 +89,7 @@ fn summary(t: &Tree) -> ScanSummary {
         elapsed_ms: t.elapsed_ms,
         denied: t.denied,
         breakdown: t.breakdown(Tree::ROOT),
+        live: t.usn.is_some(),
     }
 }
 
@@ -175,6 +178,7 @@ pub fn start_scan(app: AppHandle, state: State<'_, AppState>, root: String) -> R
                     trees.insert(root.clone(), tree.clone());
                 }
                 let _ = app.emit("scan-done", s);
+                crate::live::watch(&app, &root);
                 if let Some(dir) = cache_dir(&app)
                     && let Err(e) = cache::save(&tree, &dir)
                 {
@@ -238,6 +242,10 @@ pub async fn load_cached_scans(app: AppHandle) -> Vec<ScanSummary> {
             out.push(summary(&t));
             trees.insert(t.root_path.clone(), Arc::new(t));
         }
+    }
+    // Replay what changed since the last session, then keep the scans current.
+    for s in &out {
+        crate::live::watch(&app, &s.root);
     }
     out
 }
@@ -479,6 +487,108 @@ pub async fn find_files(app: AppHandle, query: FindFilesQuery) -> Result<Vec<Fil
         }
         hits.truncate(limit);
         hits
+    })
+    .await
+    .map_err(|e| Error::Io(std::io::Error::other(e.to_string())))
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchArgs {
+    text: String,
+    kinds: Option<Vec<String>>,
+    min_size: Option<u64>,
+    folders: Option<bool>,
+    roots: Option<Vec<String>>,
+    limit: Option<usize>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchHit {
+    root: String,
+    id: u32,
+    name: String,
+    path: String,
+    folder: String,
+    size: u64,
+    modified: i64,
+    kind: Kind,
+    is_dir: bool,
+    protected: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchResult {
+    hits: Vec<SearchHit>,
+    /// Matches before the limit.
+    total: usize,
+    /// Names searched.
+    searched: usize,
+    elapsed_ms: u64,
+}
+
+/// Searches file and folder names in all scans (or the given roots).
+#[tauri::command]
+pub async fn search(app: AppHandle, args: SearchArgs) -> Result<SearchResult> {
+    let trees: Vec<Arc<Tree>> = {
+        let state = app.state::<AppState>();
+        let all = state.trees.read().map_err(|_| Error::NoScan)?;
+        match &args.roots {
+            Some(roots) => roots
+                .iter()
+                .filter_map(|r| all.get(&normalize_root(r)).cloned())
+                .collect(),
+            None => all.values().cloned().collect(),
+        }
+    };
+    tauri::async_runtime::spawn_blocking(move || {
+        let started = std::time::Instant::now();
+        let limit = args.limit.unwrap_or(500).min(5000);
+        let q = query::SearchQuery {
+            text: args.text,
+            kinds: args
+                .kinds
+                .iter()
+                .flatten()
+                .filter_map(|k| kind_from_str(k))
+                .collect(),
+            min_size: args.min_size.unwrap_or(0),
+            folders: args.folders.unwrap_or(true),
+            limit,
+        };
+        let mut hits = Vec::new();
+        let (mut total, mut searched) = (0, 0);
+        for t in &trees {
+            let (ids, n) = query::search(t, &q);
+            total += n;
+            searched += t.nodes.len();
+            for id in ids {
+                let node = t.node(id);
+                let path = t.path(id);
+                hits.push(SearchHit {
+                    root: t.root_path.clone(),
+                    id,
+                    name: t.name(id).to_string(),
+                    folder: t.path(node.parent),
+                    size: node.size,
+                    modified: filetime_to_unix_ms(node.modified),
+                    kind: Kind::from_u8(node.kind),
+                    is_dir: node.is_dir(),
+                    protected: protect::is_protected(&path),
+                    path,
+                });
+            }
+        }
+        hits.sort_by_key(|h| std::cmp::Reverse(h.size));
+        hits.truncate(limit);
+        SearchResult {
+            hits,
+            total,
+            searched,
+            elapsed_ms: started.elapsed().as_millis() as u64,
+        }
     })
     .await
     .map_err(|e| Error::Io(std::io::Error::other(e.to_string())))

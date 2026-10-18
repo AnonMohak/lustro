@@ -4,7 +4,7 @@ Lustro is a Windows 11 storage manager. It scans drives, shows what uses the spa
 
 *Lustro* is Latin. It means "I purify" and also "I survey".
 
-Status: M0 to M7 are done. See section 4.
+Status: M0 to M8 are done. See section 4.
 
 ---
 

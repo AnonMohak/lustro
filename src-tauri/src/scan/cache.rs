@@ -7,7 +7,8 @@ use std::path::{Path, PathBuf};
 use super::model::{Node, ScanMethod, Tree};
 
 const MAGIC: &[u8; 8] = b"LUSTRO\0\x01";
-const VERSION: u32 = 1;
+/// Version 2 adds the USN journal position and the MFT record map.
+const VERSION: u32 = 2;
 
 /// Cache file name for a scan root: `C.bin` for `C:\`, a hash for a folder.
 pub fn file_name(root: &str) -> String {
@@ -40,6 +41,11 @@ pub fn save(tree: &Tree, dir: &Path) -> std::io::Result<PathBuf> {
         w.write_all(bytemuck::cast_slice(&tree.nodes))?;
         w.write_all(&(tree.names.len() as u64).to_le_bytes())?;
         w.write_all(tree.names.as_bytes())?;
+        let (journal, next) = tree.usn.unwrap_or((0, -1));
+        w.write_all(&journal.to_le_bytes())?;
+        w.write_all(&next.to_le_bytes())?;
+        w.write_all(&(tree.frn.len() as u64).to_le_bytes())?;
+        w.write_all(bytemuck::cast_slice(&tree.frn))?;
         w.flush()?;
     }
     fs::rename(&tmp, &path)?;
@@ -97,6 +103,17 @@ pub fn load(path: &Path) -> std::io::Result<Tree> {
     let names_len = u64_of(&mut b)? as usize;
     let names =
         String::from_utf8(take(&mut b, names_len)?.to_vec()).map_err(|_| bad("bad names"))?;
+    let journal = u64_of(&mut b)?;
+    let next = u64_of(&mut b)? as i64;
+    let usn = (next >= 0).then_some((journal, next));
+    let frn_len = u64_of(&mut b)? as usize;
+    let frn_bytes = take(
+        &mut b,
+        frn_len
+            .checked_mul(4)
+            .ok_or_else(|| bad("too many records"))?,
+    )?;
+    let frn: Vec<u32> = bytemuck::pod_collect_to_vec(frn_bytes);
     // Every link and name range must stay in bounds, so a damaged file cannot cause a panic later.
     let n = nodes.len() as u32;
     let valid = |v: u32| v == super::model::NONE || v < n;
@@ -108,7 +125,8 @@ pub fn load(path: &Path) -> std::io::Result<Tree> {
                 && (x.name_off as usize + x.name_len as usize) <= names.len()
                 && names.is_char_boundary(x.name_off as usize)
                 && names.is_char_boundary(x.name_off as usize + x.name_len as usize)
-        });
+        })
+        && frn.iter().all(|&v| valid(v));
     if !ok {
         return Err(bad("damaged cache file"));
     }
@@ -120,6 +138,8 @@ pub fn load(path: &Path) -> std::io::Result<Tree> {
         scanned_at,
         elapsed_ms,
         denied,
+        frn,
+        usn,
     })
 }
 
@@ -131,7 +151,9 @@ mod tests {
     #[test]
     fn round_trip() {
         let dir = std::env::temp_dir().join(format!("lustro-cache-{}", std::process::id()));
-        let tree = sample();
+        let mut tree = sample();
+        tree.usn = Some((7, 99));
+        tree.frn = vec![crate::scan::model::NONE, 0, 1];
         let path = save(&tree, &dir).unwrap();
         assert!(path.ends_with("C.bin"));
         let back = load(&path).unwrap();
@@ -140,6 +162,8 @@ mod tests {
         assert_eq!(back.nodes.len(), tree.nodes.len());
         let first = back.children(0).next().unwrap();
         assert_eq!(back.name(first), "Users");
+        assert_eq!(back.usn, Some((7, 99)));
+        assert_eq!(back.frn, tree.frn);
         fs::remove_dir_all(dir).unwrap();
     }
 

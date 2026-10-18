@@ -31,6 +31,8 @@ export interface ScanSummary {
   denied: number;
   /** Bytes for each kind, indexed like KINDS. */
   breakdown: number[];
+  /** True when the change journal can keep this scan current (fast scans, admin). */
+  live: boolean;
 }
 
 export interface ScanProgress {
@@ -204,6 +206,34 @@ export interface InstalledApp {
   location: string;
 }
 
+export interface SearchHit {
+  root: string;
+  id: number;
+  name: string;
+  path: string;
+  folder: string;
+  size: number;
+  modified: number;
+  kind: Kind;
+  isDir: boolean;
+  protected: boolean;
+}
+
+export interface SearchResult {
+  hits: SearchHit[];
+  total: number;
+  searched: number;
+  elapsedMs: number;
+}
+
+export interface SearchArgs {
+  text: string;
+  kinds?: Kind[];
+  minSize?: number;
+  folders?: boolean;
+  limit?: number;
+}
+
 export const ROOT_ID = 0;
 
 export const api = {
@@ -218,6 +248,7 @@ export const api = {
   nodeDetail: (root: string, id: number) => invoke<NodeDetail>("node_detail", { root, id }),
   treemap: (root: string, id: number, maxNodes?: number) => invoke<TreemapNode>("treemap", { root, id, maxNodes }),
   findFiles: (query: FindFilesQuery) => invoke<FileHit[]>("find_files", { query }),
+  search: (args: SearchArgs) => invoke<SearchResult>("search", { args }),
   revealPath: (path: string) => invoke<void>("reveal_path", { path }),
   takeStartupScan: () => invoke<string | null>("take_startup_scan"),
   deleteItems: (items: DeleteTarget[], permanent: boolean) =>

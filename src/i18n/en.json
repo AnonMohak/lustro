@@ -339,5 +339,25 @@
     "version": "Version",
     "location": "Folder",
     "none": "No apps match your search."
+  },
+  "search": {
+    "title": "Search files",
+    "hint": "Searches the last scan of every drive and folder. Use * and ? as wildcards, for example *.iso.",
+    "placeholder": "File name, for example *.iso",
+    "folders": "Include folders",
+    "anySize": "Any size",
+    "anyType": "All types",
+    "info": "{{shown}} of {{total}} results · {{searched}} names searched in {{ms}} ms",
+    "noScans": "Scan a drive or folder first. Then you can search it here.",
+    "none": "No files match “{{q}}”.",
+    "start": "Type a name to search.",
+    "name": "Name",
+    "size": "Size",
+    "modified": "Modified"
+  },
+  "live": {
+    "on": "Live updates on",
+    "off": "Live updates need admin",
+    "stale": "The change journal of {{root}} was reset. Lustro scans it again."
   }
 }

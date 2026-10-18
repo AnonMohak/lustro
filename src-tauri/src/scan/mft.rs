@@ -323,6 +323,8 @@ struct Rec {
 pub fn scan_volume(letter: char, progress: &Progress) -> Result<Tree, ScanError> {
     let started = Instant::now();
     let vol = open_volume(letter)?;
+    // The journal position before the read: live updates replay what changed during the scan.
+    let usn = super::usn::query(&vol.file);
     let extents = mft_extents(&vol)?;
     let total_records = (vol.mft_valid / vol.record_size as u64) as usize;
 
@@ -453,12 +455,15 @@ pub fn scan_volume(letter: char, progress: &Progress) -> Result<Tree, ScanError>
     }
     drop(recs);
     drop(names);
-    Ok(b.finish(
+    let mut tree = b.finish(
         format!("{letter}:\\"),
         ScanMethod::Mft,
         started.elapsed().as_millis() as u64,
         0,
-    ))
+    );
+    tree.frn = node_of;
+    tree.usn = usn;
+    Ok(tree)
 }
 
 #[cfg(test)]

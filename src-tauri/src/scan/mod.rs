@@ -3,6 +3,7 @@ pub mod kind;
 pub mod mft;
 pub mod model;
 pub mod query;
+pub mod usn;
 pub mod walk;
 
 use std::sync::Mutex;

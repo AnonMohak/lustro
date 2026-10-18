@@ -66,10 +66,119 @@ pub struct Tree {
     pub elapsed_ms: u64,
     /// Number of folders that Windows refused to list.
     pub denied: u32,
+    /// MFT record number → node id (fast scans only; empty for the walk).
+    pub frn: Vec<u32>,
+    /// USN journal id and the next USN to read (fast scans only).
+    pub usn: Option<(u64, i64)>,
 }
 
 impl Tree {
     pub const ROOT: u32 = 0;
+
+    /// Adds a new file or folder under `parent` and adds its totals to every ancestor.
+    pub fn add_child(
+        &mut self,
+        parent: u32,
+        name: &str,
+        node_flags: u8,
+        size: u64,
+        alloc: u64,
+        modified: u64,
+    ) -> u32 {
+        let id = self.nodes.len() as u32;
+        let name_off = self.names.len() as u32;
+        let name = &name[..name.len().min(u16::MAX as usize)];
+        self.names.push_str(name);
+        let is_dir = node_flags & flags::DIR != 0;
+        let kind = if is_dir {
+            Kind::Other
+        } else {
+            kind_of_name(name)
+        };
+        self.nodes.push(Node {
+            size,
+            alloc,
+            modified,
+            parent: NONE,
+            first_child: NONE,
+            next_sibling: NONE,
+            name_off,
+            items: if is_dir { 0 } else { 1 },
+            name_len: name.len() as u16,
+            flags: node_flags,
+            kind: kind as u8,
+        });
+        self.attach(id, parent);
+        id
+    }
+
+    /// Links a detached node under `parent` and adds its totals up the tree.
+    fn attach(&mut self, id: u32, parent: u32) {
+        let n = self.nodes[id as usize];
+        self.nodes[id as usize].parent = parent;
+        self.nodes[id as usize].next_sibling = self.nodes[parent as usize].first_child;
+        self.nodes[parent as usize].first_child = id;
+        let mut cur = parent;
+        while cur != NONE {
+            let a = &mut self.nodes[cur as usize];
+            a.size += n.size;
+            a.alloc += n.alloc;
+            a.items += n.items;
+            cur = a.parent;
+        }
+    }
+
+    /// Moves a node to a new parent and/or gives it a new name.
+    pub fn move_node(&mut self, id: u32, new_parent: u32, new_name: &str) -> bool {
+        if id == Self::ROOT || new_parent as usize >= self.nodes.len() {
+            return false;
+        }
+        // Never move a folder into itself or below itself.
+        let mut cur = new_parent;
+        while cur != NONE {
+            if cur == id {
+                return false;
+            }
+            cur = self.nodes[cur as usize].parent;
+        }
+        if self.name(id) != new_name {
+            let off = self.names.len() as u32;
+            let name = &new_name[..new_name.len().min(u16::MAX as usize)];
+            self.names.push_str(name);
+            let n = &mut self.nodes[id as usize];
+            n.name_off = off;
+            n.name_len = name.len() as u16;
+            if !n.is_dir() {
+                n.kind = kind_of_name(name) as u8;
+            }
+        }
+        if self.nodes[id as usize].parent != new_parent {
+            if self.nodes[id as usize].parent != NONE {
+                self.remove(id);
+            }
+            self.attach(id, new_parent);
+        }
+        true
+    }
+
+    /// Sets the size of a file and adjusts every ancestor by the difference.
+    pub fn set_file_size(&mut self, id: u32, size: u64, alloc: u64, modified: u64) {
+        let old = self.nodes[id as usize];
+        if old.is_dir() {
+            return;
+        }
+        let n = &mut self.nodes[id as usize];
+        n.size = size;
+        n.alloc = alloc;
+        n.modified = modified;
+        let mut cur = old.parent;
+        while cur != NONE {
+            let a = &mut self.nodes[cur as usize];
+            a.size = (a.size + size).saturating_sub(old.size);
+            a.alloc = (a.alloc + alloc).saturating_sub(old.alloc);
+            cur = a.parent;
+        }
+    }
 
     pub fn node(&self, id: u32) -> &Node {
         &self.nodes[id as usize]
@@ -385,6 +494,8 @@ impl TreeBuilder {
             scanned_at,
             elapsed_ms,
             denied,
+            frn: Vec::new(),
+            usn: None,
         }
     }
 }
@@ -441,6 +552,32 @@ pub(crate) mod tests {
         let a = t.children(me).next().unwrap();
         assert_eq!(t.path(0), "C:\\");
         assert_eq!(t.path(a), "C:\\Users\\me\\a.mp4");
+    }
+
+    #[test]
+    fn add_move_and_resize_keep_totals() {
+        let mut t = sample();
+        let users = t.find_path("C:\\Users").unwrap();
+        let me = t.find_path("C:\\Users\\me").unwrap();
+        let win = t.find_path("C:\\Windows").unwrap();
+        let f = t.add_child(me, "new.iso", 0, 1000, 4096, 1);
+        assert_eq!(t.total_size(), 1200);
+        assert_eq!(t.node(users).size, 1110);
+        assert_eq!(t.file_count(), 5);
+        assert_eq!(t.path(f), "C:\\Users\\me\\new.iso");
+
+        assert!(t.move_node(f, win, "renamed.iso"));
+        assert_eq!(t.node(users).size, 110);
+        assert_eq!(t.node(win).size, 1050);
+        assert_eq!(t.total_size(), 1200);
+        assert_eq!(t.path(f), "C:\\Windows\\renamed.iso");
+
+        t.set_file_size(f, 10, 4096, 2);
+        assert_eq!(t.node(win).size, 60);
+        assert_eq!(t.total_size(), 210);
+
+        // A folder cannot move below itself.
+        assert!(!t.move_node(users, me, "x"));
     }
 
     #[test]

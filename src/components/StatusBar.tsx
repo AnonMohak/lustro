@@ -7,6 +7,7 @@ export function StatusBar() {
   const info = useStore((s) => s.info);
   const drives = useStore((s) => s.drives);
   const free = drives?.reduce((a, d) => a + d.freeBytes, 0) ?? 0;
+  const anyLive = useStore((s) => Object.values(s.scans).some((x) => x.live));
 
   return (
     <footer className="status">
@@ -16,6 +17,12 @@ export function StatusBar() {
         <>
           <span className="sep">·</span>
           <span className="num">{t("status.drives", { count: drives.length, free: formatBytes(free) })}</span>
+        </>
+      )}
+      {anyLive && (
+        <>
+          <span className="sep">·</span>
+          <span>{info?.isAdmin ? t("live.on") : t("live.off")}</span>
         </>
       )}
       <span className="grow" />
