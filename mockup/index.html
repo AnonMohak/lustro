@@ -1,0 +1,1138 @@
+<title>Lustro Mockup</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a Windows 11 glass window on a wallpaper. Sidebar | list | main | detail, status bar below (after the reference). */
+:root {
+  --wall-1: #c3d3dd; --wall-2: #e6d7c3; --wall-3: #8fb3c2; --wall-4: #eef0ee;
+  --win: rgba(243, 244, 247, .80);
+  --pane: rgba(255, 255, 255, .42);
+  --card: rgba(255, 255, 255, .74);
+  --ctl: rgba(255, 255, 255, .82);
+  --ctl-hover: rgba(250, 250, 252, .96);
+  --hover: rgba(20, 24, 40, .05);
+  --active: rgba(20, 24, 40, .085);
+  --stroke: rgba(20, 24, 40, .09);
+  --stroke-2: rgba(20, 24, 40, .17);
+  --fg: #191b20; --fg-2: #555b66; --fg-3: #858b96;
+  --accent: #3d57d6; --accent-hover: #3248b8; --accent-fg: #ffffff; --accent-soft: rgba(61, 87, 214, .12);
+  --good: #13803f; --good-soft: rgba(19, 128, 63, .12);
+  --warn: #9a5400; --warn-soft: rgba(196, 120, 0, .14);
+  --bad: #c42b1c; --bad-soft: rgba(196, 43, 28, .10);
+  --c-video: #e46a8a; --c-image: #eeaa45; --c-doc: #5b95ea; --c-app: #9a7bec; --c-game: #43b98f;
+  --c-archive: #cf9561; --c-system: #8b94a3; --c-dev: #3cbccf; --c-other: #b4b9c2;
+  --tile-fg: rgba(12, 14, 20, .88);
+  --shadow: 0 30px 80px rgba(20, 30, 50, .28), 0 0 0 1px rgba(20, 24, 40, .10);
+  --overlay: rgba(10, 12, 18, .30);
+  --f-ui: "Segoe UI Variable Text", "Segoe UI", "Open Sans", system-ui, sans-serif;
+  --f-display: "Segoe UI Variable Display", "Segoe UI", "Open Sans", system-ui, sans-serif;
+  --f-mono: "Cascadia Mono", "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --wall-1: #0d1a17; --wall-2: #1d302b; --wall-3: #2b4750; --wall-4: #111618;
+    --win: rgba(30, 32, 36, .76); --pane: rgba(255, 255, 255, .025); --card: rgba(255, 255, 255, .045);
+    --ctl: rgba(255, 255, 255, .06); --ctl-hover: rgba(255, 255, 255, .095);
+    --hover: rgba(255, 255, 255, .05); --active: rgba(255, 255, 255, .085);
+    --stroke: rgba(255, 255, 255, .075); --stroke-2: rgba(255, 255, 255, .15);
+    --fg: #ebedf0; --fg-2: #a5aab3; --fg-3: #767c87;
+    --accent: #91a4ff; --accent-hover: #a9b8ff; --accent-fg: #0d1124; --accent-soft: rgba(145, 164, 255, .15);
+    --good: #5fd38d; --good-soft: rgba(95, 211, 141, .13);
+    --warn: #f0b35a; --warn-soft: rgba(240, 179, 90, .13);
+    --bad: #ff8a7a; --bad-soft: rgba(255, 138, 122, .12);
+    --c-video: #ec7c98; --c-image: #f2b65a; --c-doc: #6ea3f0; --c-app: #a88cf2; --c-game: #52c79c;
+    --c-archive: #d8a272; --c-system: #98a1af; --c-dev: #4fc8da; --c-other: #8f95a0;
+    --shadow: 0 30px 90px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .08);
+    --overlay: rgba(0, 0, 0, .5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --wall-1: #0d1a17; --wall-2: #1d302b; --wall-3: #2b4750; --wall-4: #111618;
+  --win: rgba(30, 32, 36, .76); --pane: rgba(255, 255, 255, .025); --card: rgba(255, 255, 255, .045);
+  --ctl: rgba(255, 255, 255, .06); --ctl-hover: rgba(255, 255, 255, .095);
+  --hover: rgba(255, 255, 255, .05); --active: rgba(255, 255, 255, .085);
+  --stroke: rgba(255, 255, 255, .075); --stroke-2: rgba(255, 255, 255, .15);
+  --fg: #ebedf0; --fg-2: #a5aab3; --fg-3: #767c87;
+  --accent: #91a4ff; --accent-hover: #a9b8ff; --accent-fg: #0d1124; --accent-soft: rgba(145, 164, 255, .15);
+  --good: #5fd38d; --good-soft: rgba(95, 211, 141, .13);
+  --warn: #f0b35a; --warn-soft: rgba(240, 179, 90, .13);
+  --bad: #ff8a7a; --bad-soft: rgba(255, 138, 122, .12);
+  --c-video: #ec7c98; --c-image: #f2b65a; --c-doc: #6ea3f0; --c-app: #a88cf2; --c-game: #52c79c;
+  --c-archive: #d8a272; --c-system: #98a1af; --c-dev: #4fc8da; --c-other: #8f95a0;
+  --shadow: 0 30px 90px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .08);
+  --overlay: rgba(0, 0, 0, .5);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  display: flex; flex-direction: column; gap: 12px;
+  padding-block: 14px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  font: 13px/1.45 var(--f-ui); color: var(--fg);
+  background:
+    radial-gradient(55% 70% at 12% 18%, var(--wall-3), transparent 70%),
+    radial-gradient(50% 60% at 88% 85%, var(--wall-2), transparent 72%),
+    radial-gradient(40% 45% at 72% 8%, var(--wall-1), transparent 70%),
+    var(--wall-4);
+  background-attachment: fixed;
+}
+button { font: inherit; color: inherit; }
+.mono { font-family: var(--f-mono); font-size: 11.5px; }
+.num { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
+
+/* icons */
+.i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+/* mockup bar (outside the app) */
+.mockbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; max-width: 1480px; width: 100%; margin-inline: auto; color: var(--fg-2); font-size: 12.5px; }
+.mockbar b { color: var(--fg); font-family: var(--f-display); font-size: 14px; letter-spacing: .01em; }
+.mockbar .grow { flex: 1; }
+
+/* segmented control */
+.seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: 7px; background: var(--hover); border: 1px solid var(--stroke); }
+.seg button { border: 0; background: none; padding: 3px 11px; border-radius: 5px; cursor: pointer; color: var(--fg-2); font-size: 12.5px; }
+.seg button:hover { color: var(--fg); }
+.seg button.on { background: var(--ctl-hover); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.12), 0 0 0 1px var(--stroke); }
+
+/* window */
+.window {
+  flex: 1; min-height: 620px; width: 100%; max-width: 1480px; margin-inline: auto;
+  display: grid; grid-template-rows: 40px minmax(0, 1fr) 30px;
+  border-radius: 10px; overflow: hidden;
+  background: var(--win);
+  -webkit-backdrop-filter: blur(48px) saturate(1.5); backdrop-filter: blur(48px) saturate(1.5);
+  box-shadow: var(--shadow);
+}
+.titlebar { display: flex; align-items: center; gap: 10px; padding-left: 14px; user-select: none; }
+.logo { width: 18px; height: 18px; flex: none; }
+.appname { font-family: var(--f-display); font-weight: 600; font-size: 13px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: 11px; font-size: 11.5px; border: 1px solid var(--stroke); background: var(--hover); color: var(--fg-2); cursor: pointer; }
+.chip .i { width: 13px; height: 13px; }
+.chip:hover { color: var(--fg); background: var(--active); }
+.chip.admin { background: var(--good-soft); color: var(--good); border-color: transparent; cursor: default; }
+.titlebar .grow { flex: 1; }
+.caps { display: flex; align-self: stretch; }
+.caps button { width: 46px; border: 0; background: none; display: grid; place-items: center; cursor: default; color: var(--fg-2); }
+.caps button:hover { background: var(--hover); color: var(--fg); }
+.caps button.x:hover { background: #c42b1c; color: #fff; }
+.caps .i { width: 14px; height: 14px; stroke-width: 1.2; }
+
+.wbody { display: flex; min-height: 0; border-top: 1px solid var(--stroke); }
+.sidebar { width: 232px; flex: none; display: flex; flex-direction: column; gap: 1px; padding: 8px; overflow-y: auto; }
+.list { width: 300px; flex: none; display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--stroke); background: var(--pane); }
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; overflow: auto; border-left: 1px solid var(--stroke); background: var(--pane); }
+.detail { width: 300px; flex: none; overflow-y: auto; border-left: 1px solid var(--stroke); background: var(--pane); }
+.status { display: flex; align-items: center; gap: 14px; padding: 0 12px; border-top: 1px solid var(--stroke); color: var(--fg-2); font-size: 12px; white-space: nowrap; overflow: hidden; }
+.status .grow { flex: 1; }
+.status .sep { color: var(--fg-3); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--fg-3); flex: none; }
+.dot.live { background: var(--good); box-shadow: 0 0 0 3px var(--good-soft); }
+
+/* sidebar */
+.sbtn { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border: 0; background: none; border-radius: 6px; cursor: pointer; text-align: left; color: var(--fg); position: relative; width: 100%; }
+.sbtn:hover { background: var(--hover); }
+.sbtn.on { background: var(--active); }
+.sbtn.on::before { content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 2px; background: var(--accent); }
+.sbtn .i { color: var(--fg-2); }
+.sbtn.on .i { color: var(--accent); }
+.sbtn .lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sbtn .badge { font-size: 11px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
+.searchbtn { border: 1px solid var(--stroke); background: var(--ctl); margin-bottom: 8px; color: var(--fg-2); }
+.kbd { font-size: 11px; color: var(--fg-3); }
+.side-sec { display: flex; justify-content: space-between; align-items: center; padding: 14px 10px 6px; font-size: 11.5px; color: var(--fg-3); letter-spacing: .02em; }
+.drv { height: auto; padding-block: 7px; align-items: flex-start; }
+.drv .i { margin-top: 2px; }
+.drive-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.drive-meta .top { display: flex; justify-content: space-between; gap: 6px; }
+.drive-meta .free { font-size: 11px; color: var(--fg-3); white-space: nowrap; }
+.minibar { height: 3px; border-radius: 2px; background: var(--active); overflow: hidden; }
+.minibar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+.minibar i.warn { background: var(--warn); }
+.sidebar .grow { flex: 1; min-height: 12px; }
+.ver { font-size: 11px; color: var(--fg-3); }
+
+/* shared bits */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--stroke); background: var(--ctl); cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--ctl-hover); }
+.btn.accent { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
+.btn.accent:hover { background: var(--accent-hover); }
+.btn.danger { color: var(--bad); }
+.btn.ghost { background: none; border-color: transparent; }
+.btn.ghost:hover { background: var(--hover); }
+.btn.sm { height: 28px; padding: 0 10px; font-size: 12.5px; }
+.btn.block { width: 100%; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; background: var(--hover); color: var(--fg-2); }
+.pill .i { width: 12px; height: 12px; }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); }
+.pill.good { background: var(--good-soft); color: var(--good); }
+.pill.acc { background: var(--accent-soft); color: var(--accent); }
+.page { padding: 22px 26px 30px; display: flex; flex-direction: column; gap: 18px; max-width: 1100px; width: 100%; }
+.phead { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.phead h2 { margin: 0; font: 600 22px/1.2 var(--f-display); text-wrap: balance; }
+.phead p { margin: 4px 0 0; color: var(--fg-2); }
+.sec { margin: 6px 0 0; font: 600 14px/1.3 var(--f-display); }
+.card { background: var(--card); border: 1px solid var(--stroke); border-radius: 8px; }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.muted { color: var(--fg-2); }
+.faint { color: var(--fg-3); }
+.infobar { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; background: var(--accent-soft); border: 1px solid var(--stroke); flex-wrap: wrap; }
+.infobar > div { flex: 1; min-width: 220px; }
+.infobar .ib-ic { color: var(--accent); display: grid; }
+.note { display: flex; gap: 8px; align-items: flex-start; padding: 9px 10px; border-radius: 6px; background: var(--hover); color: var(--fg-2); font-size: 12px; }
+.note .i { margin-top: 1px; }
+.note.lock { background: var(--bad-soft); color: var(--bad); }
+.note.warn { background: var(--warn-soft); color: var(--warn); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.fchip { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 14px; border: 1px solid var(--stroke); background: var(--ctl); font-size: 12.5px; cursor: pointer; }
+.fchip.on { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.fchip .i { width: 13px; height: 13px; }
+input[type="checkbox"] { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; cursor: pointer; }
+input[type="checkbox"]:disabled { cursor: not-allowed; }
+.text { height: 32px; border-radius: 6px; border: 1px solid var(--stroke); border-bottom-color: var(--stroke-2); background: var(--ctl); padding: 0 10px; font: inherit; color: var(--fg); min-width: 0; }
+.text:focus { outline: none; border-bottom: 2px solid var(--accent); }
+
+/* tables */
+.tbl { overflow-x: auto; border: 1px solid var(--stroke); border-radius: 8px; background: var(--card); }
+table { width: 100%; border-collapse: collapse; min-width: 640px; }
+th { text-align: left; font-weight: 600; font-size: 12px; color: var(--fg-2); padding: 9px 12px; border-bottom: 1px solid var(--stroke); white-space: nowrap; }
+td { padding: 8px 12px; border-bottom: 1px solid var(--stroke); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+tbody tr { cursor: default; }
+tbody tr:hover td { background: var(--hover); }
+tbody tr.sel td { background: var(--accent-soft); }
+td.r, th.r { text-align: right; }
+.fname { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.fname .nm { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fname .pt { color: var(--fg-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fname > div { min-width: 0; display: flex; flex-direction: column; }
+.ftype { width: 26px; height: 26px; border-radius: 6px; display: grid; place-items: center; flex: none; background: color-mix(in srgb, var(--c) 20%, transparent); color: var(--c); }
+.ftype .i { width: 15px; height: 15px; }
+.actbar { position: sticky; bottom: 0; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; background: var(--win); border: 1px solid var(--stroke); box-shadow: 0 8px 24px rgba(0,0,0,.12); flex-wrap: wrap; -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); }
+.actbar .grow { flex: 1; }
+
+/* list pane */
+.lhead { padding: 12px 12px 8px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--stroke); }
+.lhead .ttl { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.lhead h3 { margin: 0; font: 600 14px/1.3 var(--f-display); }
+.lscroll { flex: 1; overflow-y: auto; padding: 6px; min-height: 0; }
+.trow { display: grid; grid-template-columns: 16px 18px minmax(0, 1fr) auto; grid-template-rows: auto 3px; column-gap: 6px; align-items: center; padding: 5px 8px 5px calc(6px + var(--d) * 14px); border-radius: 6px; cursor: pointer; }
+.trow:hover { background: var(--hover); }
+.trow.sel { background: var(--active); }
+.trow .tw { border: 0; background: none; padding: 0; width: 16px; height: 16px; display: grid; place-items: center; color: var(--fg-3); cursor: pointer; }
+.trow .tw .i { width: 12px; height: 12px; transition: transform .12s; }
+.trow .tw.open .i { transform: rotate(90deg); }
+.trow .ticon .i { width: 15px; height: 15px; }
+.trow .tname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: center; gap: 5px; }
+.trow .tname .i { width: 12px; height: 12px; color: var(--fg-3); }
+.trow .tsize { font-size: 12px; color: var(--fg-2); font-variant-numeric: tabular-nums; }
+.trow .tsize.deny { color: var(--warn); font-size: 11px; }
+.trow .tbar { grid-column: 3 / 5; height: 3px; border-radius: 2px; background: var(--hover); overflow: hidden; margin-top: 3px; }
+.trow .tbar i { display: block; height: 100%; border-radius: 2px; background: var(--c); opacity: .9; }
+.grow-row { padding: 9px 10px; border-radius: 6px; cursor: pointer; display: flex; flex-direction: column; gap: 3px; }
+.grow-row:hover { background: var(--hover); }
+.grow-row.sel { background: var(--active); }
+.grow-row .t1 { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.grow-row .t1 b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grow-row .t2 { font-size: 12px; color: var(--fg-3); display: flex; justify-content: space-between; gap: 8px; }
+.lgroup { padding: 10px 10px 4px; font-size: 11.5px; color: var(--fg-3); letter-spacing: .02em; }
+
+/* explore main */
+.mhead { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--stroke); flex-wrap: wrap; }
+.crumbs { display: flex; align-items: center; gap: 2px; flex: 1; min-width: 0; overflow: hidden; }
+.crumbs button { border: 0; background: none; padding: 3px 6px; border-radius: 5px; cursor: pointer; color: var(--fg-2); white-space: nowrap; font-size: 13px; }
+.crumbs button:hover { background: var(--hover); color: var(--fg); }
+.crumbs button:last-child { color: var(--fg); font-weight: 600; }
+.crumbs .i { width: 12px; height: 12px; color: var(--fg-3); }
+.tmwrap { flex: 1; min-height: 320px; padding: 10px 14px 0; display: flex; flex-direction: column; }
+.tm { position: relative; flex: 1; min-height: 300px; border-radius: 6px; overflow: hidden; }
+.tile { position: absolute; border-radius: 3px; overflow: hidden; cursor: pointer; }
+.tile.leaf { background: radial-gradient(120% 120% at 25% 15%, rgba(255,255,255,.38), rgba(255,255,255,0) 60%), var(--c); color: var(--tile-fg); box-shadow: inset 0 0 0 1px rgba(0,0,0,.10); }
+.tile.leaf:hover { filter: brightness(1.08) saturate(1.05); }
+.tile.grp { background: color-mix(in srgb, var(--c) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 45%, transparent); }
+.tile.grp:hover { background: color-mix(in srgb, var(--c) 24%, transparent); }
+.tile .tl { padding: 3px 6px; font-size: 11.5px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; gap: 6px; }
+.tile .tl b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.tile .tl span { opacity: .75; font-variant-numeric: tabular-nums; }
+.tile.grp .tl { color: var(--fg); }
+.tile.leaf .tl { flex-direction: column; gap: 0; white-space: normal; }
+.tile.sel { box-shadow: inset 0 0 0 2px var(--fg), inset 0 0 0 3px var(--win); z-index: 2; }
+.tile.prot.leaf { background: repeating-linear-gradient(135deg, rgba(0,0,0,.07) 0 6px, transparent 6px 12px), radial-gradient(120% 120% at 25% 15%, rgba(255,255,255,.3), rgba(255,255,255,0) 60%), var(--c); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 10px 14px 12px; font-size: 12px; color: var(--fg-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+.hint { font-size: 12px; color: var(--fg-3); }
+.types { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; max-width: 760px; }
+.trow2 { display: grid; grid-template-columns: 28px 140px minmax(0, 1fr) 80px 52px; gap: 12px; align-items: center; }
+.hbar { height: 10px; border-radius: 5px; background: var(--hover); overflow: hidden; }
+.hbar i { display: block; height: 100%; border-radius: 5px; background: var(--c); }
+
+/* detail pane */
+.dt { padding: 18px 16px; display: flex; flex-direction: column; gap: 16px; }
+.dt-hero { display: flex; flex-direction: column; gap: 6px; }
+.dt-ic { width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; background: color-mix(in srgb, var(--c) 20%, transparent); color: var(--c); margin-bottom: 4px; }
+.dt-ic .i { width: 24px; height: 24px; stroke-width: 1.3; }
+.dt-name { font: 600 17px/1.25 var(--f-display); overflow-wrap: anywhere; }
+.dt-path { color: var(--fg-3); overflow-wrap: anywhere; }
+.big { font: 600 30px/1.1 var(--f-display); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 12.5px; }
+.kv dt { color: var(--fg-3); }
+.kv dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.share { display: flex; flex-direction: column; gap: 6px; }
+.share .bar { height: 6px; border-radius: 3px; background: var(--hover); overflow: hidden; }
+.share .bar i { display: block; height: 100%; background: var(--c); border-radius: 3px; }
+.dt h4 { margin: 0; font: 600 12.5px/1.3 var(--f-ui); color: var(--fg-2); }
+.stackbar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--hover); gap: 1px; }
+.stackbar i { display: block; height: 100%; background: var(--c); }
+.minilegend { display: flex; flex-direction: column; gap: 5px; font-size: 12px; }
+.minilegend div { display: flex; align-items: center; gap: 8px; }
+.minilegend i { width: 8px; height: 8px; border-radius: 2px; background: var(--c); flex: none; }
+.minilegend span:last-child { margin-left: auto; color: var(--fg-2); font-variant-numeric: tabular-nums; }
+.acts { display: flex; flex-direction: column; gap: 6px; }
+.acts .two { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+/* home */
+.drives { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.drive { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.dhead { display: flex; align-items: center; gap: 10px; }
+.dhead .dic { width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); flex: none; }
+.dhead .dic .i { width: 20px; height: 20px; }
+.dhead .dn { font-weight: 600; }
+.dhead .ds { font-size: 12px; color: var(--fg-3); }
+.dhead > div { flex: 1; min-width: 0; }
+.dnums { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.dnums .of { color: var(--fg-2); }
+.dbar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--hover); gap: 1px; }
+.dbar i { height: 100%; background: var(--c); }
+.dfoot { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--fg-3); }
+.leg { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--fg-2); }
+.leg span { display: inline-flex; align-items: center; gap: 5px; }
+.leg i { width: 8px; height: 8px; border-radius: 2px; background: var(--c); }
+.sugg { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.sg { padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.sg .sgt { display: flex; align-items: center; gap: 8px; color: var(--fg-2); }
+.sg .sgt .i { color: var(--accent); }
+.sg .big { font-size: 24px; }
+.sg p { margin: 0; color: var(--fg-3); font-size: 12px; flex: 1; }
+
+/* cleaner */
+.citem { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 14px; border-bottom: 1px solid var(--stroke); align-items: start; }
+.citem:last-child { border-bottom: 0; }
+.citem input { margin-top: 2px; }
+.citem .cn { font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.citem .cd { color: var(--fg-2); font-size: 12.5px; grid-column: 2 / 4; }
+.citem .cs { font-variant-numeric: tabular-nums; font-weight: 600; }
+.citem.off .cn, .citem.off .cs { color: var(--fg-3); }
+.cmd { font-family: var(--f-mono); font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--hover); color: var(--fg-2); }
+.subs { grid-column: 2 / 4; display: flex; flex-direction: column; border: 1px solid var(--stroke); border-radius: 6px; margin-top: 6px; overflow: hidden; }
+.sub { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--stroke); font-size: 12px; }
+.sub:last-child { border-bottom: 0; }
+.sub .mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-2); }
+.linkbtn { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0; font-size: 12.5px; }
+.linkbtn:hover { text-decoration: underline; }
+
+/* dupes */
+.dfile { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 11px 14px; border-bottom: 1px solid var(--stroke); }
+.dfile:last-child { border-bottom: 0; }
+.dfile .mono { overflow-wrap: anywhere; }
+
+/* settings */
+.set { display: flex; flex-direction: column; }
+.srow { display: flex; align-items: center; gap: 16px; padding: 13px 16px; border-bottom: 1px solid var(--stroke); flex-wrap: wrap; }
+.srow:last-child { border-bottom: 0; }
+.srow > div:first-child { flex: 1; min-width: 220px; }
+.srow .sd { color: var(--fg-3); font-size: 12px; }
+.switch { position: relative; width: 40px; height: 20px; flex: none; }
+.switch input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; z-index: 1; }
+.switch span { position: absolute; inset: 0; border-radius: 10px; border: 1px solid var(--fg-2); transition: background .15s; }
+.switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--fg-2); transition: transform .15s; }
+.switch input:checked + span { background: var(--accent); border-color: transparent; }
+.switch input:checked + span::after { transform: translateX(20px); background: var(--accent-fg); }
+.switch input:disabled + span { opacity: .5; }
+.switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+select.text { padding-right: 6px; }
+
+/* dialog + toast */
+.overlay { position: fixed; inset: 0; background: var(--overlay); display: grid; place-items: center; z-index: 50; padding: 16px; }
+.dlg { width: min(460px, 100%); border-radius: 10px; background: var(--win); -webkit-backdrop-filter: blur(40px) saturate(1.4); backdrop-filter: blur(40px) saturate(1.4); box-shadow: var(--shadow); overflow: hidden; }
+.dlg .db { padding: 22px 22px 18px; display: flex; flex-direction: column; gap: 10px; }
+.dlg h3 { margin: 0; font: 600 18px/1.3 var(--f-display); }
+.dlg p { margin: 0; color: var(--fg-2); }
+.dlg .df { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 22px; background: var(--hover); border-top: 1px solid var(--stroke); }
+.dlg .df .btn { min-width: 110px; }
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; background: var(--win); -webkit-backdrop-filter: blur(30px); backdrop-filter: blur(30px); box-shadow: var(--shadow); max-width: calc(100% - 32px); }
+.toast .i { color: var(--good); }
+
+@media (max-width: 1240px) { .detail { display: none !important; } }
+@media (max-width: 900px) { .list { display: none !important; } }
+@media (max-width: 640px) {
+  .sidebar { width: 52px; padding: 8px 6px; }
+  .sidebar .lbl, .sidebar .badge, .sidebar .kbd, .side-sec, .drive-meta, .ver { display: none; }
+  .sbtn { justify-content: center; padding: 0; }
+  .drv { padding-block: 0; align-items: center; }
+  .drv .i { margin-top: 0; }
+  .page { padding: 16px 14px 24px; }
+  .appname + .chip { display: none; }
+  .caps button { width: 38px; }
+  .status .hide-sm { display: none; }
+  .trow2 { grid-template-columns: 24px 90px minmax(0, 1fr) 64px; }
+  .trow2 > :last-child { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="mockbar">
+  <b>Lustro</b>
+  <span>UI mockup · Phase 0 · sample data</span>
+  <span class="grow faint">Click around. This page cannot touch your PC.</span>
+  <span class="faint">Theme</span>
+  <div class="seg" id="themeSeg" role="group" aria-label="Theme">
+    <button data-act="theme" data-v="system">System</button>
+    <button data-act="theme" data-v="light">Light</button>
+    <button data-act="theme" data-v="dark">Dark</button>
+  </div>
+</div>
+
+<div class="window" id="win">
+  <header class="titlebar" id="titlebar"></header>
+  <div class="wbody">
+    <nav class="sidebar" id="sidebar" aria-label="Main"></nav>
+    <section class="list" id="list"></section>
+    <main class="main" id="main"></main>
+    <aside class="detail" id="detail"></aside>
+  </div>
+  <footer class="status" id="status"></footer>
+</div>
+
+<script>
+/* ---------- icons ---------- */
+const P = {
+  home: 'M3 9.5 10 4l7 5.5V16a1 1 0 0 1-1 1h-3.5v-4.5h-5V17H4a1 1 0 0 1-1-1z',
+  map: 'M3.5 3.5h13v13h-13z M10 3.5v13 M10 9.5h6.5 M3.5 12h6.5',
+  file: 'M5 2.5h6.5L15 6v11.5H5z M11.5 2.5V6H15',
+  bigfile: 'M5 2.5h6.5L15 6v11.5H5z M11.5 2.5V6H15 M7.5 10.5h5 M7.5 13.5h5',
+  dupe: 'M7 6.5h9.5v10.5H7z M4 13.5V3.5h9',
+  clean: 'M10 2.5l1.6 4.4L16 8.5l-4.4 1.6L10 14.5l-1.6-4.4L4 8.5l4.4-1.6z M15.5 13.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z',
+  apps: 'M3.5 3.5h5v5h-5z M11.5 3.5h5v5h-5z M3.5 11.5h5v5h-5z M11.5 11.5h5v5h-5z',
+  history: 'M3.5 10a6.5 6.5 0 1 0 1.9-4.6 M3.5 3.5v3h3 M10 6.5V10l2.5 1.5',
+  settings: 'M10 7.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z M10 2.5v2 M10 15.5v2 M2.5 10h2 M15.5 10h2 M4.7 4.7l1.4 1.4 M13.9 13.9l1.4 1.4 M4.7 15.3l1.4-1.4 M13.9 6.1l1.4-1.4',
+  search: 'M8.5 3.5a5 5 0 1 0 0 10 5 5 0 0 0 0-10z M12.2 12.2l4.3 4.3',
+  shield: 'M10 2.5 16 5v4.5c0 3.8-2.6 6.6-6 8-3.4-1.4-6-4.2-6-8V5z',
+  drive: 'M3 11.5h14v4H3z M3 11.5 5 4.5h10l2 7 M13.5 13.5h1',
+  usb: 'M7.5 2.5h5v6h-5z M6 8.5h8v6a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3z M9 4.5v1.5 M11 4.5v1.5',
+  folder: 'M2.5 5.5a1 1 0 0 1 1-1h4l1.5 2h7.5a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1z',
+  trash: 'M4 5.5h12 M8 5.5v-2h4v2 M5.5 5.5l.7 11h7.6l.7-11 M8.5 8.5v5 M11.5 8.5v5',
+  refresh: 'M16 10a6 6 0 1 1-1.8-4.3 M16 3.5V7h-3.5',
+  chev: 'M8 5.5 12.5 10 8 14.5',
+  open: 'M11 3.5h5.5V9 M16.5 3.5l-7 7 M14 11.5v5H3.5V6h5',
+  copy: 'M7 7h9.5v9.5H7z M4 13V3.5h9.5',
+  lock: 'M5.5 9h9v8h-9z M7.5 9V6.5a2.5 2.5 0 0 1 5 0V9',
+  check: 'M4.5 10.5 8 14l7.5-8',
+  code: 'M7 6 3 10l4 4 M13 6l4 4-4 4',
+  globe: 'M10 3a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M3 10h14 M10 3c2 2 3 4.5 3 7s-1 5-3 7c-2-2-3-4.5-3-7s1-5 3-7z',
+  box: 'M3.5 6.5 10 3l6.5 3.5v7L10 17l-6.5-3.5z M3.5 6.5 10 10l6.5-3.5 M10 10v7',
+  windows: 'M3 4.5l6-1v6H3z M10.5 3.3l6.5-.8v7h-6.5z M3 10.5h6v6l-6-1z M10.5 10.5H17v7l-6.5-.8z',
+  info: 'M10 3a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M10 9v4.5 M10 6.5v.2',
+  warn: 'M10 3 17.5 16.5h-15z M10 8v4 M10 14.2v.2',
+  up: 'M10 16V4 M5.5 8.5 10 4l4.5 4.5',
+  x: 'M5 5l10 10 M15 5 5 15',
+  min: 'M5 10h10',
+  max: 'M5.5 5.5h9v9h-9z',
+  restore: 'M7.5 5.5 4 9l3.5 3.5 M4 9h8a4 4 0 0 1 0 8h-2',
+  export: 'M10 3v9 M6.5 6.5 10 3l3.5 3.5 M4 11.5v5h12v-5',
+  video: 'M3 5.5h10v9H3z M13 8.5l4-2v7l-4-2z',
+  image: 'M3 4.5h14v11H3z M3 13l4-4 3 3 2-2 5 5 M12.5 7.5v.1',
+  doc: 'M5 2.5h6.5L15 6v11.5H5z M11.5 2.5V6H15 M7.5 10h5 M7.5 13h5',
+  app: 'M3.5 4.5h13v11h-13z M3.5 7.5h13',
+  game: 'M6 6.5h8a3.5 3.5 0 0 1 0 7c-1.2 0-1.8-1-4-1s-2.8 1-4 1a3.5 3.5 0 0 1 0-7z M6.5 9v2 M5.5 10h2 M13 9.5v.1 M14.5 10.5v.1',
+  archive: 'M3.5 4h13v3.5h-13z M4.5 7.5v8.5h11V7.5 M8.5 10.5h3',
+  bell: 'M5.5 13.5V9a4.5 4.5 0 0 1 9 0v4.5l1.5 2h-12z M8.5 17h3',
+};
+const ic = n => `<svg class="i" viewBox="0 0 20 20" aria-hidden="true"><path d="${P[n] || P.file}"/></svg>`;
+const LOGO = `<svg class="logo" viewBox="0 0 18 18" aria-hidden="true"><rect x="1" y="1" width="9" height="16" rx="2" fill="var(--accent)"/><rect x="11" y="1" width="6" height="9" rx="2" fill="var(--c-dev)"/><rect x="11" y="11" width="6" height="6" rx="2" fill="var(--c-image)"/></svg>`;
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+function fmt(gb) {
+  if (gb >= 1000) return (gb / 1000).toFixed(2) + ' TB';
+  if (gb >= 1) return gb.toFixed(1) + ' GB';
+  const mb = gb * 1000;
+  if (mb >= 10) return mb.toFixed(0) + ' MB';
+  if (mb >= 1) return mb.toFixed(1) + ' MB';
+  return Math.max(1, Math.round(gb * 1e6)) + ' KB';
+}
+const TODAY = new Date(2026, 9, 18);
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const parseD = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const fdate = s => { const d = parseD(s); return `${d.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()}`; };
+function age(s) {
+  const d = parseD(s); let m = (TODAY.getFullYear() - d.getFullYear()) * 12 + TODAY.getMonth() - d.getMonth();
+  if (TODAY.getDate() < d.getDate()) m--;
+  if (m < 1) { const days = Math.round((TODAY - d) / 864e5); return days <= 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`; }
+  const y = Math.floor(m / 12), r = m % 12;
+  return (y ? `${y} yr ` : '') + (r ? `${r} mo ` : '') + 'ago';
+}
+const TYPES = {
+  video: ['Videos', '--c-video', 'video'], image: ['Pictures', '--c-image', 'image'], doc: ['Documents', '--c-doc', 'doc'],
+  app: ['Apps', '--c-app', 'app'], game: ['Games', '--c-game', 'game'], archive: ['Archives and ISOs', '--c-archive', 'archive'],
+  system: ['System', '--c-system', 'windows'], dev: ['Dev', '--c-dev', 'code'], other: ['Other', '--c-other', 'file'],
+};
+const cvar = t => `var(${TYPES[t][1]})`;
+
+/* ---------- sample data: drive C: ---------- */
+const F = 1;
+const C = { n: 'C:', t: 'other', c: [
+  { n: 'Users', t: 'doc', c: [
+    { n: 'mohak', c: [
+      { n: 'Videos', t: 'video', c: [
+        { n: 'OBS Recordings', c: [
+          { n: '2026-09-12 21-04-11.mkv', f: F, s: 9.8, d: '2026-09-12' },
+          { n: '2026-08-30 19-22-50.mkv', f: F, s: 8.1, d: '2026-08-30' },
+          { n: '2026-07-02 22-10-05.mkv', f: F, s: 7.4, d: '2026-07-02' },
+          { n: '2025-12-24 18-40-19.mkv', f: F, s: 6.3, d: '2025-12-24' }] },
+        { n: 'Trip-Ladakh-2025.mp4', f: F, s: 18.2, d: '2025-08-21' },
+        { n: 'Family', c: [
+          { n: 'Wedding-cut-4K.mov', f: F, s: 7.9, d: '2023-02-18' },
+          { n: 'Diwali-2024.mp4', f: F, s: 3.1, d: '2024-11-02' }] },
+        { n: 'Screen captures', s: 7.6 }] },
+      { n: 'AppData', t: 'app', c: [
+        { n: 'Local', c: [
+          { n: 'Docker', t: 'dev', s: 21.4 }, { n: 'Microsoft', s: 7.8 }, { n: 'Google', s: 6.1 },
+          { n: 'Temp', t: 'other', s: 4.9 }, { n: 'npm-cache', t: 'dev', s: 3.8 }, { n: 'JetBrains', t: 'dev', s: 3.2 }] },
+        { n: 'Roaming', s: 7.7 }] },
+      { n: 'Downloads', t: 'archive', c: [
+        { n: 'ubuntu-24.04.3-desktop-amd64.iso', f: F, s: 6.1, d: '2025-10-02' },
+        { n: 'Win11_24H2_English_x64.iso', f: F, s: 5.8, d: '2025-03-14' },
+        { n: 'DaVinci_Resolve_19.1_Windows.zip', f: F, s: 3.4, d: '2025-01-09' },
+        { n: 'blender-4.2-windows-x64.msi', f: F, s: 0.4, t: 'app', d: '2024-07-20' },
+        { n: 'Installers', t: 'app', s: 9.6 }, { n: 'Misc', t: 'other', s: 13.9 }] },
+      { n: 'projects', t: 'dev', c: [
+        { n: 'cc-no-404', s: 12.8 }, { n: 'rust-playground', s: 9.4 }, { n: 'portfolio-site', s: 7.1 }, { n: 'old-experiments', s: 5.3 }] },
+      { n: 'Documents', t: 'doc', s: 18.3 }, { n: 'Pictures', t: 'image', s: 16.8 }, { n: 'OneDrive', t: 'doc', s: 9.5 }] },
+    { n: 'Public', s: 6.6 }] },
+  { n: 'Program Files', t: 'app', p: 1, c: [
+    { n: 'Adobe', s: 14.2 }, { n: 'NVIDIA Corporation', s: 6.9 }, { n: 'Microsoft Office', s: 5.1 },
+    { n: 'Docker', s: 4.3 }, { n: 'Blender Foundation', s: 1.6 }, { n: 'Other apps', s: 14.1 }] },
+  { n: 'XboxGames', t: 'game', c: [{ n: 'Halo Infinite', s: 28.1 }, { n: 'Ori and the Will of the Wisps', s: 10.3 }] },
+  { n: 'Windows', t: 'system', p: 1, c: [
+    { n: 'WinSxS', s: 9.8 }, { n: 'System32', s: 6.7 }, { n: 'Installer', s: 4.1 }, { n: 'SoftwareDistribution', s: 3.2 }, { n: 'Other system files', s: 10.1 }] },
+  { n: 'Program Files (x86)', t: 'app', p: 1, s: 12.7 },
+  { n: 'pagefile.sys', f: F, t: 'system', p: 1, s: 12.0, d: '2026-10-18' },
+  { n: 'ProgramData', t: 'app', s: 9.8 },
+  { n: 'hiberfil.sys', f: F, t: 'system', p: 1, s: 6.4, d: '2026-10-17' },
+  { n: '$Recycle.Bin', t: 'other', p: 1, s: 4.0 },
+  { n: 'System Volume Information', t: 'system', p: 1, deny: 1, s: 0.9 }] };
+const BYID = [];
+(function prep(n, parent) {
+  n.parent = parent; n.id = BYID.push(n) - 1;
+  if (!n.t) n.t = parent ? parent.t : 'other';
+  if (n.c) { n.c.forEach(ch => prep(ch, n)); n.s = n.c.reduce((a, c) => a + c.s, 0); n.c.sort((a, b) => b.s - a.s); }
+  n.items = n.f ? 1 : Math.round(Math.sqrt(n.s) * 950 + (n.id * 131) % 700);
+  if (!n.d) { const dd = new Date(TODAY); dd.setDate(dd.getDate() - (n.id * 53) % 420); n.d = `${dd.getFullYear()}-${String(dd.getMonth() + 1).padStart(2, '0')}-${String(dd.getDate()).padStart(2, '0')}`; }
+})(C, null);
+C.items = 1284330;
+const pathOf = n => { const a = []; for (let x = n; x; x = x.parent) a.unshift(x.n); return a.length === 1 ? 'C:\\' : a.join('\\'); };
+const isProt = n => { for (let x = n; x; x = x.parent) if (x.p) return true; return n === C || n.n === 'Users' || n.n === 'mohak'; };
+function agg(n, acc = {}) { if (n.c) n.c.forEach(c => agg(c, acc)); else acc[n.t] = (acc[n.t] || 0) + n.s; return acc; }
+
+const DRIVES = [
+  { id: 'C', name: 'Windows (C:)', fs: 'NTFS', kind: 'SSD', total: 476.9, used: 412.6,
+    cats: { app: 98, video: 92, system: 60, doc: 46, game: 38, dev: 30, archive: 25, image: 18, other: 5.6 } },
+  { id: 'D', name: 'Data (D:)', fs: 'NTFS', kind: 'HDD', total: 1820, used: 1210,
+    cats: { video: 520, image: 310, archive: 160, doc: 90, game: 80, other: 50 } },
+  { id: 'E', name: 'SanDisk (E:)', fs: 'exFAT', kind: 'USB drive', usb: 1, total: 114.6, used: 58.3,
+    cats: { video: 31, image: 12.4, archive: 8.8, doc: 6.1 } },
+];
+
+const FILES = [
+  { n: 'docker_data.vhdx', p: 'C:\\Users\\mohak\\AppData\\Local\\Docker\\wsl\\disk', s: 21.4, t: 'dev', d: '2026-10-18' },
+  { n: 'Trip-Ladakh-2025.mp4', p: 'C:\\Users\\mohak\\Videos', s: 18.2, t: 'video', d: '2025-08-21' },
+  { n: 'pagefile.sys', p: 'C:\\', s: 12.0, t: 'system', d: '2026-10-18', prot: 1 },
+  { n: '2026-09-12 21-04-11.mkv', p: 'C:\\Users\\mohak\\Videos\\OBS Recordings', s: 9.8, t: 'video', d: '2026-09-12' },
+  { n: 'campaign_deploy_01.pak', p: 'C:\\XboxGames\\Halo Infinite\\Content\\deploy', s: 8.9, t: 'game', d: '2026-05-03' },
+  { n: '2026-08-30 19-22-50.mkv', p: 'C:\\Users\\mohak\\Videos\\OBS Recordings', s: 8.1, t: 'video', d: '2026-08-30' },
+  { n: 'Wedding-cut-4K.mov', p: 'C:\\Users\\mohak\\Videos\\Family', s: 7.9, t: 'video', d: '2023-02-18' },
+  { n: '2026-07-02 22-10-05.mkv', p: 'C:\\Users\\mohak\\Videos\\OBS Recordings', s: 7.4, t: 'video', d: '2026-07-02' },
+  { n: 'hiberfil.sys', p: 'C:\\', s: 6.4, t: 'system', d: '2026-10-17', prot: 1 },
+  { n: '2025-12-24 18-40-19.mkv', p: 'C:\\Users\\mohak\\Videos\\OBS Recordings', s: 6.3, t: 'video', d: '2025-12-24' },
+  { n: 'ubuntu-24.04.3-desktop-amd64.iso', p: 'C:\\Users\\mohak\\Downloads', s: 6.1, t: 'archive', d: '2025-10-02' },
+  { n: 'Win11_24H2_English_x64.iso', p: 'C:\\Users\\mohak\\Downloads', s: 5.8, t: 'archive', d: '2025-03-14' },
+  { n: 'GTA-SA-backup.zip', p: 'C:\\Users\\mohak\\Downloads\\Misc', s: 4.2, t: 'archive', d: '2022-06-11' },
+  { n: 'DaVinci_Resolve_19.1_Windows.zip', p: 'C:\\Users\\mohak\\Downloads', s: 3.4, t: 'archive', d: '2025-01-09' },
+  { n: 'Diwali-2024.mp4', p: 'C:\\Users\\mohak\\Videos\\Family', s: 3.1, t: 'video', d: '2024-11-02' },
+  { n: 'college-project-final (2).zip', p: 'C:\\Users\\mohak\\Documents\\College', s: 1.3, t: 'archive', d: '2021-04-30' },
+  { n: 'Lightroom Catalog-v13.lrcat', p: 'C:\\Users\\mohak\\Pictures\\Lightroom', s: 1.1, t: 'image', d: '2023-09-15' },
+  { n: 'setup-old-printer-driver.exe', p: 'C:\\Users\\mohak\\Downloads\\Installers', s: 0.42, t: 'app', d: '2020-11-08' },
+];
+const SEARCH_EXTRA = [
+  { n: 'debian-12.7.0-amd64-netinst.iso', p: 'E:\\ISOs', s: 0.63, t: 'archive', d: '2024-09-01' },
+  { n: 'Fedora-Workstation-Live-41.iso', p: 'E:\\ISOs', s: 2.2, t: 'archive', d: '2025-02-11' },
+  { n: 'virtio-win-0.1.262.iso', p: 'C:\\Users\\mohak\\Downloads\\Misc', s: 0.71, t: 'archive', d: '2025-06-30' },
+  { n: 'invoice-2026-09.pdf', p: 'C:\\Users\\mohak\\Documents\\Bills', s: 0.0002, t: 'doc', d: '2026-09-04' },
+  { n: 'IMG_4412.HEIC', p: 'C:\\Users\\mohak\\Pictures\\Camera Roll', s: 0.0042, t: 'image', d: '2026-03-08' },
+  { n: 'package.json', p: 'C:\\Users\\mohak\\projects\\portfolio-site', s: 0.000002, t: 'dev', d: '2026-10-15' },
+];
+
+const DUPES = [
+  { n: 'Diwali-2024.mp4', s: 3.1, t: 'video', files: [
+    { p: 'C:\\Users\\mohak\\Videos\\Family', d: '2024-11-02' }, { p: 'E:\\Phone backup\\DCIM', d: '2024-11-02' }, { p: 'C:\\Users\\mohak\\Downloads\\Misc', d: '2024-11-05' }] },
+  { n: 'Win11_24H2_English_x64.iso', s: 5.8, t: 'archive', files: [
+    { p: 'C:\\Users\\mohak\\Downloads', d: '2025-03-14' }, { p: 'C:\\Users\\mohak\\Documents\\ISO', d: '2025-03-20' }] },
+  { n: 'DaVinci_Resolve_19.1_Windows.zip', s: 3.4, t: 'archive', files: [
+    { p: 'C:\\Users\\mohak\\Downloads', d: '2025-01-09' }, { p: 'D:\\Installers', d: '2025-01-10' }] },
+  { n: 'blender-4.2-windows-x64.msi', s: 0.36, t: 'app', files: [
+    { p: 'C:\\Users\\mohak\\Downloads', d: '2024-07-20' }, { p: 'C:\\Users\\mohak\\Downloads\\Installers', d: '2024-07-21' }] },
+  { n: 'node-v22.11.0-x64.msi', s: 0.031, t: 'app', files: [
+    { p: 'C:\\Users\\mohak\\Downloads', d: '2024-11-14' }, { p: 'C:\\Users\\mohak\\Downloads\\Installers', d: '2024-11-14' }, { p: 'D:\\Installers', d: '2025-01-02' }] },
+  { n: 'IMG_4412.HEIC', s: 0.0042, t: 'image', files: [
+    { p: 'C:\\Users\\mohak\\Pictures\\Camera Roll', d: '2026-03-08' }, { p: 'C:\\Users\\mohak\\OneDrive\\Pictures', d: '2026-03-08' }, { p: 'E:\\Phone backup\\DCIM', d: '2026-03-09' }] },
+  { n: 'Resume_2026.pdf', s: 0.00031, t: 'doc', files: [
+    { p: 'C:\\Users\\mohak\\Documents', d: '2026-01-12' }, { p: 'C:\\Users\\mohak\\Downloads', d: '2026-01-12' }, { p: 'C:\\Users\\mohak\\Desktop', d: '2026-01-13' }, { p: 'C:\\Users\\mohak\\OneDrive\\Documents', d: '2026-01-13' }] },
+];
+
+const CLEAN = [
+  { id: 'sys', n: 'System junk', ic: 'windows', items: [
+    { n: 'Your temporary files', s: 4.9, on: 1, desc: 'Files that apps left in %TEMP%.' },
+    { n: 'Windows temporary files', s: 2.1, on: 1, admin: 1, desc: 'C:\\Windows\\Temp' },
+    { n: 'Windows Update cache', s: 3.2, on: 1, admin: 1, desc: 'Updates that are already installed. Lustro pauses Windows Update while it cleans.' },
+    { n: 'Delivery Optimization files', s: 1.4, on: 1, admin: 1, desc: 'Update pieces that Windows shares with other PCs.' },
+    { n: 'Thumbnail cache', s: 0.6, on: 1, desc: 'Explorer makes new thumbnails when it needs them.' },
+    { n: 'DirectX shader cache', s: 1.1, on: 1, desc: 'Games build their shaders again at the next start.' },
+    { n: 'Crash dumps and error reports', s: 2.3, on: 1, desc: 'Memory dumps and Windows Error Reporting files.' },
+    { n: 'Recycle Bin', s: 4.0, on: 0, desc: '412 items. After this, you cannot restore them.' },
+    { n: 'Previous Windows installation', s: 18.6, on: 0, admin: 1, warn: 1, desc: 'Windows.old. After this, you cannot go back to the previous Windows version.' }] },
+  { id: 'web', n: 'Browsers', ic: 'globe', items: [
+    { n: 'Chrome cache', s: 2.8, on: 1, desc: '2 profiles: Personal, Work.' },
+    { n: 'Edge cache', s: 1.2, on: 1, desc: '1 profile.' },
+    { n: 'Brave cache', s: 0.9, on: 1, running: 1, desc: 'Close Brave to clean it.' },
+    { n: 'Firefox cache', s: 0.7, on: 1, desc: '1 profile.' },
+    { n: 'Chrome history and cookies', s: 0.4, on: 0, warn: 1, desc: 'Signs you out of websites. Passwords, bookmarks and extensions stay.' },
+    { n: 'Edge history and cookies', s: 0.2, on: 0, warn: 1, desc: 'Signs you out of websites. Passwords, bookmarks and extensions stay.' }] },
+  { id: 'dev', n: 'Dev junk', ic: 'code', items: [
+    { n: 'node_modules folders', on: 1, desc: '14 projects. Projects with no change for 30 days are selected.', open: 1, subs: [
+      { p: 'C:\\Users\\mohak\\projects\\old-experiments\\todo-app\\node_modules', s: 1.24, a: '7 months', on: 1 },
+      { p: 'C:\\Users\\mohak\\projects\\old-experiments\\chat-bot\\node_modules', s: 0.98, a: '11 months', on: 1 },
+      { p: 'C:\\Users\\mohak\\projects\\hackathon-2025\\web\\node_modules', s: 1.61, a: '1 year', on: 1 },
+      { p: 'C:\\Users\\mohak\\projects\\cc-no-404\\router\\node_modules', s: 0.42, a: '2 days', on: 0 },
+      { p: 'C:\\Users\\mohak\\projects\\portfolio-site\\node_modules', s: 0.87, a: '3 days', on: 0 },
+      { p: '+ 9 more projects', s: 3.48, a: '', on: 1, more: 1 }] },
+    { n: 'Rust target folders', on: 1, desc: '4 projects.', subs: [
+      { p: 'C:\\Users\\mohak\\projects\\rust-playground\\target', s: 4.1, a: '2 months', on: 1 },
+      { p: 'C:\\Users\\mohak\\projects\\old-experiments\\ray-tracer\\target', s: 1.3, a: '9 months', on: 1 },
+      { p: 'C:\\Users\\mohak\\projects\\cc-no-404\\pc_scaner\\target', s: 0.8, a: 'today', on: 0 }] },
+    { n: 'Python .venv and __pycache__', s: 1.9, on: 1, desc: '6 projects with no change for 30 days.' },
+    { n: 'npm cache', s: 3.8, on: 1, cmd: 'npm cache clean --force', desc: 'Packages download again when you need them.' },
+    { n: 'pip cache', s: 1.1, on: 1, cmd: 'pip cache purge', desc: 'Packages download again when you need them.' },
+    { n: 'Cargo registry cache', s: 2.4, on: 0, desc: 'Crates download again at the next build.' },
+    { n: 'NuGet cache', s: 0.9, on: 0, cmd: 'dotnet nuget locals all --clear', desc: 'Packages download again at the next restore.' }] },
+  { id: 'docker', n: 'Docker and WSL', ic: 'box', items: [
+    { n: 'Docker images that no container uses', s: 9.7, on: 1, cmd: 'docker image prune -a', desc: '31 images.' },
+    { n: 'Docker build cache', s: 2.6, on: 1, cmd: 'docker builder prune', desc: 'Builds run slower one time.' },
+    { n: 'Docker stopped containers', s: 0.8, on: 0, cmd: 'docker container prune', desc: '5 containers. Their data is lost.' },
+    { n: 'Compact the Ubuntu WSL disk', s: 6.3, on: 0, admin: 1, desc: 'ext4.vhdx is 14.7 GB but holds 8.4 GB. Lustro shuts down WSL first.' }] },
+  { id: 'ide', n: 'IDE caches', ic: 'app', items: [
+    { n: 'VS Code cache and old extension versions', s: 1.6, on: 1, desc: '23 old extension versions.' },
+    { n: 'JetBrains caches of old versions', s: 2.2, on: 1, desc: 'RustRover 2024.3, WebStorm 2024.2.' },
+    { n: 'Visual Studio component cache', s: 0.4, on: 1, desc: 'Visual Studio builds it again at the next start.' }] },
+];
+CLEAN.forEach(c => c.items.forEach(it => { if (it.subs) it.s = it.subs.reduce((a, b) => a + b.s, 0); }));
+
+const APPS = [
+  { n: 'Halo Infinite', pub: 'Xbox Game Studios', src: 'Store', s: 28.1, inst: '2025-11-02', used: '5 months ago', t: 'game' },
+  { n: 'Ori and the Will of the Wisps', pub: 'Xbox Game Studios', src: 'Store', s: 10.3, inst: '2024-12-26', used: 'over a year ago', t: 'game' },
+  { n: 'Adobe Premiere Pro 2026', pub: 'Adobe Inc.', src: 'Desktop', s: 9.8, inst: '2026-02-11', used: '2 days ago', t: 'video' },
+  { n: 'Microsoft 365 Apps', pub: 'Microsoft Corporation', src: 'Desktop', s: 5.1, inst: '2025-06-01', used: 'today', t: 'doc' },
+  { n: 'Adobe Photoshop 2026', pub: 'Adobe Inc.', src: 'Desktop', s: 4.4, inst: '2026-02-11', used: '3 weeks ago', t: 'image' },
+  { n: 'Docker Desktop', pub: 'Docker Inc.', src: 'Desktop', s: 4.3, inst: '2025-09-17', used: 'today', t: 'dev' },
+  { n: 'Rust toolchain (rustup)', pub: 'Rust Foundation', src: 'Desktop', s: 2.1, inst: '2025-04-08', used: '', t: 'dev' },
+  { n: 'Blender 4.2 LTS', pub: 'Blender Foundation', src: 'Desktop', s: 1.6, inst: '2024-07-21', used: '3 weeks ago', t: 'app' },
+  { n: 'NVIDIA App', pub: 'NVIDIA Corporation', src: 'Desktop', s: 1.4, inst: '2025-03-02', used: '', t: 'app' },
+  { n: 'Visual Studio Code', pub: 'Microsoft Corporation', src: 'Desktop', s: 0.6, inst: '2024-02-10', used: 'today', t: 'dev' },
+  { n: 'Discord', pub: 'Discord Inc.', src: 'Desktop', s: 0.5, inst: '2023-08-30', used: 'yesterday', t: 'app' },
+  { n: 'Spotify', pub: 'Spotify AB', src: 'Store', s: 0.4, inst: '2024-05-14', used: 'today', t: 'app' },
+  { n: 'Candy Crush Saga', pub: 'King', src: 'Store', s: 0.3, inst: '2024-10-01', used: 'never', t: 'game' },
+  { n: 'Zoom Workplace', pub: 'Zoom Communications', src: 'Desktop', s: 0.3, inst: '2023-01-19', used: '8 months ago', t: 'app' },
+  { n: 'Python 3.12.5', pub: 'Python Software Foundation', src: 'Desktop', s: 0.2, inst: '2024-08-07', used: '', t: 'dev' },
+  { n: 'Node.js', pub: 'OpenJS Foundation', src: 'Desktop', s: 0.1, inst: '2024-11-14', used: '', t: 'dev' },
+];
+
+const HIST = [
+  { t: 'Today, 18:42', a: 'Recycle Bin', n: 'Trip-Ladakh-2025 (1).mp4', p: 'C:\\Users\\mohak\\Downloads\\Misc', s: 18.2, restore: 1 },
+  { t: 'Today, 18:40', a: 'Cleaner', n: 'npm cache', p: 'npm cache clean --force', s: 3.8 },
+  { t: 'Today, 18:40', a: 'Cleaner', n: 'Your temporary files', p: 'C:\\Users\\mohak\\AppData\\Local\\Temp', s: 4.9 },
+  { t: 'Yesterday, 21:15', a: 'Permanent', n: 'old-vm.vhdx', p: 'D:\\VMs', s: 42.0 },
+  { t: '14 Oct, 10:02', a: 'Recycle Bin', n: 'Screen captures 2024', p: 'C:\\Users\\mohak\\Videos', s: 7.6, gone: 1 },
+  { t: '14 Oct, 09:58', a: 'Blocked', n: 'Installer', p: 'C:\\Windows', s: 4.1 },
+  { t: '2 Oct, 16:20', a: 'Recycle Bin', n: 'node-v20.9.0-x64.msi', p: 'C:\\Users\\mohak\\Downloads', s: 0.026, restore: 1 },
+];
+
+/* ---------- state ---------- */
+const users = C.c.find(n => n.n === 'Users'), me = users.c.find(n => n.n === 'mohak');
+const S = {
+  screen: 'explore', admin: false, theme: 'system',
+  zoom: C, sel: me, open: new Set([users.id, me.id]), view: 'map',
+  filesTab: 'large', fileSel: new Set([1, 6]), chips: { gb: true, prot: false },
+  dupe: 0, dupeDel: DUPES.map(g => new Set(g.files.map((_, i) => i).filter(i => i > 0))),
+  cleanCat: 'sys', app: 0, appSrc: 'All', appQ: '', q: '*.iso',
+};
+try { const t = localStorage.getItem('lustro-mock-theme'); if (t) S.theme = t; } catch (e) {}
+const hash = (location.hash || '').slice(1);
+const NAV = [
+  ['home', 'Home', 'home'], ['explore', 'Explore', 'map'], ['files', 'Large and old files', 'bigfile'],
+  ['dupes', 'Duplicates', 'dupe'], ['clean', 'Clean up', 'clean'], ['apps', 'Installed apps', 'apps'], ['history', 'History', 'history'],
+];
+if ([...NAV.map(n => n[0]), 'search', 'settings'].includes(hash)) S.screen = hash;
+
+/* ---------- derived numbers ---------- */
+const itemOn = it => it.subs ? it.subs.filter(s => s.on).reduce((a, b) => a + b.s, 0) : (it.on ? it.s : 0);
+const itemUsable = it => (!it.admin || S.admin) && !it.running;
+const cleanSel = cat => cat.items.filter(itemUsable).reduce((a, it) => a + itemOn(it), 0);
+const dupeSave = () => DUPES.reduce((a, g, i) => a + g.s * S.dupeDel[i].size, 0);
+const oldFiles = () => FILES.filter(f => f.d < '2025-10-18');
+
+/* ---------- chrome ---------- */
+function renderChrome() {
+  $('#titlebar').innerHTML = `${LOGO}<span class="appname">Lustro</span>
+    ${S.admin ? `<span class="chip admin">${ic('shield')}Administrator</span>` : `<button class="chip" data-act="admin">${ic('shield')}Run as admin</button>`}
+    <span class="grow"></span>
+    <div class="caps"><button data-act="caption" aria-label="Minimize">${ic('min')}</button><button data-act="caption" aria-label="Maximize">${ic('max')}</button><button class="x" data-act="caption" aria-label="Close">${ic('x')}</button></div>`;
+  const junk = CLEAN.reduce((a, c) => a + cleanSel(c), 0);
+  const badge = { clean: fmt(junk), dupes: fmt(dupeSave()) };
+  $('#sidebar').innerHTML = `
+    <button class="sbtn searchbtn ${S.screen === 'search' ? 'on' : ''}" data-act="nav" data-v="search">${ic('search')}<span class="lbl">Search files</span><span class="kbd">Ctrl+K</span></button>
+    ${NAV.map(([id, l, i]) => `<button class="sbtn ${S.screen === id ? 'on' : ''}" data-act="nav" data-v="${id}" title="${l}">${ic(i)}<span class="lbl">${l}</span>${badge[id] ? `<span class="badge">${badge[id]}</span>` : ''}</button>`).join('')}
+    <div class="side-sec"><span>Drives</span><button class="btn ghost sm" style="height:22px;padding:0 4px" data-act="rescan" aria-label="Rescan drives">${ic('refresh')}</button></div>
+    ${DRIVES.map(d => { const pct = d.used / d.total * 100; return `<button class="sbtn drv" data-act="drive" data-v="${d.id}" title="${d.name}">${ic(d.usb ? 'usb' : 'drive')}<span class="drive-meta"><span class="top"><span class="lbl">${d.name}</span><span class="free num">${fmt(d.total - d.used)} free</span></span><span class="minibar"><i class="${pct > 85 ? 'warn' : ''}" style="width:${pct}%"></i></span></span></button>`; }).join('')}
+    <div class="grow"></div>
+    <button class="sbtn" data-act="update">${ic('refresh')}<span class="lbl">Check for updates</span><span class="ver">v0.1.0</span></button>
+    <button class="sbtn ${S.screen === 'settings' ? 'on' : ''}" data-act="nav" data-v="settings">${ic('settings')}<span class="lbl">Settings</span></button>`;
+  $('#status').innerHTML = `<span class="dot ${S.admin ? 'live' : ''}"></span>
+    <span class="num">C: · ${C.items.toLocaleString('en-US')} files · ${fmt(C.s)}</span><span class="sep">·</span>
+    <span class="hide-sm">${S.admin ? 'Fast scan (MFT) in 11.4 s' : 'Folder walk in 2 min 41 s'}</span><span class="sep hide-sm">·</span>
+    <span class="hide-sm">${S.admin ? 'Live updates on' : '3 folders need admin'}</span>
+    <span class="grow"></span>
+    <span class="hide-sm">Recycle Bin: 4.0 GB</span>`;
+  document.querySelectorAll('#themeSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === S.theme));
+}
+
+/* ---------- screens ---------- */
+const SCREENS = {};
+
+SCREENS.home = () => {
+  const banner = S.admin ? '' : `<div class="infobar"><span class="ib-ic">${ic('shield')}</span><div><b>Lustro runs without admin rights.</b> Scans use the slower folder walk, and 3 system folders stay hidden.</div><button class="btn accent sm" data-act="admin">Run as admin</button></div>`;
+  const scanInfo = { C: S.admin ? 'Fast scan (MFT) · 11.4 s · live' : 'Folder walk · 2 min 41 s · 14 min ago', D: S.admin ? 'Fast scan (MFT) · 23 s · live' : 'Folder walk · 6 min 12 s · yesterday', E: 'Folder walk (exFAT) · 48 s · 3 days ago' };
+  const cards = DRIVES.map(d => {
+    const pct = Math.round(d.used / d.total * 100);
+    const cats = Object.entries(d.cats);
+    return `<div class="card drive">
+      <div class="dhead"><span class="dic">${ic(d.usb ? 'usb' : 'drive')}</span><div><div class="dn">${d.name}</div><div class="ds">${d.fs} · ${d.kind}</div></div><span class="pill ${pct > 85 ? 'warn' : ''}">${pct}% full</span></div>
+      <div class="dnums"><span class="big">${fmt(d.used)}</span><span class="of">used of ${fmt(d.total)}</span></div>
+      <div class="dbar" role="img" aria-label="Space by type">${cats.map(([t, v]) => `<i style="--c:${cvar(t)};width:${v / d.total * 100}%" title="${TYPES[t][0]}: ${fmt(v)}"></i>`).join('')}</div>
+      <div class="leg">${cats.slice(0, 4).map(([t, v]) => `<span style="--c:${cvar(t)}"><i></i>${TYPES[t][0]} ${fmt(v)}</span>`).join('')}<span class="faint">${fmt(d.total - d.used)} free</span></div>
+      <div class="dfoot"><span>${scanInfo[d.id]}</span><div class="row"><button class="btn sm" data-act="rescan">Rescan</button><button class="btn sm accent" data-act="drive" data-v="${d.id}">Explore</button></div></div>
+    </div>`;
+  }).join('');
+  const junkSys = cleanSel(CLEAN[0]) + cleanSel(CLEAN[1]);
+  const junkDev = cleanSel(CLEAN[2]) + cleanSel(CLEAN[3]) + cleanSel(CLEAN[4]);
+  const sg = [
+    ['clean', 'Junk files', junkSys, 'Temp files, caches, crash dumps and browser caches.', 'clean', 'sys'],
+    ['code', 'Dev junk', junkDev, 'Old node_modules and target folders, tool caches, Docker images.', 'clean', 'dev'],
+    ['dupe', 'Duplicate files', dupeSave(), `${DUPES.length} groups of identical files on C:, D: and E:.`, 'dupes'],
+    ['bigfile', 'Large old files', oldFiles().filter(f => !f.prot).reduce((a, f) => a + f.s, 0), 'Files that nobody changed for more than a year.', 'files', 'old'],
+  ].map(([i, t, s, p, go, sub]) => `<div class="card sg"><div class="sgt">${ic(i)}${t}</div><div class="big">${fmt(s)}</div><p>${p}</p><div><button class="btn sm" data-act="goto" data-v="${go}" data-sub="${sub || ''}">Review</button></div></div>`).join('');
+  return { main: `<div class="page">
+    <div class="phead"><div><h2>Storage</h2><p>3 drives · ${fmt(DRIVES.reduce((a, d) => a + d.used, 0))} used of ${fmt(DRIVES.reduce((a, d) => a + d.total, 0))}</p></div><button class="btn" data-act="pick">${ic('folder')}Scan a folder</button></div>
+    ${banner}<div class="drives">${cards}</div>
+    <h3 class="sec">Ways to free space</h3><div class="sugg">${sg}</div></div>` };
+};
+
+function treeRows(n, depth) {
+  let h = '';
+  for (const c of n.c || []) {
+    const open = S.open.has(c.id);
+    const pct = n.s ? c.s / n.s * 100 : 0;
+    const deny = c.deny && !S.admin;
+    h += `<div class="trow ${S.sel === c ? 'sel' : ''}" data-act="sel" data-id="${c.id}" style="--d:${depth};--c:${cvar(c.t)}" title="${esc(c.n)}">
+      <button class="tw ${open ? 'open' : ''}" data-act="tw" data-id="${c.id}" aria-label="Expand" ${c.c ? '' : 'tabindex="-1" style="visibility:hidden"'}>${ic('chev')}</button>
+      <span class="ticon" style="color:var(--c)">${ic(c.f ? TYPES[c.t][2] : 'folder')}</span>
+      <span class="tname">${esc(c.n)}${isProt(c) && c.parent === C ? ic('lock') : ''}</span>
+      <span class="tsize ${deny ? 'deny' : ''}">${deny ? 'Needs admin' : fmt(c.s)}</span>
+      <span class="tbar"><i style="width:${deny ? 0 : pct}%"></i></span></div>`;
+    if (open && c.c) h += treeRows(c, depth + 1);
+  }
+  return h;
+}
+
+SCREENS.explore = () => {
+  const crumbs = []; for (let x = S.zoom; x; x = x.parent) crumbs.unshift(x);
+  const list = `<div class="lhead"><div class="ttl"><h3>Windows (C:)</h3><span class="faint num">${fmt(C.s)}</span></div>
+      <input class="text" id="treeFilter" placeholder="Filter folders" aria-label="Filter folders"></div>
+    <div class="lscroll" id="tree">${treeRows(C, 0)}</div>`;
+  const legendTypes = Object.keys(agg(S.zoom)).sort((a, b) => agg(S.zoom)[b] - agg(S.zoom)[a]);
+  const main = `<div class="mhead">
+      <button class="btn ghost sm" data-act="up" aria-label="Up one level" ${S.zoom.parent ? '' : 'disabled'}>${ic('up')}</button>
+      <div class="crumbs">${crumbs.map((c, i) => `${i ? ic('chev') : ''}<button data-act="zoom" data-id="${c.id}">${esc(c.n === 'C:' ? 'Windows (C:)' : c.n)}</button>`).join('')}</div>
+      <div class="seg"><button class="${S.view === 'map' ? 'on' : ''}" data-act="view" data-v="map">Treemap</button><button class="${S.view === 'types' ? 'on' : ''}" data-act="view" data-v="types">File types</button></div>
+      <button class="btn sm" data-act="export">${ic('export')}Export</button>
+    </div>
+    ${S.view === 'map' ? `<div class="tmwrap"><div class="tm" id="tm" role="img" aria-label="Treemap of ${esc(pathOf(S.zoom))}"></div></div>
+      <div class="legend">${legendTypes.map(t => `<span style="--c:${cvar(t)}"><i></i>${TYPES[t][0]}</span>`).join('')}<span class="grow"></span><span class="hint">Click to select. Double-click to zoom in.</span></div>` : typesView(S.zoom)}`;
+  return { list, main, detail: detailFor(S.sel), after: () => { drawTreemap(); const t = document.querySelector('#tree .trow.sel'); if (t && S._scrollTree) { t.scrollIntoView({ block: 'nearest' }); S._scrollTree = false; } } };
+};
+
+function typesView(n) {
+  const a = agg(n), tot = n.s, ent = Object.entries(a).sort((x, y) => y[1] - x[1]);
+  const max = ent[0][1];
+  return `<div class="types"><div class="muted">Space by file type in <span class="mono">${esc(pathOf(n))}</span></div>
+    ${ent.map(([t, v]) => `<div class="trow2" style="--c:${cvar(t)}"><span class="ftype">${ic(TYPES[t][2])}</span><span>${TYPES[t][0]}</span><span class="hbar"><i style="width:${v / max * 100}%"></i></span><span class="num" style="text-align:right">${fmt(v)}</span><span class="num faint" style="text-align:right">${(v / tot * 100).toFixed(1)}%</span></div>`).join('')}</div>`;
+}
+
+function detailFor(n) {
+  if (!n) return '<div class="dt muted">Select a folder or a file.</div>';
+  const prot = isProt(n);
+  const deny = n.deny && !S.admin;
+  const kind = n.f ? 'File' : 'Folder';
+  let inside = '';
+  if (n.c) {
+    const a = agg(n), ent = Object.entries(a).sort((x, y) => y[1] - x[1]);
+    inside = `<div class="share"><h4>Inside</h4><div class="stackbar">${ent.map(([t, v]) => `<i style="--c:${cvar(t)};width:${v / n.s * 100}%"></i>`).join('')}</div>
+      <div class="minilegend">${ent.slice(0, 5).map(([t, v]) => `<div style="--c:${cvar(t)}"><i></i><span>${TYPES[t][0]}</span><span>${fmt(v)}</span></div>`).join('')}</div></div>`;
+  }
+  const why = n === C || n.n === 'Users' || n.n === 'mohak' ? 'Drive roots, the Users folder and user profile folders are protected.' : 'Protected system path. Lustro never deletes it.';
+  return `<div class="dt" style="--c:${cvar(n.t)}">
+    <div class="dt-hero"><span class="dt-ic">${ic(n.f ? TYPES[n.t][2] : 'folder')}</span><div class="dt-name">${esc(n.n === 'C:' ? 'Windows (C:)' : n.n)}</div><div class="dt-path mono">${esc(pathOf(n))}</div></div>
+    ${deny ? `<div class="note warn">${ic('shield')}<span>Windows lets only admins read this folder. <button class="linkbtn" data-act="admin">Run as admin</button></span></div>` : ''}
+    <div><div class="big">${deny ? '—' : fmt(n.s)}</div><div class="faint">${kind} · ${TYPES[n.t][0]}</div></div>
+    <dl class="kv"><dt>On disk</dt><dd>${deny ? '—' : fmt(n.s * 1.003)}</dd>${n.c ? `<dt>Items</dt><dd>${n.items.toLocaleString('en-US')}</dd>` : ''}<dt>Modified</dt><dd>${fdate(n.d)}</dd><dt>Share of C:</dt><dd>${(n.s / C.s * 100).toFixed(1)}%</dd></dl>
+    <div class="share"><div class="bar"><i style="width:${Math.max(.5, n.s / C.s * 100)}%"></i></div></div>
+    ${inside}
+    <div class="acts">
+      <div class="two"><button class="btn sm" data-act="reveal">${ic('open')}Open</button><button class="btn sm" data-act="copy" data-v="${esc(pathOf(n))}">${ic('copy')}Copy path</button></div>
+      ${prot ? `<div class="note lock">${ic('lock')}<span>${why}</span></div>` :
+        `<button class="btn accent block" data-act="recycle" data-id="${n.id}">${ic('trash')}Move to Recycle Bin</button>
+         <button class="btn ghost danger block sm" data-act="perm" data-id="${n.id}">Delete permanently</button>`}
+    </div></div>`;
+}
+
+function squarify(items, x, y, w, h) {
+  const out = []; const total = items.reduce((a, i) => a + i.v, 0); if (!total || w <= 0 || h <= 0) return out;
+  const scale = w * h / total; let rest = items.map(i => ({ ...i, a: i.v * scale }));
+  const worst = (row, s) => { const sum = row.reduce((a, r) => a + r.a, 0); const mx = Math.max(...row.map(r => r.a)), mn = Math.min(...row.map(r => r.a)); return Math.max(s * s * mx / (sum * sum), sum * sum / (s * s * mn)); };
+  while (rest.length) {
+    const short = Math.min(w, h); const row = [rest[0]]; let i = 1;
+    while (i < rest.length && worst([...row, rest[i]], short) <= worst(row, short)) { row.push(rest[i]); i++; }
+    const rs = row.reduce((a, r) => a + r.a, 0);
+    if (w >= h) { const cw = rs / h; let yy = y; row.forEach(r => { const rh = r.a / cw; out.push({ ...r, x, y: yy, w: cw, h: rh }); yy += rh; }); x += cw; w -= cw; }
+    else { const ch = rs / w; let xx = x; row.forEach(r => { const rw = r.a / ch; out.push({ ...r, x: xx, y, w: rw, h: ch }); xx += rw; }); y += ch; h -= ch; }
+    rest = rest.slice(i);
+  }
+  return out;
+}
+function tileHtml(r, depth) {
+  const n = r.node; if (r.w < 2 || r.h < 2) return '';
+  const grp = n.c && r.w > 80 && r.h > 54 && depth < 3;
+  const prot = isProt(n) ? 'prot' : '';
+  const style = `left:${r.x + 1}px;top:${r.y + 1}px;width:${r.w - 2}px;height:${r.h - 2}px;--c:${cvar(n.t)}`;
+  const label = (r.w > 56 && r.h > (grp ? 18 : 30)) ? `<div class="tl"><b>${esc(n.n)}</b><span>${fmt(n.s)}</span></div>` : '';
+  let h = `<div class="tile ${grp ? 'grp' : 'leaf'} ${prot} ${S.sel === n ? 'sel' : ''}" data-act="sel" data-id="${n.id}" style="${style}" title="${esc(n.n)} · ${fmt(n.s)}">${label}</div>`;
+  if (grp) h += squarify(n.c.map(c => ({ v: c.s, node: c })), r.x + 3, r.y + 21, r.w - 6, r.h - 24).map(s => tileHtml(s, depth + 1)).join('');
+  return h;
+}
+function drawTreemap() {
+  const box = $('#tm'); if (!box) return;
+  const W = box.clientWidth, H = box.clientHeight;
+  const kids = (S.zoom.c || []).filter(c => c.s > 0);
+  box.innerHTML = squarify(kids.map(c => ({ v: c.s, node: c })), 0, 0, W, H).map(r => tileHtml(r, 0)).join('');
+}
+
+SCREENS.files = () => {
+  const old = S.filesTab === 'old';
+  let rows = old ? oldFiles().sort((a, b) => a.d < b.d ? -1 : 1) : [...FILES].sort((a, b) => b.s - a.s);
+  if (S.chips.gb) rows = rows.filter(f => f.s >= 1);
+  if (S.chips.prot) rows = rows.filter(f => !f.prot);
+  const sel = [...S.fileSel].map(i => FILES[i]);
+  const selSize = sel.reduce((a, f) => a + f.s, 0);
+  const tr = rows.map(f => { const i = FILES.indexOf(f); return `<tr class="${S.fileSel.has(i) ? 'sel' : ''}">
+    <td style="width:36px"><input type="checkbox" id="f${i}" data-act="fsel" data-i="${i}" ${S.fileSel.has(i) ? 'checked' : ''} ${f.prot ? 'disabled' : ''} aria-label="Select ${esc(f.n)}"></td>
+    <td><div class="fname"><span class="ftype" style="--c:${cvar(f.t)}">${ic(TYPES[f.t][2])}</span><div><span class="nm">${esc(f.n)} ${f.prot ? `<span class="pill bad">${ic('lock')}Protected</span>` : ''}</span><span class="pt mono">${esc(f.p)}</span></div></div></td>
+    <td class="r num">${fmt(f.s)}</td><td class="num">${fdate(f.d)}<div class="faint" style="font-size:11.5px">${age(f.d)}</div></td><td class="muted">${TYPES[f.t][0]}</td></tr>`; }).join('');
+  return {
+    main: `<div class="page">
+      <div class="phead"><div><h2>Large and old files</h2><p>${old ? 'Files that nobody changed for more than 1 year.' : 'The biggest files on all scanned drives.'}</p></div>
+        <div class="seg"><button class="${!old ? 'on' : ''}" data-act="ftab" data-v="large">Largest</button><button class="${old ? 'on' : ''}" data-act="ftab" data-v="old">Oldest</button></div></div>
+      <div class="chips"><button class="fchip ${S.chips.gb ? 'on' : ''}" data-act="chip" data-v="gb">${S.chips.gb ? ic('check') : ''}1 GB or larger</button><button class="fchip">All types ${ic('chev')}</button><button class="fchip">All drives ${ic('chev')}</button><button class="fchip ${S.chips.prot ? 'on' : ''}" data-act="chip" data-v="prot">${S.chips.prot ? ic('check') : ''}Hide protected files</button></div>
+      <div class="tbl"><table><thead><tr><th></th><th>Name</th><th class="r">Size</th><th>Modified</th><th>Type</th></tr></thead><tbody>${tr || `<tr><td colspan="5" class="muted">No files match these filters.</td></tr>`}</tbody></table></div>
+      ${sel.length ? `<div class="actbar"><b>${sel.length} selected</b><span class="muted num">${fmt(selSize)}</span><span class="grow"></span><button class="btn sm ghost" data-act="fclear">Clear</button><button class="btn sm ghost danger" data-act="perm-files">Delete permanently</button><button class="btn sm accent" data-act="recycle-files">${ic('trash')}Move to Recycle Bin</button></div>` : ''}
+    </div>`,
+    detail: `<div class="dt"><div><div class="faint">Selected</div><div class="big">${fmt(selSize)}</div><div class="muted">${sel.length} files</div></div>
+      ${sel.length ? `<div class="minilegend">${sel.map(f => `<div style="--c:${cvar(f.t)}"><i></i><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.n)}</span><span>${fmt(f.s)}</span></div>`).join('')}</div>` : ''}
+      <div class="note">${ic('info')}<span>Files in the Recycle Bin still use space. Empty the bin, or use Shift+Delete to delete permanently.</span></div></div>`,
+  };
+};
+
+SCREENS.dupes = () => {
+  const g = DUPES[S.dupe], del = S.dupeDel[S.dupe];
+  const allDel = del.size === g.files.length;
+  const list = `<div class="lhead"><div class="ttl"><h3>Duplicates</h3><span class="pill acc">${fmt(dupeSave())} to free</span></div><div class="faint" style="font-size:12px">Compared by size, then content hash (BLAKE3).</div></div>
+    <div class="lscroll">${DUPES.map((d, i) => `<div class="grow-row ${i === S.dupe ? 'sel' : ''}" data-act="dupe" data-i="${i}" style="--c:${cvar(d.t)}">
+      <div class="t1"><b>${esc(d.n)}</b><span class="num muted">${fmt(d.s * S.dupeDel[i].size)}</span></div>
+      <div class="t2"><span>${d.files.length} copies · ${fmt(d.s)} each</span><span>${S.dupeDel[i].size} to delete</span></div></div>`).join('')}
+      <div class="lgroup">+ 112 smaller groups (0.4 GB)</div></div>`;
+  const main = `<div class="page">
+    <div class="phead"><div style="display:flex;gap:12px;align-items:center;min-width:0"><span class="ftype" style="--c:${cvar(g.t)};width:40px;height:40px;border-radius:9px">${ic(TYPES[g.t][2])}</span><div style="min-width:0"><h2 style="font-size:18px;overflow-wrap:anywhere">${esc(g.n)}</h2><p>${g.files.length} identical copies · ${fmt(g.s)} each</p></div></div>
+      <div class="row"><span class="faint">Keep</span><div class="seg"><button data-act="dkeep" data-v="old">Oldest</button><button data-act="dkeep" data-v="new">Newest</button><button data-act="dkeep" data-v="c">The one on C:</button></div></div></div>
+    <div class="card">${g.files.map((f, i) => `<div class="dfile">
+      <input type="checkbox" id="d${S.dupe}-${i}" data-act="dsel" data-i="${i}" ${del.has(i) ? 'checked' : ''} aria-label="Delete this copy">
+      <div style="min-width:0"><div class="mono">${esc(f.p)}\\${esc(g.n)}</div><div class="faint" style="font-size:12px">Modified ${fdate(f.d)}</div></div>
+      ${del.has(i) ? '<span class="pill bad">Delete</span>' : '<span class="pill good">Keep</span>'}
+      <button class="btn ghost sm" data-act="reveal" aria-label="Open folder">${ic('open')}</button></div>`).join('')}</div>
+    ${allDel ? `<div class="note lock">${ic('warn')}<span>Keep at least one copy. Lustro does not delete every copy of a file.</span></div>` : ''}
+  </div>`;
+  const nDel = S.dupeDel.reduce((a, s) => a + s.size, 0);
+  const bad = S.dupeDel.some((s, i) => s.size === DUPES[i].files.length);
+  return { list, main, detail: `<div class="dt"><div><div class="faint">Space to free</div><div class="big">${fmt(dupeSave())}</div><div class="muted">${nDel} copies in ${DUPES.length} groups</div></div>
+    <div class="note">${ic('info')}<span>Files with the same size and the same content hash are duplicates. Hard links and online-only OneDrive files are skipped.</span></div>
+    <button class="btn accent block" data-act="dupe-go" ${bad ? 'disabled' : ''}>${ic('trash')}Move ${nDel} copies to Recycle Bin</button></div>` };
+};
+
+SCREENS.clean = () => {
+  const cat = CLEAN.find(c => c.id === S.cleanCat);
+  const total = CLEAN.reduce((a, c) => a + cleanSel(c), 0);
+  const list = `<div class="lhead"><div class="ttl"><h3>Clean up</h3><button class="btn ghost sm" data-act="rescan">${ic('refresh')}Rescan</button></div></div>
+    <div class="lscroll">${CLEAN.map(c => `<div class="grow-row ${c.id === S.cleanCat ? 'sel' : ''}" data-act="ccat" data-v="${c.id}">
+      <div class="t1"><b style="display:flex;gap:8px;align-items:center">${ic(c.ic)}${c.n}</b><span class="num">${fmt(cleanSel(c))}</span></div>
+      <div class="t2"><span>${c.items.filter(it => itemUsable(it) && itemOn(it) > 0).length} of ${c.items.length} selected</span><span>${fmt(c.items.reduce((a, it) => a + it.s, 0))} found</span></div></div>`).join('')}</div>`;
+  const items = cat.items.map((it, k) => {
+    const usable = itemUsable(it), on = usable && itemOn(it) > 0;
+    const tags = [it.admin ? `<span class="pill ${S.admin ? 'good' : 'warn'}">${ic('shield')}${S.admin ? 'Admin' : 'Needs admin'}</span>` : '', it.running ? `<span class="pill warn">Brave is open</span>` : '', it.warn ? `<span class="pill warn">${ic('warn')}Read first</span>` : '', it.cmd ? `<span class="cmd">${esc(it.cmd)}</span>` : ''].join('');
+    const subs = it.subs && it.open ? `<div class="subs">${it.subs.map((s, j) => `<div class="sub"><input type="checkbox" id="cs${k}-${j}" data-act="csub" data-k="${k}" data-j="${j}" ${s.on ? 'checked' : ''} ${usable ? '' : 'disabled'} aria-label="Select"><span class="mono" title="${esc(s.p)}">${esc(s.p)}</span><span class="faint">${s.a ? 'changed ' + s.a + (s.a === 'today' ? '' : ' ago') : ''}</span><span class="num">${fmt(s.s)}</span></div>`).join('')}</div>` : '';
+    return `<div class="citem ${usable ? '' : 'off'}">
+      <input type="checkbox" id="ci${k}" data-act="citem" data-k="${k}" ${on ? 'checked' : ''} ${usable ? '' : 'disabled'} aria-label="Select ${esc(it.n)}">
+      <div class="cn">${esc(it.n)} ${tags}</div><div class="cs">${fmt(it.s)}</div>
+      <div class="cd">${esc(it.desc || '')} ${it.subs ? `<button class="linkbtn" data-act="cexp" data-k="${k}">${it.open ? 'Hide folders' : 'Show folders'}</button>` : ''} ${it.admin && !S.admin ? `<button class="linkbtn" data-act="admin">Run as admin</button>` : ''}</div>
+      ${subs}</div>`;
+  }).join('');
+  const main = `<div class="page"><div class="phead"><div><h2>${cat.n}</h2><p>Safe items are selected. Items that need a choice are not.</p></div><div class="row"><button class="btn sm ghost" data-act="cnone">Select none</button><button class="btn sm" data-act="csafe">Select safe items</button></div></div>
+    <div class="card">${items}</div></div>`;
+  const detail = `<div class="dt"><div><div class="faint">Selected in all groups</div><div class="big">${fmt(total)}</div></div>
+    <div class="minilegend">${CLEAN.map(c => `<div style="--c:var(--accent)"><i></i><span>${c.n}</span><span>${fmt(cleanSel(c))}</span></div>`).join('')}</div>
+    <button class="btn accent block" data-act="clean-go">${ic('clean')}Clean ${fmt(total)}</button>
+    <div class="note">${ic('info')}<span>Cleaner items are deleted permanently. They are caches and temp files that apps make again.</span></div>
+    ${S.admin ? '' : `<div class="note warn">${ic('shield')}<span>${CLEAN.reduce((a, c) => a + c.items.filter(i => i.admin).length, 0)} items need admin rights. <button class="linkbtn" data-act="admin">Run as admin</button></span></div>`}</div>`;
+  return { list, main, detail };
+};
+
+SCREENS.apps = () => {
+  let rows = APPS.map((a, i) => ({ ...a, i }));
+  if (S.appSrc !== 'All') rows = rows.filter(a => a.src === S.appSrc);
+  if (S.appQ) rows = rows.filter(a => (a.n + a.pub).toLowerCase().includes(S.appQ.toLowerCase()));
+  const a = APPS[S.app];
+  const tr = rows.map(r => `<tr class="${r.i === S.app ? 'sel' : ''}" data-act="app" data-i="${r.i}">
+    <td><div class="fname"><span class="ftype" style="--c:${cvar(r.t)}">${ic(TYPES[r.t][2])}</span><div><span class="nm">${esc(r.n)}</span><span class="pt">${esc(r.pub)}</span></div></div></td>
+    <td class="muted">${r.src === 'Store' ? 'Microsoft Store' : 'Desktop app'}</td><td class="r num">${fmt(r.s)}</td><td class="num">${fdate(r.inst)}</td><td class="muted">${r.used || '<span class="faint" title="Windows has no record">Unknown</span>'}</td>
+    <td class="r"><button class="btn sm" data-act="uninstall" data-i="${r.i}">Uninstall</button></td></tr>`).join('');
+  return {
+    main: `<div class="page">
+      <div class="phead"><div><h2>Installed apps</h2><p>${APPS.length} apps · ${fmt(APPS.reduce((s, x) => s + x.s, 0))}</p></div>
+        <div class="row"><input class="text" id="appQ" placeholder="Search apps" value="${esc(S.appQ)}" aria-label="Search apps" style="width:200px"><div class="seg">${['All', 'Desktop', 'Store'].map(v => `<button class="${S.appSrc === v ? 'on' : ''}" data-act="asrc" data-v="${v}">${v}</button>`).join('')}</div></div></div>
+      <div class="tbl"><table><thead><tr><th>Name</th><th>Source</th><th class="r">Size</th><th>Installed</th><th>Last used</th><th></th></tr></thead><tbody id="appRows">${tr}</tbody></table></div></div>`,
+    detail: `<div class="dt" style="--c:${cvar(a.t)}"><div class="dt-hero"><span class="dt-ic">${ic(TYPES[a.t][2])}</span><div class="dt-name">${esc(a.n)}</div><div class="faint">${esc(a.pub)}</div></div>
+      <div class="big">${fmt(a.s)}</div>
+      <dl class="kv"><dt>Source</dt><dd>${a.src === 'Store' ? 'Microsoft Store' : 'Desktop app'}</dd><dt>Installed</dt><dd>${fdate(a.inst)}</dd><dt>Last used</dt><dd>${a.used || 'Unknown'}</dd></dl>
+      <button class="btn accent block" data-act="uninstall" data-i="${S.app}">Uninstall</button>
+      <div class="note">${ic('info')}<span>Lustro runs the app's own uninstaller. The uninstaller can ask for admin rights.</span></div></div>`,
+  };
+};
+
+const SEARCH_POOL = [...FILES, ...SEARCH_EXTRA];
+function searchRows(q) {
+  const re = new RegExp('^' + q.trim().replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + (q.includes('*') ? '$' : ''), 'i');
+  const hits = q.trim() ? SEARCH_POOL.filter(f => q.includes('*') ? re.test(f.n) : f.n.toLowerCase().includes(q.trim().toLowerCase())) : [];
+  return { hits, html: hits.map(f => `<tr><td><div class="fname"><span class="ftype" style="--c:${cvar(f.t)}">${ic(TYPES[f.t][2])}</span><div><span class="nm">${esc(f.n)}</span><span class="pt mono">${esc(f.p)}</span></div></div></td><td class="r num">${fmt(f.s)}</td><td class="num">${fdate(f.d)}</td><td class="r"><button class="btn ghost sm" data-act="reveal" aria-label="Open folder">${ic('open')}</button></td></tr>`).join('') || `<tr><td colspan="4" class="muted">No files match “${esc(q)}”.</td></tr>` };
+}
+SCREENS.search = () => {
+  const r = searchRows(S.q);
+  return { main: `<div class="page">
+    <div class="phead"><div><h2>Search files</h2><p>Searches the last scan of every drive. Use * and ? as wildcards.</p></div></div>
+    <div class="row"><input class="text" id="q" value="${esc(S.q)}" placeholder="File name, for example *.iso" aria-label="Search" style="flex:1;min-width:200px;height:36px;font-size:14px"><div class="chips"><button class="fchip on">${ic('check')}All drives</button><button class="fchip">Any size ${ic('chev')}</button><button class="fchip">Any date ${ic('chev')}</button></div></div>
+    <div class="faint num" id="qinfo">${r.hits.length} results · 1,431,882 files searched in 0.04 s</div>
+    <div class="tbl"><table><thead><tr><th>Name</th><th class="r">Size</th><th>Modified</th><th></th></tr></thead><tbody id="qrows">${r.html}</tbody></table></div></div>` };
+};
+
+SCREENS.history = () => {
+  const freed = HIST.filter(h => h.a !== 'Blocked').reduce((a, h) => a + h.s, 0);
+  const pill = { 'Recycle Bin': 'acc', Cleaner: 'good', Permanent: 'bad', Blocked: 'warn' };
+  return { main: `<div class="page">
+    <div class="phead"><div><h2>History</h2><p>${fmt(freed)} freed this month. Lustro keeps this log on this PC only.</p></div><button class="btn sm" data-act="export">${ic('export')}Export CSV</button></div>
+    <div class="tbl"><table><thead><tr><th>When</th><th>Action</th><th>Item</th><th class="r">Size</th><th></th></tr></thead><tbody>
+    ${HIST.map((h, i) => `<tr><td class="num muted" style="white-space:nowrap">${h.t}</td><td><span class="pill ${pill[h.a]}">${h.a === 'Blocked' ? ic('lock') : ''}${h.a}</span></td>
+      <td><div class="fname"><div><span class="nm">${esc(h.n)}</span><span class="pt mono">${esc(h.p)}</span></div></div></td>
+      <td class="r num">${fmt(h.s)}</td>
+      <td class="r">${h.restore ? `<button class="btn sm" data-act="restore" data-i="${i}">${ic('restore')}Restore</button>` : h.gone ? '<span class="faint" style="font-size:12px">Recycle Bin emptied</span>' : h.a === 'Blocked' ? '<span class="faint" style="font-size:12px">Protected system path</span>' : ''}</td></tr>`).join('')}
+    </tbody></table></div></div>` };
+};
+
+function sw(id, on, dis) { return `<label class="switch"><input type="checkbox" id="${id}" ${on ? 'checked' : ''} ${dis ? 'disabled' : ''}><span></span></label>`; }
+SCREENS.settings = () => ({ main: `<div class="page" style="max-width:820px">
+  <div class="phead"><div><h2>Settings</h2></div></div>
+  <h3 class="sec">Appearance</h3>
+  <div class="card set"><div class="srow"><div><div>Theme</div><div class="sd">System follows the Windows light or dark setting.</div></div><div class="seg">${['system', 'light', 'dark'].map(v => `<button class="${S.theme === v ? 'on' : ''}" data-act="theme" data-v="${v}">${v[0].toUpperCase() + v.slice(1)}</button>`).join('')}</div></div></div>
+  <h3 class="sec">Delete</h3>
+  <div class="card set">
+    <div class="srow"><div><div>Default delete</div><div class="sd">Shift+Delete always deletes permanently.</div></div><select class="text" id="setDel"><option>Move to Recycle Bin</option><option>Delete permanently</option></select></div>
+    <div class="srow"><div><div>Ask before a permanent delete</div><div class="sd">Always on. You cannot undo a permanent delete.</div></div>${sw('setAsk', 1, 1)}</div>
+    <div class="srow"><div><div>Protected system paths</div><div class="sd">Windows, Program Files, page file, drive roots and profile folders. Lustro never deletes them.</div></div><span class="pill bad">${ic('lock')}Always on</span></div></div>
+  <h3 class="sec">Scanning</h3>
+  <div class="card set">
+    <div class="srow"><div><div>Fast scan on NTFS drives</div><div class="sd">Reads the Master File Table. Needs admin rights.</div></div>${sw('setMft', 1)}</div>
+    <div class="srow"><div><div>Live updates</div><div class="sd">Reads the NTFS change journal, so results stay current without a rescan. Needs admin rights.</div></div>${sw('setUsn', 1)}</div>
+    <div class="srow"><div><div>Show sizes as</div><div class="sd">"Size on disk" counts cluster slack and compression.</div></div><select class="text" id="setSize"><option>Size</option><option>Size on disk</option></select></div></div>
+  <h3 class="sec">Clean up</h3>
+  <div class="card set">
+    <div class="srow"><div><div>Select dev project folders after</div><div class="sd">Lustro selects node_modules, target and similar folders only in projects with no change for this many days.</div></div><select class="text" id="setDays"><option>14 days</option><option selected>30 days</option><option>90 days</option></select></div></div>
+  <h3 class="sec">Alerts and Windows</h3>
+  <div class="card set">
+    <div class="srow"><div><div>Low space alert</div><div class="sd">Lustro stays in the tray and sends a notification when a drive has less free space than this.</div></div><select class="text" id="setLow"><option>5% free</option><option selected>10% free</option><option>15% free</option></select>${sw('setAlert', 1)}</div>
+    <div class="srow"><div><div>Start with Windows</div><div class="sd">Starts in the tray, without admin rights.</div></div>${sw('setStart', 0)}</div>
+    <div class="srow"><div><div>"Analyze with Lustro" in Explorer</div><div class="sd">Adds the command to the right-click menu of folders and drives.</div></div>${sw('setMenu', 1)}</div></div>
+  <h3 class="sec">About</h3>
+  <div class="card set">
+    <div class="srow"><div><div>Lustro 0.1.0</div><div class="sd">Free and open source (MIT). Lustro is Latin for “I purify” and “I survey”.</div></div><button class="btn sm" data-act="update">${ic('refresh')}Check for updates</button></div>
+    <div class="srow"><div><div>Check for updates automatically</div><div class="sd">From GitHub Releases.</div></div>${sw('setUpd', 1)}</div></div>
+</div>` });
+
+/* ---------- render ---------- */
+const listEl = $('#list'), mainEl = $('#main'), detailEl = $('#detail');
+function render() {
+  const keepTree = document.querySelector('#tree')?.scrollTop, keepMain = mainEl.scrollTop, same = render._last === S.screen;
+  const r = SCREENS[S.screen]();
+  listEl.hidden = !r.list; listEl.innerHTML = r.list || '';
+  mainEl.innerHTML = r.main; detailEl.hidden = !r.detail; detailEl.innerHTML = r.detail || '';
+  if (same) { mainEl.scrollTop = keepMain; const t = document.querySelector('#tree'); if (t && keepTree != null) t.scrollTop = keepTree; }
+  render._last = S.screen;
+  renderChrome();
+  r.after && r.after();
+}
+function applyTheme() {
+  if (S.theme === 'system') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', S.theme);
+  try { localStorage.setItem('lustro-mock-theme', S.theme); } catch (e) {}
+}
+
+/* ---------- dialog + toast ---------- */
+function toast(msg) {
+  document.querySelector('.toast')?.remove();
+  const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status');
+  t.innerHTML = `${ic('check')}<span>${msg}</span>`; document.body.appendChild(t);
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.remove(), 3200);
+}
+function dialog({ title, body, ok, danger }, onOk) {
+  const o = document.createElement('div'); o.className = 'overlay';
+  o.innerHTML = `<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgT"><div class="db"><h3 id="dlgT">${title}</h3>${body}</div>
+    <div class="df"><button class="btn ${danger ? '' : 'accent'}" data-k="ok" style="${danger ? 'background:var(--bad);color:#fff;border-color:transparent' : ''}">${ok}</button><button class="btn" data-k="cancel">Cancel</button></div></div>`;
+  o.addEventListener('click', e => { const k = e.target.closest('[data-k]')?.dataset.k; if (k || e.target === o) { o.remove(); if (k === 'ok') onOk && onOk(); } });
+  document.body.appendChild(o); o.querySelector('[data-k="cancel"]').focus();
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el || el.disabled) return;
+  const a = el.dataset.act, id = +el.dataset.id, v = el.dataset.v;
+  if (el.type === 'checkbox') return; // handled on change
+  switch (a) {
+    case 'nav': S.screen = v; render(); mainEl.scrollTop = 0; break;
+    case 'goto': S.screen = v; if (v === 'clean' && el.dataset.sub) S.cleanCat = el.dataset.sub; if (v === 'files' && el.dataset.sub) { S.filesTab = 'old'; S.chips.gb = false; } render(); break;
+    case 'theme': S.theme = v; applyTheme(); render(); break;
+    case 'admin':
+      if (S.admin) break;
+      dialog({ title: 'Restart Lustro as administrator?', body: '<p>Windows shows a User Account Control prompt. Lustro restarts and keeps your last scan, so you do not wait again.</p><p>With admin rights you get the fast scan, live updates, system folders and the system cleaner.</p>', ok: 'Restart as admin' },
+        () => { S.admin = true; render(); toast('Lustro restarted as administrator. Fast scan and live updates are on.'); });
+      break;
+    case 'sel': {
+      if (e.target.closest('[data-act="tw"]')) break;
+      const n = BYID[id]; S.sel = n;
+      if (el.classList.contains('trow') && n.c) { S.zoom = n; S.open.add(n.id); }
+      if (el.classList.contains('tile')) { for (let x = n.parent; x; x = x.parent) S.open.add(x.id); S._scrollTree = true; }
+      render(); break;
+    }
+    case 'tw': { const n = BYID[id]; S.open.has(id) ? S.open.delete(id) : S.open.add(id); if (S.open.has(id)) { S.zoom = n; S.sel = n; } render(); break; }
+    case 'zoom': S.zoom = BYID[id]; S.sel = BYID[id]; render(); break;
+    case 'up': if (S.zoom.parent) { S.sel = S.zoom; S.zoom = S.zoom.parent; render(); } break;
+    case 'view': S.view = v; render(); break;
+    case 'drive': if (v === 'C') { S.screen = 'explore'; S.zoom = C; S.sel = C; render(); } else toast('This mockup has sample folders for C: only.'); break;
+    case 'recycle': { const n = BYID[id]; dialog({ title: 'Move to Recycle Bin?', body: `<p><b>${esc(n.n)}</b> · ${fmt(n.s)}</p><p class="mono">${esc(pathOf(n))}</p><p>You can restore it from History or from the Recycle Bin.</p>`, ok: 'Move to Recycle Bin' }, () => toast(`Moved “${esc(n.n)}” to the Recycle Bin (mockup, nothing changed).`)); break; }
+    case 'perm': { const n = BYID[id]; dialog({ title: 'Delete permanently?', danger: 1, body: `<p><b>${esc(n.n)}</b> · ${fmt(n.s)}${n.c ? ` · ${n.items.toLocaleString('en-US')} items` : ''}</p><p class="mono">${esc(pathOf(n))}</p><p style="color:var(--bad)">You cannot undo this. The item does not go to the Recycle Bin.</p>`, ok: 'Delete permanently' }, () => toast(`Deleted “${esc(n.n)}” permanently (mockup, nothing changed).`)); break; }
+    case 'recycle-files': case 'perm-files': {
+      const sel = [...S.fileSel].map(i => FILES[i]), size = fmt(sel.reduce((s, f) => s + f.s, 0)), perm = a === 'perm-files';
+      dialog({ title: perm ? `Delete ${sel.length} files permanently?` : `Move ${sel.length} files to the Recycle Bin?`, danger: perm, body: `<p>${size} in ${sel.length} files.</p>${perm ? '<p style="color:var(--bad)">You cannot undo this.</p>' : '<p>You can restore them from History.</p>'}`, ok: perm ? 'Delete permanently' : 'Move to Recycle Bin' },
+        () => { toast(`${perm ? 'Deleted' : 'Moved'} ${sel.length} files · ${size} (mockup)`); S.fileSel.clear(); render(); });
+      break;
+    }
+    case 'fclear': S.fileSel.clear(); render(); break;
+    case 'ftab': S.filesTab = v; if (v === 'old') S.chips.gb = false; render(); break;
+    case 'chip': S.chips[v] = !S.chips[v]; render(); break;
+    case 'dupe': S.dupe = +el.dataset.i; render(); break;
+    case 'dkeep': {
+      const g = DUPES[S.dupe]; let keep = 0;
+      if (v === 'old') keep = g.files.reduce((k, f, i) => f.d < g.files[k].d ? i : k, 0);
+      if (v === 'new') keep = g.files.reduce((k, f, i) => f.d > g.files[k].d ? i : k, 0);
+      if (v === 'c') keep = Math.max(0, g.files.findIndex(f => f.p.startsWith('C:')));
+      S.dupeDel[S.dupe] = new Set(g.files.map((_, i) => i).filter(i => i !== keep)); render(); break;
+    }
+    case 'dupe-go': { const n = S.dupeDel.reduce((s, x) => s + x.size, 0); dialog({ title: `Move ${n} copies to the Recycle Bin?`, body: `<p>${fmt(dupeSave())} in ${DUPES.length} groups. One copy of each file stays.</p>`, ok: 'Move to Recycle Bin' }, () => toast(`Moved ${n} copies · ${fmt(dupeSave())} (mockup)`)); break; }
+    case 'ccat': S.cleanCat = v; render(); break;
+    case 'cexp': { const it = CLEAN.find(c => c.id === S.cleanCat).items[+el.dataset.k]; it.open = !it.open; render(); break; }
+    case 'cnone': CLEAN.find(c => c.id === S.cleanCat).items.forEach(it => { it.on = 0; it.subs && it.subs.forEach(s => s.on = 0); }); render(); break;
+    case 'csafe': CLEAN.find(c => c.id === S.cleanCat).items.forEach(it => { it.on = it.warn || it.n === 'Recycle Bin' || it.n.startsWith('Cargo') || it.n.startsWith('NuGet') || it.n.includes('stopped') || it.n.startsWith('Compact') ? 0 : 1; it.subs && it.subs.forEach(s => s.on = !/days|today/.test(s.a) ? 1 : 0); }); render(); break;
+    case 'clean-go': {
+      const total = CLEAN.reduce((s, c) => s + cleanSel(c), 0);
+      const lines = CLEAN.filter(c => cleanSel(c) > 0).map(c => `<div style="display:flex;justify-content:space-between"><span>${c.n}</span><span class="num">${fmt(cleanSel(c))}</span></div>`).join('');
+      dialog({ title: `Clean ${fmt(total)}?`, body: `<div style="display:flex;flex-direction:column;gap:4px">${lines}</div><p>These items are deleted permanently. Apps make these caches again when they need them.</p>`, ok: 'Clean' }, () => toast(`Cleaned ${fmt(total)} (mockup, nothing changed).`));
+      break;
+    }
+    case 'app': if (!e.target.closest('button')) { S.app = +el.dataset.i; render(); } break;
+    case 'asrc': S.appSrc = v; render(); break;
+    case 'uninstall': { const ap = APPS[+el.dataset.i]; dialog({ title: `Uninstall ${esc(ap.n)}?`, body: `<p>Lustro starts the uninstaller of ${esc(ap.pub)}. Follow its steps to finish.</p>`, ok: 'Uninstall' }, () => toast(`Started the uninstaller of ${esc(ap.n)} (mockup).`)); break; }
+    case 'restore': { const h = HIST[+el.dataset.i]; toast(`Restored “${esc(h.n)}” to ${esc(h.p)} (mockup).`); h.restore = 0; h.a = 'Recycle Bin'; h.restored = 1; render(); break; }
+    case 'copy': { const t = v; try { navigator.clipboard.writeText(t).then(() => toast('Copied the path.'), () => toast(t)); } catch (err) { toast(t); } break; }
+    case 'reveal': toast('Opens the folder in File Explorer (mockup).'); break;
+    case 'rescan': toast(S.admin ? 'Fast scan of C: finished in 11.2 s (mockup).' : 'Folder walk started. Run as admin for the fast scan (mockup).'); break;
+    case 'export': toast('Saves a CSV or HTML report (mockup).'); break;
+    case 'pick': toast('Opens a folder picker (mockup).'); break;
+    case 'update': toast('Lustro 0.1.0 is the latest version (mockup).'); break;
+    case 'caption': toast('These buttons belong to Windows in the real app.'); break;
+  }
+});
+document.addEventListener('dblclick', e => {
+  const t = e.target.closest('.tile'); if (!t) return;
+  const n = BYID[+t.dataset.id]; if (n.c) { S.zoom = n; S.sel = n; S.open.add(n.id); for (let x = n.parent; x; x = x.parent) S.open.add(x.id); render(); }
+});
+document.addEventListener('change', e => {
+  const el = e.target, a = el.dataset.act;
+  if (a === 'fsel') { const i = +el.dataset.i; el.checked ? S.fileSel.add(i) : S.fileSel.delete(i); render(); }
+  if (a === 'dsel') { const i = +el.dataset.i, s = S.dupeDel[S.dupe]; el.checked ? s.add(i) : s.delete(i); render(); }
+  if (a === 'citem') { const it = CLEAN.find(c => c.id === S.cleanCat).items[+el.dataset.k]; if (it.subs) it.subs.forEach(s => s.on = el.checked ? 1 : 0); else it.on = el.checked ? 1 : 0; render(); }
+  if (a === 'csub') { const it = CLEAN.find(c => c.id === S.cleanCat).items[+el.dataset.k]; it.subs[+el.dataset.j].on = el.checked ? 1 : 0; render(); }
+});
+document.addEventListener('input', e => {
+  if (e.target.id === 'q') { S.q = e.target.value; const r = searchRows(S.q); $('#qrows').innerHTML = r.html; $('#qinfo').textContent = `${r.hits.length} results · 1,431,882 files searched in 0.04 s`; }
+  if (e.target.id === 'appQ') { S.appQ = e.target.value; const pos = e.target.selectionStart; render(); const q = $('#appQ'); q.focus(); q.setSelectionRange(pos, pos); }
+  if (e.target.id === 'treeFilter') { const f = e.target.value.toLowerCase(); document.querySelectorAll('#tree .trow').forEach(r => { r.hidden = f && !r.title.toLowerCase().includes(f); }); }
+});
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); S.screen = 'search'; render(); $('#q')?.focus(); }
+  if (e.key === 'Escape') document.querySelector('.overlay')?.remove();
+});
+new ResizeObserver(() => { if (S.screen === 'explore' && S.view === 'map') drawTreemap(); }).observe(mainEl);
+
+applyTheme();
+render();
+</script>
