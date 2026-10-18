@@ -168,9 +168,15 @@ mod tests {
         ));
     }
 
+    /// Needs a desktop session with a Recycle Bin. GitHub's Windows runners run as a
+    /// service session where the shell Recycle Bin does not list the item, so CI skips it.
     #[test]
     fn recycles_and_restores_a_file() {
-        // The long form of the path: on CI, TEMP uses a short 8.3 name (RUNNER~1),
+        if std::env::var("CI").is_ok() {
+            eprintln!("skipped on CI: the runner session has no usable Recycle Bin");
+            return;
+        }
+        // The long form of the path: TEMP can use a short 8.3 name (RUNNER~1),
         // but the Recycle Bin reports the long name.
         let root = temp("bin");
         let long = fs::canonicalize(&root).unwrap();
@@ -180,10 +186,16 @@ mod tests {
         recycle(&f).unwrap();
         assert!(!f.exists());
         let items = trash::os_limited::list().unwrap();
+        let count = items.len();
         let item = items
             .into_iter()
             .find(|i| i.original_path() == f)
-            .expect("item in the Recycle Bin");
+            .unwrap_or_else(|| {
+                panic!(
+                    "{} is not among the {count} items in the Recycle Bin",
+                    f.display()
+                )
+            });
         trash::os_limited::restore_all([item]).unwrap();
         assert_eq!(fs::read(&f).unwrap(), b"recycle me");
         fs::remove_dir_all(root).unwrap();
