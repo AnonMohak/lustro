@@ -254,6 +254,17 @@ export interface Favorite {
   hits: FavoriteHit[];
 }
 
+/** The `delete-progress` event of a delete or a clean run. */
+export interface DeleteProgress {
+  done: number;
+  doneBytes: number;
+  total: number;
+  /** 0 for a clean run: the cleaner measures while it runs. */
+  totalBytes: number;
+  /** The path (delete) or rule name (clean) that is in work now. Empty between items. */
+  current: string;
+}
+
 export const ROOT_ID = 0;
 
 export const api = {
@@ -280,6 +291,7 @@ export const api = {
   takeStartupScan: () => invoke<string | null>("take_startup_scan"),
   deleteItems: (items: DeleteTarget[], permanent: boolean) =>
     invoke<DeleteResult>("delete_items", { items, permanent }),
+  cancelDelete: () => invoke<void>("cancel_delete"),
   history: () => invoke<HistoryEntry[]>("history"),
   restore: (id: number) => invoke<void>("restore", { id }),
   dupesStart: (minSize: number, includeAppData: boolean) => invoke<void>("dupes_start", { minSize, includeAppData }),

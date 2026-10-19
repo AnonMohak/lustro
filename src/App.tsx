@@ -6,7 +6,7 @@ import { Sidebar } from "./components/Sidebar";
 import { StatusBar } from "./components/StatusBar";
 import { TitleBar } from "./components/TitleBar";
 import { Tooltip } from "./components/Tooltip";
-import { api, type ScanErrorEvent, type ScanProgress, type ScanSummary } from "./lib/api";
+import { api, type DeleteProgress, type ScanErrorEvent, type ScanProgress, type ScanSummary } from "./lib/api";
 import { formatCount, formatDuration } from "./lib/format";
 import { rootLabel } from "./lib/scanText";
 import { autoUpdateOn, checkForUpdates } from "./lib/updates";
@@ -37,6 +37,7 @@ function useScanEvents() {
           }),
         );
       }),
+      listen<DeleteProgress>("delete-progress", (e) => st().onDeleteProgress(e.payload)),
       // A second start of Lustro (Explorer menu) asks to scan a folder.
       listen<string>("open-scan", (e) => st().startScan(e.payload)),
       // Live updates: the change journal changed a fast-scan tree.

@@ -31,6 +31,7 @@ export function Clean() {
   const isAdmin = useStore((s) => s.info?.isAdmin ?? false);
   const showToast = useStore((s) => s.showToast);
   const openDialog = useStore((s) => s.openDialog);
+  const runJob = useStore((s) => s.runJob);
   const devAgeDays = useStore((s) => s.devAgeDays);
   const [rules, setRules] = useState<CleanRule[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -122,26 +123,29 @@ export function Clean() {
         t("clean.confirmBody"),
       ],
       confirm: t("clean.confirm"),
+      // The sidebar block shows the progress and the result; a toast shows only problems.
       onConfirm: async () => {
         setBusy(true);
-        try {
-          const res = await api.cleanRun(
-            chosen.map((r) => r.id),
-            items,
-            devAgeDays,
-          );
-          const freed = res.reduce((a, r) => a + r.freedBytes, 0);
-          const inUse = res.reduce((a, r) => a + r.skippedFiles, 0);
-          const skipped = res.filter((r) => r.skipped);
-          if (skipped.length > 0) showToast(t("clean.skippedRule", { name: skipped[0].name, reason: skipped[0].skipped }), true);
-          else if (inUse > 0) showToast(t("clean.doneSkipped", { size: formatBytes(freed), n: formatCount(inUse) }));
-          else showToast(t("clean.doneToast", { size: formatBytes(freed) }));
-        } catch (e) {
-          showToast(String(e), true);
-        } finally {
-          setBusy(false);
-          setReload((r) => r + 1);
-        }
+        await runJob({
+          kind: "clean",
+          items: chosen.length,
+          bytes: total,
+          run: async () => {
+            const res = await api.cleanRun(
+              chosen.map((r) => r.id),
+              items,
+              devAgeDays,
+            );
+            const freed = res.reduce((a, r) => a + r.freedBytes, 0);
+            const inUse = res.reduce((a, r) => a + r.skippedFiles, 0);
+            const skipped = res.filter((r) => r.skipped);
+            if (skipped.length > 0) showToast(t("clean.skippedRule", { name: skipped[0].name, reason: skipped[0].skipped }), true);
+            else if (inUse > 0) showToast(t("clean.doneSkipped", { size: formatBytes(freed), n: formatCount(inUse) }));
+            return { freed, errors: skipped.length };
+          },
+        });
+        setBusy(false);
+        setReload((r) => r + 1);
       },
     });
   };

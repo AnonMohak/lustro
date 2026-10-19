@@ -1,13 +1,14 @@
 //! Tauri commands for the cleaner.
 
 use std::collections::HashMap;
+use std::sync::atomic::Ordering;
 
 use rayon::prelude::*;
 use serde::Serialize;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 
 use crate::clean::{self, RuleItem, system};
-use crate::commands::with_history;
+use crate::commands::{DeleteProgress, with_history};
 use crate::error::{Error, Result};
 use crate::ops::history::Action;
 use crate::state::AppState;
@@ -107,15 +108,35 @@ pub async fn clean_run(
 ) -> Result<Vec<RuleOutcome>> {
     let ctx = ctx(&app, dev_age_days);
     let items = items.unwrap_or_default();
+    app.state::<AppState>()
+        .delete_cancel
+        .store(false, Ordering::Relaxed);
     tauri::async_runtime::spawn_blocking(move || {
         let admin = elevation::is_elevated();
         let running = system::running_processes();
         let rules = clean::rules();
         let mut out = Vec::new();
+        let mut progress = DeleteProgress {
+            done: 0,
+            done_bytes: 0,
+            total: ids.len(),
+            total_bytes: 0,
+            current: String::new(),
+        };
         for id in ids {
+            if app
+                .state::<AppState>()
+                .delete_cancel
+                .load(Ordering::Relaxed)
+            {
+                break;
+            }
             let Some(rule) = rules.iter().find(|r| r.id == id) else {
+                progress.done += 1;
                 continue;
             };
+            progress.current = rule.name.clone();
+            let _ = app.emit("delete-progress", progress.clone());
             let skip = if rule.admin && !admin {
                 Some("Needs admin rights.".to_string())
             } else {
@@ -133,12 +154,17 @@ pub async fn clean_run(
                     skipped_files: 0,
                     skipped: Some(reason),
                 });
+                progress.done += 1;
                 continue;
             }
             let r = clean::clean_rule(rule, &ctx, items.get(&rule.id).map(|v| v.as_slice()));
             with_history(&app, |h| {
                 h.add(Action::Cleaner, &rule.name, r.freed_bytes, Ok(()))
             });
+            progress.done += 1;
+            progress.done_bytes += r.freed_bytes;
+            progress.current.clear();
+            let _ = app.emit("delete-progress", progress.clone());
             out.push(RuleOutcome {
                 id: rule.id.clone(),
                 name: rule.name.clone(),

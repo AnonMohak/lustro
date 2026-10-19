@@ -659,6 +659,25 @@ pub struct DeleteResult {
     summaries: Vec<ScanSummary>,
 }
 
+/// Sent as `delete-progress` before and after each item of a delete or a clean run.
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteProgress {
+    pub done: usize,
+    pub done_bytes: u64,
+    pub total: usize,
+    /// 0 when the backend does not know it (the cleaner measures while it runs).
+    pub total_bytes: u64,
+    /// The item that is being deleted now.
+    pub current: String,
+}
+
+/// Stops the running delete or clean run after its current item.
+#[tauri::command]
+pub fn cancel_delete(state: State<'_, AppState>) {
+    state.delete_cancel.store(true, Ordering::Relaxed);
+}
+
 fn data_dir(app: &AppHandle) -> Option<std::path::PathBuf> {
     app.path().app_local_data_dir().ok()
 }
@@ -719,6 +738,9 @@ pub async fn delete_items(
     });
 
     let app2 = app.clone();
+    app.state::<AppState>()
+        .delete_cancel
+        .store(false, Ordering::Relaxed);
     tauri::async_runtime::spawn_blocking(move || {
         let mut result = DeleteResult {
             deleted: 0,
@@ -727,7 +749,23 @@ pub async fn delete_items(
             summaries: Vec::new(),
         };
         let mut changed: Vec<String> = Vec::new();
+        let mut progress = DeleteProgress {
+            done: 0,
+            done_bytes: 0,
+            total: targets.len(),
+            total_bytes: targets.iter().map(|t| t.3).sum(),
+            current: String::new(),
+        };
         for (root, id, path, size) in targets {
+            if app2
+                .state::<AppState>()
+                .delete_cancel
+                .load(Ordering::Relaxed)
+            {
+                break;
+            }
+            progress.current = path.clone();
+            let _ = app2.emit("delete-progress", progress.clone());
             let p = std::path::Path::new(&path);
             let outcome = if permanent {
                 delete::delete_permanent(p)
@@ -771,6 +809,10 @@ pub async fn delete_items(
                     message: e.to_string(),
                 }),
             }
+            progress.done += 1;
+            progress.done_bytes += size;
+            progress.current.clear();
+            let _ = app2.emit("delete-progress", progress.clone());
         }
         // New totals, and save the changed scans in the background.
         let state = app2.state::<AppState>();

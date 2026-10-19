@@ -26,6 +26,8 @@ pub struct AppState {
     pub watch_gen: Mutex<HashMap<String, u64>>,
     /// Backend settings (tray, alerts, Windows integration).
     pub settings: Mutex<crate::settings::Settings>,
+    /// Set by `cancel_delete`: the running delete or clean stops after its current item.
+    pub delete_cancel: std::sync::atomic::AtomicBool,
 }
 
 impl AppState {

@@ -381,3 +381,19 @@ input[type="checkbox"]:not(.switch > input):focus-visible { outline: 2px solid v
 .trow .star .i { width: 13px; height: 13px; }
 .trow:hover .star, .trow .star.on, .trow .star:focus-visible { width: 16px; }
 .trow .star:hover { color: var(--fg); }
+
+/* delete and clean progress, bottom of the sidebar */
+.job { margin: 6px 2px 8px; padding: 10px 10px 9px; border-radius: 8px; background: var(--card); border: 1px solid var(--stroke); display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+.job .jt { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 12.5px; }
+.job .jt .lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.job .jt > .i { width: 14px; height: 14px; color: var(--accent); }
+.job.ok .jt > .i { color: var(--good); }
+.job.warn .jt > .i { color: var(--warn); }
+.job .stop { border: 0; background: none; color: var(--fg-3); padding: 2px; border-radius: 4px; cursor: pointer; display: grid; }
+.job .stop:hover { color: var(--fg); background: var(--active); }
+.job .stop .i { width: 12px; height: 12px; }
+.job .jbar { height: 4px; border-radius: 2px; overflow: hidden; background: linear-gradient(90deg, var(--active) 40%, var(--stroke-2) 50%, var(--active) 60%) 0 0 / 250% 100%; animation: job-wait 1.6s linear infinite; }
+.job .jbar i { display: block; height: 100%; border-radius: 2px; background: var(--accent); transition: width .3s ease; }
+@keyframes job-wait { from { background-position: 100% 0; } to { background-position: -150% 0; } }
+.job .jm { display: flex; justify-content: space-between; gap: 8px; color: var(--fg-2); font-variant-numeric: tabular-nums; }
+.job .jc { color: var(--fg-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

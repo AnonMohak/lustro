@@ -196,6 +196,21 @@
     "scope": "Drive or folder",
     "allScans": "All scans"
   },
+  "job": {
+    "recycle": "Moving to the Recycle Bin",
+    "permanent": "Deleting",
+    "clean": "Cleaning up",
+    "stopping": "Stopping…",
+    "items": "{{done}} of {{total}}",
+    "bytes": "{{done}} of {{total}}",
+    "stop": "Stop after this item",
+    "done": "Done",
+    "stopped": "Stopped",
+    "errors_one": "Done with 1 problem",
+    "errors_other": "Done with {{count}} problems",
+    "freed": "{{size}} freed",
+    "recycled": "{{size}} to the Recycle Bin"
+  },
   "del": {
     "recycle": "Move to Recycle Bin",
     "permanent": "Delete permanently",

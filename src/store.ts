@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api, type AppInfo, type DriveInfo, type Favorite, type ScanProgress, type ScanSummary } from "./lib/api";
+import { api, type AppInfo, type DeleteProgress, type DriveInfo, type Favorite, type ScanProgress, type ScanSummary } from "./lib/api";
 import { normalizeRoot } from "./lib/scanText";
 
 export type Screen = "home" | "explore" | "files" | "dupes" | "clean" | "apps" | "history" | "search" | "settings";
@@ -10,6 +10,29 @@ export interface DialogSpec {
   confirm: string;
   danger?: boolean;
   onConfirm: () => void;
+}
+
+export type JobKind = "recycle" | "permanent" | "clean";
+
+/** One delete or clean run. `run` does the work and returns what it freed. */
+export interface Job {
+  kind: JobKind;
+  items: number;
+  bytes: number;
+  run: () => Promise<{ freed: number; errors: number }>;
+}
+
+/** The progress block in the sidebar. It sums all queued jobs. */
+export interface JobView {
+  kind: JobKind;
+  done: number;
+  total: number;
+  doneBytes: number;
+  totalBytes: number;
+  current: string;
+  stopping: boolean;
+  /** Set when the queue is empty; the block then shows the result for a few seconds. */
+  finished: { freed: number; recycled: number; errors: number; stopped: boolean } | null;
 }
 
 interface Toast {
@@ -57,6 +80,12 @@ interface State {
   setFavorite: (path: string, on: boolean) => Promise<void>;
   /** Opens a favourite in Explore, in the smallest scan that holds it. */
   openFavorite: (f: Favorite) => void;
+  job: JobView | null;
+  /** Queues a delete or clean run. Resolves when it is done (or dropped by Stop). */
+  runJob: (job: Job) => Promise<void>;
+  /** Stops the running job after its current item and drops the queued ones. */
+  cancelJobs: () => void;
+  onDeleteProgress: (p: DeleteProgress) => void;
 }
 
 const DELETE_KEY = "lustro.deleteMode";
@@ -80,6 +109,42 @@ function savedDeleteMode(): "recycle" | "permanent" {
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
+// The job queue. Jobs run one at a time; the sidebar block shows their sum.
+const jobQueue: { job: Job; resolve: () => void }[] = [];
+let jobCurrent: Job | null = null;
+let jobRunning = false;
+/** Items and bytes of the jobs that already ended. */
+let jobBase = { done: 0, bytes: 0 };
+let jobResult = { freed: 0, recycled: 0, errors: 0 };
+let jobTimer: ReturnType<typeof setTimeout> | undefined;
+
+async function pumpJobs() {
+  jobRunning = true;
+  while (jobQueue.length > 0) {
+    const { job, resolve } = jobQueue.shift()!;
+    jobCurrent = job;
+    useStore.setState((s) => ({ job: s.job && { ...s.job, kind: job.kind, current: "" } }));
+    try {
+      const r = await job.run();
+      jobResult.errors += r.errors;
+      if (job.kind === "recycle") jobResult.recycled += r.freed;
+      else jobResult.freed += r.freed;
+    } catch (e) {
+      jobResult.errors += 1;
+      useStore.getState().showToast(String(e), true);
+    }
+    jobBase = { done: jobBase.done + job.items, bytes: jobBase.bytes + job.bytes };
+    jobCurrent = null;
+    resolve();
+  }
+  jobRunning = false;
+  const v = useStore.getState().job;
+  if (!v) return;
+  const full = v.stopping ? {} : { done: v.total, doneBytes: v.totalBytes };
+  useStore.setState({ job: { ...v, ...full, current: "", finished: { ...jobResult, stopped: v.stopping } } });
+  jobTimer = setTimeout(() => useStore.setState({ job: null }), 4000);
+}
+
 export const useStore = create<State>((set, get) => ({
   screen: "home",
   info: null,
@@ -89,6 +154,48 @@ export const useStore = create<State>((set, get) => ({
   exploreRoot: null,
   exploreTarget: null,
   favorites: [],
+  job: null,
+  runJob: (job) =>
+    new Promise<void>((resolve) => {
+      clearTimeout(jobTimer);
+      let v = get().job;
+      if (!v || v.finished) {
+        jobBase = { done: 0, bytes: 0 };
+        jobResult = { freed: 0, recycled: 0, errors: 0 };
+        v = { kind: job.kind, done: 0, total: 0, doneBytes: 0, totalBytes: 0, current: "", stopping: false, finished: null };
+      }
+      set({ job: { ...v, total: v.total + job.items, totalBytes: v.totalBytes + job.bytes } });
+      jobQueue.push({ job, resolve });
+      if (!jobRunning) void pumpJobs();
+    }),
+  cancelJobs: () => {
+    const v = get().job;
+    if (!v || v.finished) return;
+    // Drop the queued jobs and take them out of the totals.
+    let items = 0;
+    let bytes = 0;
+    for (const q of jobQueue.splice(0)) {
+      items += q.job.items;
+      bytes += q.job.bytes;
+      q.resolve();
+    }
+    set({ job: { ...v, total: v.total - items, totalBytes: v.totalBytes - bytes, stopping: true } });
+    api.cancelDelete().catch(() => {});
+  },
+  onDeleteProgress: (p) => {
+    const v = get().job;
+    const j = jobCurrent;
+    if (!v || !j || v.finished) return;
+    // A clean run reports freed bytes, which can differ from the measured size.
+    set({
+      job: {
+        ...v,
+        done: jobBase.done + Math.min(p.done, j.items),
+        doneBytes: jobBase.bytes + Math.min(p.doneBytes, j.bytes),
+        current: p.current,
+      },
+    });
+  },
   dialog: null,
   toast: null,
   treeVersion: 0,

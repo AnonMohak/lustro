@@ -57,6 +57,7 @@ pub fn run() {
             commands::list_drives,
             commands::restart_as_admin,
             commands::start_scan,
+            commands::cancel_delete,
             commands::cancel_scan,
             commands::forget_scan,
             commands::load_cached_scans,

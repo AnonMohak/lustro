@@ -12,9 +12,10 @@ export interface DeleteItem extends DeleteTarget {
 /** Asks for confirmation, deletes, then refreshes the views. */
 export function confirmDelete(items: DeleteItem[], permanent: boolean, onDone?: () => void) {
   if (items.length === 0) return;
-  const { openDialog, showToast, afterDelete } = useStore.getState();
+  const { openDialog, showToast, afterDelete, runJob } = useStore.getState();
   const t = i18n.t.bind(i18n);
-  const size = formatBytes(items.reduce((a, i) => a + i.size, 0));
+  const bytes = items.reduce((a, i) => a + i.size, 0);
+  const size = formatBytes(bytes);
   const one = items.length === 1 ? items[0] : null;
   const body = one ? [`${one.name} · ${size}`, one.path] : [t("del.manyBody", { count: items.length, n: formatCount(items.length), size })];
   body.push(permanent ? t("del.permanentWarn") : t("del.recycleNote"));
@@ -30,31 +31,26 @@ export function confirmDelete(items: DeleteItem[], permanent: boolean, onDone?: 
     body,
     confirm: permanent ? t("del.permanentConfirm") : t("del.recycleConfirm"),
     danger: permanent,
-    onConfirm: async () => {
-      try {
-        const r = await api.deleteItems(
-          items.map(({ root, id }) => ({ root, id })),
-          permanent,
-        );
-        afterDelete(r.summaries);
-        if (r.failed.length === 0) {
-          showToast(
-            t(permanent ? "del.doneDeleted" : "del.doneRecycled", {
-              count: r.deleted,
-              n: formatCount(r.deleted),
-              size: formatBytes(r.freedBytes),
-            }),
+    // The sidebar block shows the progress and the result; a toast shows only problems.
+    onConfirm: () =>
+      runJob({
+        kind: permanent ? "permanent" : "recycle",
+        items: items.length,
+        bytes,
+        run: async () => {
+          const r = await api.deleteItems(
+            items.map(({ root, id }) => ({ root, id })),
+            permanent,
           );
-        } else {
-          showToast(
-            t("del.partial", { ok: r.deleted, total: r.deleted + r.failed.length, reason: r.failed[0].message }),
-            true,
-          );
-        }
-        onDone?.();
-      } catch (e) {
-        showToast(String(e), true);
-      }
-    },
+          afterDelete(r.summaries);
+          if (r.failed.length > 0)
+            showToast(
+              t("del.partial", { ok: r.deleted, total: r.deleted + r.failed.length, reason: r.failed[0].message }),
+              true,
+            );
+          onDone?.();
+          return { freed: r.freedBytes, errors: r.failed.length };
+        },
+      }),
   });
 }

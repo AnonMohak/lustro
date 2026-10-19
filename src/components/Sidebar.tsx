@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { driveIcon, driveName } from "../lib/drives";
-import { formatBytes, percent } from "../lib/format";
+import { formatBytes, formatCount, percent } from "../lib/format";
 import { rootLabel } from "../lib/scanText";
 import { checkForUpdates } from "../lib/updates";
 import { useStore, type Screen } from "../store";
@@ -16,6 +16,59 @@ const NAV: [Screen, IconName][] = [
   ["apps", "apps"],
   ["history", "history"],
 ];
+
+/** Progress of the running delete or clean run, then its result for a few seconds. */
+function JobBlock() {
+  const { t } = useTranslation();
+  const job = useStore((s) => s.job);
+  const cancelJobs = useStore((s) => s.cancelJobs);
+  if (!job) return null;
+  const f = job.finished;
+
+  if (f) {
+    const parts = [
+      f.freed > 0 && t("job.freed", { size: formatBytes(f.freed) }),
+      f.recycled > 0 && t("job.recycled", { size: formatBytes(f.recycled) }),
+    ].filter(Boolean);
+    const title = f.errors > 0 ? t("job.errors", { count: f.errors }) : t(f.stopped ? "job.stopped" : "job.done");
+    return (
+      <div className={`job ${f.errors > 0 ? "warn" : "ok"}`} role="status">
+        <div className="jt">
+          <Icon name={f.errors > 0 ? "warn" : "check"} />
+          <span className="lbl">{title}</span>
+        </div>
+        {parts.length > 0 && <div className="jm">{parts.join(" · ")}</div>}
+      </div>
+    );
+  }
+
+  const pct = job.totalBytes > 0 ? percent(job.doneBytes, job.totalBytes) : percent(job.done, job.total);
+  return (
+    <div className="job run" role="status">
+      <div className="jt">
+        <Icon name={job.kind === "clean" ? "clean" : "trash"} />
+        <span className="lbl">{job.stopping ? t("job.stopping") : t(`job.${job.kind}`)}</span>
+        {!job.stopping && (
+          <button className="stop" title={t("job.stop")} aria-label={t("job.stop")} onClick={cancelJobs}>
+            <Icon name="x" />
+          </button>
+        )}
+      </div>
+      <div className="jbar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)}>
+        <i style={{ width: `${pct}%` }} />
+      </div>
+      <div className="jm">
+        <span>{t("job.items", { done: formatCount(job.done), total: formatCount(job.total) })}</span>
+        {job.totalBytes > 0 && <span>{t("job.bytes", { done: formatBytes(job.doneBytes), total: formatBytes(job.totalBytes) })}</span>}
+      </div>
+      {job.current && (
+        <div className="jc mono" title={job.current}>
+          {rootLabel(job.current)}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function Sidebar() {
   const { t } = useTranslation();
@@ -145,6 +198,7 @@ export function Sidebar() {
       )}
 
       <div className="grow" />
+      <JobBlock />
       <button className="sbtn" title={t("nav.checkUpdates")} onClick={() => checkForUpdates(true)}>
         <Icon name="refresh" />
         <span className="lbl">{t("nav.checkUpdates")}</span>
