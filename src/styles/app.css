@@ -24,6 +24,11 @@
   --f-mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
   color-scheme: dark;
 }
+/* Windows draws no Acrylic when "Transparency effects" is off (also in energy saver).
+   Then the window gets a solid dark color, so it never shows black or a wrong color. */
+@media (prefers-reduced-transparency: reduce) {
+  :root { --win: #1c1e22; --pane: rgba(255, 255, 255, .025); }
+}
 
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
