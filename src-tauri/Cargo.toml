@@ -1,6 +1,6 @@
 [package]
 name = "lustro"
-version = "1.0.1"
+version = "1.1.0"
 description = "Storage manager for Windows 11"
 authors = ["Mohak"]
 license = "MIT"

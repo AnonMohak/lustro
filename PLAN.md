@@ -4,7 +4,7 @@ Lustro is a Windows 11 storage manager. It scans drives, shows what uses the spa
 
 ## Status
 
-Milestones M0 to M11 are done. Lustro v1.0.0 is published on [GitHub Releases](https://github.com/AnonMohak/lustro/releases) and tested with and without admin rights. v1.0.1 adds the final logo (M11). The [README](README.md) describes the features. The git history and the closed GitHub milestones record the work.
+Milestones M0 to M11 are done. Lustro v1.0.0 is published on [GitHub Releases](https://github.com/AnonMohak/lustro/releases) and tested with and without admin rights. v1.0.1 adds the final logo (M11). v1.1.0 adds favourites, the themed installer (Lustro Setup), the dark Acrylic look, delete progress, app-styled controls, and deleting app folders in Program Files as admin. The [README](README.md) describes the features. The git history and the closed GitHub milestones record the work.
 
 ## Facts for later work
 
