@@ -84,7 +84,10 @@
     "askPermanent": "Ask before a permanent delete",
     "askPermanentHint": "Always on. You cannot undo a permanent delete.",
     "protectedTitle": "Protected system paths",
-    "protectedHint": "Windows, Program Files, the page file, drive roots and profile folders. Lustro never deletes them.",
+    "protectedHint": "Windows, the Program Files folders, the page file, drive roots and profile folders. Lustro never deletes them.",
+    "allowAppFolders": "Allow deleting app folders",
+    "needsAdmin": "Needs admin",
+    "allowAppFoldersHint": "Only as admin. You can then delete app and game folders inside Program Files, with a warning each time. Windows folders stay protected.",
     "alwaysOn": "Always on",
     "cleanup": "Clean up",
     "devAge": "Select project folders after",
@@ -166,6 +169,8 @@
     "star": "Add to favourites",
     "unstar": "Remove from favourites",
     "protected": "Protected system path. Lustro never deletes it.",
+    "appFolder": "App folder in Program Files. You can delete it, but you must confirm a warning.",
+    "appFolderLocked": "App folder in Program Files. To delete it, run as admin and turn on Settings > Allow deleting app folders.",
     "link": "This is a link to another folder. Lustro does not count its target.",
     "onlineOnly": "Online-only file. It uses no space on this PC.",
     "denied": "Windows lets only admins read this folder.",
@@ -193,6 +198,7 @@
     "filesCount_other": "{{count}} files",
     "binNote": "Files in the Recycle Bin still use space. Empty the bin, or use Shift+Delete to delete permanently.",
     "protected": "Protected",
+    "appFolder": "App folder",
     "scope": "Drive or folder",
     "allScans": "All scans"
   },
@@ -229,7 +235,12 @@
     "recycleTitleMany": "Move {{n}} items to the Recycle Bin?",
     "permanentTitleMany": "Delete {{n}} items permanently?",
     "manyBody": "{{n}} items · {{size}}",
-    "partial": "Deleted {{ok}} of {{total}} items. The first problem: {{reason}}"
+    "partial": "Deleted {{ok}} of {{total}} items. The first problem: {{reason}}",
+    "appTitle_one": "Delete a protected app folder?",
+    "appTitle_other": "Delete {{count}} protected app folders?",
+    "appWarn_one": "This item is inside Program Files. The app or game can stop working, and Windows can still list it as installed. If you can, use Installed apps > Uninstall instead.",
+    "appWarn_other": "{{count}} items are inside Program Files. These apps or games can stop working, and Windows can still list them as installed. If you can, use Installed apps > Uninstall instead.",
+    "appAck": "I understand the risk"
   },
   "history": {
     "title": "History",

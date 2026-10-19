@@ -6,7 +6,7 @@ use std::io;
 use std::os::windows::fs::MetadataExt;
 use std::path::Path;
 
-use super::protect::is_protected;
+use super::protect::{is_app_folder, is_protected};
 
 const ATTR_READONLY: u32 = 0x1;
 const ATTR_DIRECTORY: u32 = 0x10;
@@ -16,6 +16,10 @@ const ATTR_REPARSE_POINT: u32 = 0x400;
 pub enum DeleteError {
     #[error("{0} is a protected system path. Lustro never deletes it.")]
     Protected(String),
+    #[error(
+        "{0} is an app folder in Program Files. To delete it, run Lustro as admin and turn on Settings > Allow deleting app folders."
+    )]
+    AppFolder(String),
     #[error("{0} no longer exists.")]
     Missing(String),
     #[error("{0}")]
@@ -24,10 +28,17 @@ pub enum DeleteError {
     Trash(String),
 }
 
-fn check(path: &Path) -> Result<fs::Metadata, DeleteError> {
+/// `allow_app`: the user confirmed the warning for app folders, runs as admin and turned on
+/// the setting. Only then an app folder in Program Files passes.
+fn check(path: &Path, allow_app: bool) -> Result<fs::Metadata, DeleteError> {
     let s = path.to_string_lossy();
     if is_protected(&s) {
-        return Err(DeleteError::Protected(s.into_owned()));
+        if !is_app_folder(&s) {
+            return Err(DeleteError::Protected(s.into_owned()));
+        }
+        if !allow_app {
+            return Err(DeleteError::AppFolder(s.into_owned()));
+        }
     }
     fs::symlink_metadata(path).map_err(|e| {
         if e.kind() == io::ErrorKind::NotFound {
@@ -38,16 +49,17 @@ fn check(path: &Path) -> Result<fs::Metadata, DeleteError> {
     })
 }
 
-/// Moves one file or folder to the Recycle Bin.
-pub fn recycle(path: &Path) -> Result<(), DeleteError> {
-    check(path)?;
+/// Moves one file or folder to the Recycle Bin. `allow_app` lets an app folder pass (see `check`).
+pub fn recycle(path: &Path, allow_app: bool) -> Result<(), DeleteError> {
+    check(path, allow_app)?;
     trash::delete(path).map_err(|e| DeleteError::Trash(e.to_string()))
 }
 
 /// Deletes one file or folder permanently. A junction or symbolic link is removed
 /// as a link; Lustro never deletes the files that it points to.
-pub fn delete_permanent(path: &Path) -> Result<(), DeleteError> {
-    let meta = check(path)?;
+/// `allow_app` lets an app folder pass (see `check`).
+pub fn delete_permanent(path: &Path, allow_app: bool) -> Result<(), DeleteError> {
+    let meta = check(path, allow_app)?;
     remove(path, &meta)?;
     Ok(())
 }
@@ -112,7 +124,7 @@ mod tests {
         p.set_readonly(true);
         fs::set_permissions(&ro, p).unwrap();
 
-        delete_permanent(&dir).unwrap();
+        delete_permanent(&dir, false).unwrap();
         assert!(!dir.exists());
         fs::remove_dir_all(root).unwrap();
     }
@@ -140,7 +152,7 @@ mod tests {
         assert!(ok);
 
         // Deleting the folder that holds the junction must keep the target's files.
-        delete_permanent(&holder).unwrap();
+        delete_permanent(&holder, false).unwrap();
         assert!(!holder.exists());
         assert_eq!(fs::read(target.join("keep.txt")).unwrap(), b"keep me");
         fs::remove_dir_all(root).unwrap();
@@ -150,20 +162,37 @@ mod tests {
     #[test]
     fn refuses_protected_and_missing_paths() {
         assert!(matches!(
-            delete_permanent(Path::new("C:\\Windows")),
+            delete_permanent(Path::new("C:\\Windows"), false),
             Err(DeleteError::Protected(_))
         ));
         assert!(matches!(
-            recycle(Path::new("C:\\pagefile.sys")),
+            recycle(Path::new("C:\\pagefile.sys"), false),
+            Err(DeleteError::Protected(_))
+        ));
+        // App folders need the explicit allow, and Windows folders never pass.
+        assert!(matches!(
+            delete_permanent(Path::new("C:\\Program Files\\NoSuchGame"), false),
+            Err(DeleteError::AppFolder(_))
+        ));
+        assert!(matches!(
+            delete_permanent(Path::new("C:\\Program Files\\NoSuchGame"), true),
+            Err(DeleteError::Missing(_))
+        ));
+        assert!(matches!(
+            delete_permanent(Path::new("C:\\Program Files\\WindowsApps"), true),
             Err(DeleteError::Protected(_))
         ));
         assert!(matches!(
-            delete_permanent(Path::new("C:\\")),
+            delete_permanent(Path::new("C:\\Windows\\System32"), true),
+            Err(DeleteError::Protected(_))
+        ));
+        assert!(matches!(
+            delete_permanent(Path::new("C:\\"), false),
             Err(DeleteError::Protected(_))
         ));
         let missing = std::env::temp_dir().join("lustro-surely-missing-9f8e7d");
         assert!(matches!(
-            delete_permanent(&missing),
+            delete_permanent(&missing, false),
             Err(DeleteError::Missing(_))
         ));
     }
@@ -183,7 +212,7 @@ mod tests {
         let root = std::path::PathBuf::from(long.to_string_lossy().trim_start_matches("\\\\?\\"));
         let f = root.join(format!("lustro-recycle-test-{}.txt", std::process::id()));
         fs::write(&f, b"recycle me").unwrap();
-        recycle(&f).unwrap();
+        recycle(&f, false).unwrap();
         assert!(!f.exists());
         let items = trash::os_limited::list().unwrap();
         let count = items.len();

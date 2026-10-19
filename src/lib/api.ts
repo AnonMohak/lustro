@@ -78,6 +78,8 @@ export interface NodeDetail {
   ancestors: { id: number; name: string }[];
   breakdown: number[];
   protected: boolean;
+  /** A protected app folder in Program Files that an admin may delete after a warning. */
+  appFolder: boolean;
 }
 
 export interface TreemapNode {
@@ -99,6 +101,8 @@ export interface FileHit {
   modified: number;
   kind: Kind;
   protected: boolean;
+  /** A protected app folder in Program Files that an admin may delete after a warning. */
+  appFolder: boolean;
 }
 
 export interface FindFilesQuery {
@@ -217,6 +221,8 @@ export interface SearchHit {
   kind: Kind;
   isDir: boolean;
   protected: boolean;
+  /** A protected app folder in Program Files that an admin may delete after a warning. */
+  appFolder: boolean;
 }
 
 export interface SearchResult {
@@ -240,6 +246,7 @@ export interface BackendSettings {
   lowSpacePercent: number;
   startWithWindows: boolean;
   explorerMenu: boolean;
+  allowAppFolders: boolean;
 }
 
 export interface FavoriteHit {
@@ -289,8 +296,9 @@ export const api = {
   setFavorite: (path: string, on: boolean) => invoke<Favorite[]>("set_favorite", { path, on }),
   revealPath: (path: string) => invoke<void>("reveal_path", { path }),
   takeStartupScan: () => invoke<string | null>("take_startup_scan"),
-  deleteItems: (items: DeleteTarget[], permanent: boolean) =>
-    invoke<DeleteResult>("delete_items", { items, permanent }),
+  /** `appFolders`: the user confirmed the app-folder warning. */
+  deleteItems: (items: DeleteTarget[], permanent: boolean, appFolders = false) =>
+    invoke<DeleteResult>("delete_items", { items, permanent, appFolders }),
   cancelDelete: () => invoke<void>("cancel_delete"),
   history: () => invoke<HistoryEntry[]>("history"),
   restore: (id: number) => invoke<void>("restore", { id }),

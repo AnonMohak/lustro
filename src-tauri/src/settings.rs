@@ -16,6 +16,8 @@ pub struct Settings {
     pub low_space_percent: u8,
     pub start_with_windows: bool,
     pub explorer_menu: bool,
+    /// Admin may delete app folders in Program Files, after a warning each time.
+    pub allow_app_folders: bool,
     /// Favourite folders in the sidebar, in the order the user added them.
     pub favorites: Vec<String>,
 }
@@ -28,6 +30,7 @@ impl Default for Settings {
             low_space_percent: 10,
             start_with_windows: false,
             explorer_menu: false,
+            allow_app_folders: false,
             favorites: Vec::new(),
         }
     }

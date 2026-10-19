@@ -62,7 +62,8 @@ export default function App() {
 
   useScanEvents();
   useEffect(() => {
-    const { loadInfo, loadDrives, loadCachedScans, showToast } = useStore.getState();
+    const { loadInfo, loadDrives, loadCachedScans, loadAllowAppFolders, showToast } = useStore.getState();
+    loadAllowAppFolders().catch(() => {});
     loadInfo().catch((e) => showToast(String(e), true));
     loadDrives().catch((e) => showToast(String(e), true));
     loadCachedScans()

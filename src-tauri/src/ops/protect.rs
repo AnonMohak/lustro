@@ -56,6 +56,22 @@ const CLEANER_EXCEPTIONS: &[&str] = &[
 /// Single protected files that the cleaner may delete.
 const CLEANER_FILES: &[&str] = &["windows\\memory.dmp"];
 
+/// Protected folders whose contents (apps and games) an admin may delete after a warning,
+/// when Settings > "Allow deleting app folders" is on. The folders themselves stay.
+const APP_TREES: &[&str] = &["program files", "program files (x86)"];
+
+/// Folders inside the app trees that Windows owns. They stay locked, like every
+/// folder whose name starts with "windows" (WindowsApps, Windows Defender, ...).
+const APP_LOCKED: &[&str] = &[
+    "common files",
+    "internet explorer",
+    "microsoft update health tools",
+    "modifiablewindowsapps",
+    "msbuild",
+    "reference assemblies",
+    "uninstall information",
+];
+
 fn normalize(path: &str) -> String {
     let p = path.replace('/', "\\");
     let p = p.strip_prefix("\\\\?\\").unwrap_or(&p);
@@ -77,6 +93,27 @@ pub fn cleaner_may_delete(path: &str) -> bool {
         || CLEANER_EXCEPTIONS.iter().any(|e| {
             rel.len() > e.len() + 1 && rel.starts_with(e) && rel.as_bytes()[e.len()] == b'\\'
         })
+}
+
+/// True when `path` is inside Program Files or Program Files (x86), in an app or game folder
+/// that is not one of Windows' own. An admin may delete it after a warning (see `APP_TREES`).
+pub fn is_app_folder(path: &str) -> bool {
+    let p = normalize(path);
+    let b = p.as_bytes();
+    if b.len() < 4 || !b[0].is_ascii_alphabetic() || b[1] != b':' || b[2] != b'\\' {
+        return false;
+    }
+    if p.contains("\\..\\") || p.ends_with("\\..") || p.contains("\\.\\") {
+        return false;
+    }
+    let rel = &p[3..];
+    APP_TREES.iter().any(|t| {
+        let Some(rest) = rel.strip_prefix(t).and_then(|r| r.strip_prefix('\\')) else {
+            return false;
+        };
+        let first = rest.split('\\').next().unwrap_or("");
+        !first.is_empty() && !first.starts_with("windows") && !APP_LOCKED.contains(&first)
+    })
 }
 
 /// True when Lustro must not delete `path`.
@@ -137,7 +174,38 @@ pub fn is_protected(path: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{cleaner_may_delete, is_protected};
+    use super::{cleaner_may_delete, is_app_folder, is_protected};
+
+    #[test]
+    fn app_folders() {
+        for p in [
+            "C:\\Program Files (x86)\\Steam",
+            "C:\\Program Files (x86)\\Steam\\steamapps\\common\\SomeGame",
+            "C:\\Program Files\\Epic Games\\Fortnite",
+            "D:\\Program Files\\App\\app.exe",
+            "\\\\?\\C:\\Program Files\\App",
+        ] {
+            assert!(is_app_folder(p), "{p} is an app folder");
+            assert!(is_protected(p), "{p} stays protected without the switch");
+        }
+        for p in [
+            "C:\\Program Files",
+            "C:\\Program Files (x86)",
+            "C:\\Program Files\\",
+            "C:\\Program Files\\WindowsApps\\Some.App",
+            "C:\\Program Files\\Windows Defender",
+            "C:\\Program Files (x86)\\Windows Kits\\10",
+            "C:\\Program Files\\Common Files\\System",
+            "C:\\Program Files (x86)\\Internet Explorer",
+            "C:\\Program Files\\App\\..\\..\\Windows",
+            "C:\\Windows\\System32",
+            "C:\\ProgramData\\Microsoft\\Windows",
+            "C:\\Program Files2\\App",
+            "C:\\Users\\me\\Downloads",
+        ] {
+            assert!(!is_app_folder(p), "{p} is not an app folder");
+        }
+    }
 
     #[test]
     fn system_paths_are_protected() {

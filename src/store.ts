@@ -9,6 +9,10 @@ export interface DialogSpec {
   body: string[];
   confirm: string;
   danger?: boolean;
+  /** A warning in a red box under the body. */
+  warn?: string;
+  /** A checkbox label. The confirm button stays disabled until it is checked. */
+  ack?: string;
   onConfirm: () => void;
 }
 
@@ -80,6 +84,11 @@ interface State {
   setFavorite: (path: string, on: boolean) => Promise<void>;
   /** Opens a favourite in Explore, in the smallest scan that holds it. */
   openFavorite: (f: Favorite) => void;
+  /** Settings > Allow deleting app folders (a backend setting). With admin rights, it unlocks
+   *  app folders in Program Files, behind a warning. */
+  allowAppFolders: boolean;
+  loadAllowAppFolders: () => Promise<void>;
+  setAllowAppFolders: (on: boolean) => void;
   job: JobView | null;
   /** Queues a delete or clean run. Resolves when it is done (or dropped by Stop). */
   runJob: (job: Job) => Promise<void>;
@@ -154,6 +163,9 @@ export const useStore = create<State>((set, get) => ({
   exploreRoot: null,
   exploreTarget: null,
   favorites: [],
+  allowAppFolders: false,
+  loadAllowAppFolders: async () => set({ allowAppFolders: (await api.getSettings()).allowAppFolders }),
+  setAllowAppFolders: (allowAppFolders) => set({ allowAppFolders }),
   job: null,
   runJob: (job) =>
     new Promise<void>((resolve) => {
@@ -276,3 +288,6 @@ export const useStore = create<State>((set, get) => ({
     set({ devAgeDays });
   },
 }));
+
+/** True when app folders in Program Files can be deleted: admin rights and the setting on. */
+export const useAppsUnlocked = () => useStore((s) => (s.info?.isAdmin ?? false) && s.allowAppFolders);

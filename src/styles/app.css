@@ -397,3 +397,7 @@ input[type="checkbox"]:not(.switch > input):focus-visible { outline: 2px solid v
 @keyframes job-wait { from { background-position: 100% 0; } to { background-position: -150% 0; } }
 .job .jm { display: flex; justify-content: space-between; gap: 8px; color: var(--fg-2); font-variant-numeric: tabular-nums; }
 .job .jc { color: var(--fg-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* confirm checkbox in dialogs (app folder delete) */
+.dlg .ack { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.dlg .ack:hover { background: var(--hover); }

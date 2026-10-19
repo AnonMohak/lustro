@@ -47,6 +47,7 @@ Everything else works without admin rights.
 ## Safety
 
 - Lustro never deletes protected paths: `C:\Windows`, `Program Files`, the page file, drive roots, user profile folders and similar. The backend checks every path before it deletes.
+- One exception, off by default: as admin, with Settings > "Allow deleting app folders" on, you can delete app and game folders inside `Program Files`. Each delete shows a warning that you must confirm. Windows' own folders there (for example `WindowsApps`) stay protected.
 - Delete moves items to the Recycle Bin. A permanent delete always asks first.
 - Lustro removes junctions and symbolic links as links. It never deletes the files that they point to.
 - The cleaner deletes caches and temp files permanently. Apps make them again.

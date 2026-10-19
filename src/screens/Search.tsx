@@ -7,7 +7,7 @@ import { confirmDelete } from "../lib/deleteFlow";
 import { filesCsv, saveExport } from "../lib/exporters";
 import { formatBytes, formatCount } from "../lib/format";
 import { KIND_ICON, kindColor } from "../lib/kinds";
-import { useStore } from "../store";
+import { useAppsUnlocked, useStore } from "../store";
 
 const SIZES: [number, string][] = [
   [0, ""],
@@ -22,6 +22,7 @@ export function Search() {
   const scans = useStore((s) => s.scans);
   const treeVersion = useStore((s) => s.treeVersion);
   const showToast = useStore((s) => s.showToast);
+  const appsUnlocked = useAppsUnlocked();
   const [text, setText] = useState("");
   const [folders, setFolders] = useState(true);
   const [minSize, setMinSize] = useState(0);
@@ -147,7 +148,7 @@ export function Search() {
                     <input
                       type="checkbox"
                       checked={selected.has(key(h))}
-                      disabled={h.protected}
+                      disabled={h.protected && !(h.appFolder && appsUnlocked)}
                       aria-label={h.name}
                       onChange={() =>
                         setSelected((s) => {
@@ -168,9 +169,9 @@ export function Search() {
                         <span className="nm selectable">
                           {h.name}{" "}
                           {h.protected && (
-                            <span className="pill bad">
-                              <Icon name="lock" />
-                              {t("files.protected")}
+                            <span className={`pill ${h.appFolder ? "warn" : "bad"}`}>
+                              <Icon name={h.appFolder ? "warn" : "lock"} />
+                              {t(h.appFolder ? "files.appFolder" : "files.protected")}
                             </span>
                           )}
                         </span>
@@ -205,13 +206,13 @@ export function Search() {
           </button>
           <button
             className="btn sm ghost danger"
-            onClick={() => confirmDelete(sel.map((h) => ({ root: h.root, id: h.id, name: h.name, path: h.path, size: h.size })), true, () => setSelected(new Set()))}
+            onClick={() => confirmDelete(sel.map((h) => ({ root: h.root, id: h.id, name: h.name, path: h.path, size: h.size, appFolder: h.appFolder })), true, () => setSelected(new Set()))}
           >
             {t("del.permanent")}
           </button>
           <button
             className="btn sm accent"
-            onClick={() => confirmDelete(sel.map((h) => ({ root: h.root, id: h.id, name: h.name, path: h.path, size: h.size })), false, () => setSelected(new Set()))}
+            onClick={() => confirmDelete(sel.map((h) => ({ root: h.root, id: h.id, name: h.name, path: h.path, size: h.size, appFolder: h.appFolder })), false, () => setSelected(new Set()))}
           >
             <Icon name="trash" />
             {t("del.recycle")}

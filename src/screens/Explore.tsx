@@ -10,7 +10,7 @@ import { driveIcon, driveName } from "../lib/drives";
 import { formatBytes, formatCount, percent } from "../lib/format";
 import { KIND_ICON, kindColor, sortedBreakdown } from "../lib/kinds";
 import { rootLabel, scanSummaryText } from "../lib/scanText";
-import { useStore } from "../store";
+import { useAppsUnlocked, useStore } from "../store";
 
 const CHILD_LIMIT = 1000;
 const ROW_H = 30;
@@ -253,6 +253,7 @@ function DetailPane({
   const { t } = useTranslation();
   const showToast = useStore((s) => s.showToast);
   const isAdmin = useStore((s) => s.info?.isAdmin ?? false);
+  const appsUnlocked = useAppsUnlocked();
   if (!detail) return <aside className="detail"><div className="dt muted">{t("explore.selectHint")}</div></aside>;
   const n = detail.node;
   const ent = sortedBreakdown(detail.breakdown);
@@ -353,10 +354,10 @@ function DetailPane({
               {t(starred ? "explore.unstar" : "explore.star")}
             </button>
           )}
-          {detail.protected ? (
+          {detail.protected && !(detail.appFolder && appsUnlocked) ? (
             <div className="note lock">
               <Icon name="lock" />
-              <span>{t("explore.protected")}</span>
+              <span>{t(detail.appFolder ? "explore.appFolderLocked" : "explore.protected")}</span>
             </div>
           ) : n.id === ROOT_ID ? (
             <div className="note">
@@ -365,6 +366,12 @@ function DetailPane({
             </div>
           ) : (
             <>
+              {detail.appFolder && (
+                <div className="note warn">
+                  <Icon name="warn" />
+                  <span>{t("explore.appFolder")}</span>
+                </div>
+              )}
               <button className="btn accent block" onClick={() => onDelete(false)}>
                 <Icon name="trash" />
                 {t("del.recycle")}
@@ -520,17 +527,19 @@ function ExploreView({ root }: { root: string }) {
     loadKids(n.id).catch(() => {});
   };
 
+  const appsUnlocked = useAppsUnlocked();
   const deleteSelected = useCallback(
     (permanent: boolean) => {
       const d = selDetail;
-      if (!d || d.protected || d.node.id === ROOT_ID) return;
+      if (!d || (d.protected && !(d.appFolder && appsUnlocked)) || d.node.id === ROOT_ID) return;
       const parentId = d.ancestors[d.ancestors.length - 2]?.id ?? ROOT_ID;
-      confirmDelete([{ root, id: d.node.id, name: d.node.name, path: d.path, size: d.node.size }], permanent, () => {
+      const item = { root, id: d.node.id, name: d.node.name, path: d.path, size: d.node.size, appFolder: d.appFolder };
+      confirmDelete([item], permanent, () => {
         setSel(parentId);
         if (zoom === d.node.id) setZoom(parentId);
       });
     },
-    [selDetail, root, zoom],
+    [selDetail, root, zoom, appsUnlocked],
   );
 
   // Delete moves the selection to the Recycle Bin (or deletes it, per Settings). Shift+Delete deletes permanently.

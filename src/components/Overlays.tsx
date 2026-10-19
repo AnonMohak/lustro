@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useStore } from "../store";
 import { Icon } from "./Icon";
@@ -8,9 +8,11 @@ export function Dialog() {
   const dialog = useStore((s) => s.dialog);
   const close = useStore((s) => s.closeDialog);
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const [acked, setAcked] = useState(false);
 
   useEffect(() => {
     if (!dialog) return;
+    setAcked(false);
     cancelRef.current?.focus();
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
     window.addEventListener("keydown", onKey);
@@ -26,10 +28,23 @@ export function Dialog() {
           {dialog.body.map((p, i) => (
             <p key={i}>{p}</p>
           ))}
+          {dialog.warn && (
+            <div className="note lock">
+              <Icon name="warn" />
+              <span>{dialog.warn}</span>
+            </div>
+          )}
+          {dialog.ack && (
+            <label className="ack">
+              <input type="checkbox" id="dlgAck" checked={acked} onChange={(e) => setAcked(e.target.checked)} />
+              <span>{dialog.ack}</span>
+            </label>
+          )}
         </div>
         <div className="df">
           <button
             className={`btn ${dialog.danger ? "danger-fill" : "accent"}`}
+            disabled={!!dialog.ack && !acked}
             onClick={() => {
               close();
               dialog.onConfirm();

@@ -366,6 +366,8 @@ pub struct NodeDetail {
     breakdown: [u64; KIND_COUNT],
     /// True when Lustro never deletes this path.
     protected: bool,
+    /// A protected app folder in Program Files that an admin may delete after a warning.
+    app_folder: bool,
 }
 
 #[tauri::command]
@@ -397,6 +399,7 @@ pub fn node_detail(state: State<'_, AppState>, root: String, id: u32) -> Result<
     Ok(NodeDetail {
         node: dto(&t, id),
         protected: protect::is_protected(&path),
+        app_folder: protect::is_app_folder(&path),
         path,
         ancestors,
         breakdown: t.breakdown(id),
@@ -440,6 +443,7 @@ pub struct FileHit {
     modified: i64,
     kind: Kind,
     protected: bool,
+    app_folder: bool,
 }
 
 fn kind_from_str(s: &str) -> Option<Kind> {
@@ -494,6 +498,7 @@ pub async fn find_files(app: AppHandle, query: FindFilesQuery) -> Result<Vec<Fil
                     modified: filetime_to_unix_ms(n.modified),
                     kind: Kind::from_u8(n.kind),
                     protected: protect::is_protected(&path),
+                    app_folder: protect::is_app_folder(&path),
                 });
             }
         }
@@ -532,6 +537,7 @@ pub struct SearchHit {
     kind: Kind,
     is_dir: bool,
     protected: bool,
+    app_folder: bool,
 }
 
 #[derive(Serialize)]
@@ -593,6 +599,7 @@ pub async fn search(app: AppHandle, args: SearchArgs) -> Result<SearchResult> {
                     kind: Kind::from_u8(node.kind),
                     is_dir: node.is_dir(),
                     protected: protect::is_protected(&path),
+                    app_folder: protect::is_app_folder(&path),
                     path,
                 });
             }
@@ -698,12 +705,18 @@ pub fn with_history<T>(app: &AppHandle, f: impl FnOnce(&mut History) -> T) -> Op
 }
 
 /// Deletes scan items. Protected paths are refused and logged as blocked.
+/// `app_folders` says that the user confirmed the app-folder warning. App folders in
+/// Program Files pass only with it, as admin, and with the setting on.
 #[tauri::command]
 pub async fn delete_items(
     app: AppHandle,
     items: Vec<DeleteTarget>,
     permanent: bool,
+    app_folders: Option<bool>,
 ) -> Result<DeleteResult> {
+    let allow_app = app_folders == Some(true)
+        && elevation::is_elevated()
+        && crate::desktop::current_settings(&app).allow_app_folders;
     // Resolve the items to paths while the trees are stable.
     let mut targets: Vec<(String, u32, String, u64)> = Vec::new();
     {
@@ -768,12 +781,14 @@ pub async fn delete_items(
             let _ = app2.emit("delete-progress", progress.clone());
             let p = std::path::Path::new(&path);
             let outcome = if permanent {
-                delete::delete_permanent(p)
+                delete::delete_permanent(p, allow_app)
             } else {
-                delete::recycle(p)
+                delete::recycle(p, allow_app)
             };
             let action = match (&outcome, permanent) {
-                (Err(delete::DeleteError::Protected(_)), _) => Action::Blocked,
+                (Err(delete::DeleteError::Protected(_) | delete::DeleteError::AppFolder(_)), _) => {
+                    Action::Blocked
+                }
                 (_, true) => Action::Permanent,
                 (_, false) => Action::Recycle,
             };

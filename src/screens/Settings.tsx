@@ -25,6 +25,8 @@ export function Settings() {
   useEffect(() => {
     api.getSettings().then(setBackend).catch((e) => showToast(String(e), true));
   }, [showToast]);
+  const isAdmin = useStore((s) => s.info?.isAdmin ?? false);
+  const setAllowAppFolders = useStore((s) => s.setAllowAppFolders);
   const update = (patch: Partial<BackendSettings>) => {
     if (!backend) return;
     const next = { ...backend, ...patch };
@@ -85,6 +87,28 @@ export function Settings() {
             {t("settings.alwaysOn")}
           </span>
         </div>
+        {backend && (
+          <div className="srow">
+            <div>
+              <div>{t("settings.allowAppFolders")}</div>
+              <div className="sd">{t("settings.allowAppFoldersHint")}</div>
+            </div>
+            {!isAdmin && (
+              <span className="pill warn">
+                <Icon name="shield" />
+                {t("settings.needsAdmin")}
+              </span>
+            )}
+            <Switch
+              id="setAppFolders"
+              on={backend.allowAppFolders}
+              onChange={(v) => {
+                update({ allowAppFolders: v });
+                setAllowAppFolders(v);
+              }}
+            />
+          </div>
+        )}
       </div>
 
       <h3 className="sec">{t("settings.cleanup")}</h3>

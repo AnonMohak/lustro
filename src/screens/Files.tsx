@@ -8,7 +8,7 @@ import { filesCsv, saveExport } from "../lib/exporters";
 import { formatBytes, formatCount, timeAgo } from "../lib/format";
 import { KIND_ICON, kindColor } from "../lib/kinds";
 import { rootLabel } from "../lib/scanText";
-import { useStore } from "../store";
+import { useAppsUnlocked, useStore } from "../store";
 
 const GB = 1024 ** 3;
 const YEAR_MS = 365 * 24 * 3600 * 1000;
@@ -18,6 +18,7 @@ export function Files() {
   const { t } = useTranslation();
   const scans = useStore((s) => s.scans);
   const showToast = useStore((s) => s.showToast);
+  const appsUnlocked = useAppsUnlocked();
   const [tab, setTab] = useState<"size" | "age">("size");
   const [bigOnly, setBigOnly] = useState(true);
   const [hideProtected, setHideProtected] = useState(false);
@@ -68,7 +69,7 @@ export function Files() {
 
   const runDelete = (permanent: boolean) =>
     confirmDelete(
-      sel.map((f) => ({ root: f.root, id: f.id, name: f.name, path: f.path, size: f.size })),
+      sel.map((f) => ({ root: f.root, id: f.id, name: f.name, path: f.path, size: f.size, appFolder: f.appFolder })),
       permanent,
       () => setSelected(new Set()),
     );
@@ -169,7 +170,7 @@ export function Files() {
                         type="checkbox"
                         id={`f-${key(f)}`}
                         checked={selected.has(key(f))}
-                        disabled={f.protected}
+                        disabled={f.protected && !(f.appFolder && appsUnlocked)}
                         aria-label={f.name}
                         onChange={() => toggle(f)}
                       />
@@ -183,9 +184,9 @@ export function Files() {
                           <span className="nm selectable">
                             {f.name}{" "}
                             {f.protected && (
-                              <span className="pill bad">
-                                <Icon name="lock" />
-                                {t("files.protected")}
+                              <span className={`pill ${f.appFolder ? "warn" : "bad"}`}>
+                                <Icon name={f.appFolder ? "warn" : "lock"} />
+                                {t(f.appFolder ? "files.appFolder" : "files.protected")}
                               </span>
                             )}
                           </span>

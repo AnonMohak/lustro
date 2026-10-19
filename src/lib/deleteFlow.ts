@@ -7,6 +7,8 @@ export interface DeleteItem extends DeleteTarget {
   name: string;
   path: string;
   size: number;
+  /** A protected app folder in Program Files: it needs the extra warning. */
+  appFolder?: boolean;
 }
 
 /** Asks for confirmation, deletes, then refreshes the views. */
@@ -19,9 +21,13 @@ export function confirmDelete(items: DeleteItem[], permanent: boolean, onDone?: 
   const one = items.length === 1 ? items[0] : null;
   const body = one ? [`${one.name} · ${size}`, one.path] : [t("del.manyBody", { count: items.length, n: formatCount(items.length), size })];
   body.push(permanent ? t("del.permanentWarn") : t("del.recycleNote"));
+  // App folders in Program Files: a warning and an "I understand" checkbox, every time.
+  const apps = items.filter((i) => i.appFolder).length;
 
   openDialog({
-    title: permanent
+    title: apps > 0
+      ? t("del.appTitle", { count: apps })
+      : permanent
       ? one
         ? t("del.permanentTitleOne")
         : t("del.permanentTitleMany", { n: formatCount(items.length) })
@@ -30,7 +36,9 @@ export function confirmDelete(items: DeleteItem[], permanent: boolean, onDone?: 
         : t("del.recycleTitleMany", { n: formatCount(items.length) }),
     body,
     confirm: permanent ? t("del.permanentConfirm") : t("del.recycleConfirm"),
-    danger: permanent,
+    danger: permanent || apps > 0,
+    warn: apps > 0 ? t("del.appWarn", { count: apps }) : undefined,
+    ack: apps > 0 ? t("del.appAck") : undefined,
     // The sidebar block shows the progress and the result; a toast shows only problems.
     onConfirm: () =>
       runJob({
@@ -41,6 +49,7 @@ export function confirmDelete(items: DeleteItem[], permanent: boolean, onDone?: 
           const r = await api.deleteItems(
             items.map(({ root, id }) => ({ root, id })),
             permanent,
+            apps > 0,
           );
           afterDelete(r.summaries);
           if (r.failed.length > 0)
