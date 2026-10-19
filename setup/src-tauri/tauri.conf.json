@@ -1,0 +1,25 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Lustro Setup",
+  "version": "../../package.json",
+  "identifier": "com.anonmohak.lustro.setup",
+  "build": {
+    "beforeDevCommand": "npx vite --config vite.config.ts",
+    "devUrl": "http://localhost:1430",
+    "beforeBuildCommand": "npx vite build --config vite.config.ts",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: asset:; font-src 'self' data:; connect-src ipc: http://ipc.localhost",
+      "freezePrototype": true
+    }
+  },
+  "bundle": {
+    "active": false,
+    "publisher": "Lustro contributors",
+    "copyright": "Copyright (c) 2026 Mohak. MIT License.",
+    "icon": ["../../src-tauri/icons/icon.ico"]
+  }
+}

@@ -28,7 +28,9 @@ Lustro is a free and open source storage manager for Windows 11. It scans your d
 
 ## Install
 
-Download `Lustro_x.y.z_x64-setup.exe` from [Releases](https://github.com/AnonMohak/lustro/releases) and run it. The installer needs no admin rights. Lustro updates itself from GitHub Releases (you can turn this off in Settings).
+Download `Lustro-Setup-x.y.z.exe` from [Releases](https://github.com/AnonMohak/lustro/releases) and run it. The installer needs no admin rights. You can choose the folder, a desktop shortcut, start with Windows and the Explorer menu entry. Lustro updates itself from GitHub Releases (you can turn this off in Settings).
+
+The release also has `Lustro_x.y.z_x64-setup.exe`. It is the update package that Lustro downloads by itself.
 
 > **SmartScreen warning.** The installer is not code-signed yet, so Windows may show "Windows protected your PC". Choose **More info**, then **Run anyway**.
 
@@ -61,9 +63,14 @@ You need Windows 11, [Rust](https://rustup.rs) (MSVC toolchain), Node.js 22 or l
 npm install
 npm run tauri dev     # run the app in dev mode
 npm run tauri build   # make the installer in src-tauri/target/release/bundle/nsis
+npm run build:setup   # put it in the themed installer: src-tauri/target/release/bundle/setup
+npm run setup:dev     # run the themed installer window in dev mode
 npm test              # frontend tests
 cd src-tauri; cargo test
+cd ../setup/src-tauri; cargo test
 ```
+
+The themed installer (`setup/`) is a small Tauri app. It holds the NSIS installer, runs it without a window, and then applies the options. A copy of it in the install folder is the uninstaller.
 
 `npm run tauri build` also signs the update package, so it needs the updater key in `TAURI_SIGNING_PRIVATE_KEY`. Without the key, build with `npm run tauri build -- --config src-tauri/tauri.ci.conf.json`.
 

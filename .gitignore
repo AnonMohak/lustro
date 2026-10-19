@@ -5,6 +5,7 @@ dist/
 # Rust / Tauri
 target/
 src-tauri/gen/schemas/
+setup/src-tauri/gen/schemas/
 
 # Editors and OS
 .vscode/*

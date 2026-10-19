@@ -26,7 +26,9 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: src-tauri
+          workspaces: |
+            src-tauri
+            setup/src-tauri
 
       - name: Install npm packages
         run: npm ci
@@ -49,12 +51,24 @@ jobs:
         working-directory: src-tauri
         run: cargo test
 
+      - name: Setup lint and tests
+        working-directory: setup/src-tauri
+        run: |
+          cargo fmt --check
+          cargo clippy --all-targets -- -D warnings
+          cargo test
+
       # CI has no updater signing key (pull requests cannot read secrets), so it skips the update package.
       - name: Build installer
         run: npm run tauri build -- --config src-tauri/tauri.ci.conf.json
 
+      - name: Build Lustro Setup
+        run: npm run build:setup
+
       - uses: actions/upload-artifact@v4
         with:
           name: lustro-installer
-          path: src-tauri/target/release/bundle/nsis/*.exe
+          path: |
+            src-tauri/target/release/bundle/setup/*.exe
+            src-tauri/target/release/bundle/nsis/*.exe
           if-no-files-found: error

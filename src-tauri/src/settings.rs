@@ -62,10 +62,15 @@ fn exe() -> std::io::Result<String> {
 
 /// Adds or removes the "start with Windows" entry (current user, no admin needed).
 pub fn set_start_with_windows(on: bool) -> std::io::Result<()> {
+    set_start_with_windows_for(&exe()?, on)
+}
+
+/// Like `set_start_with_windows`, for the Lustro exe at `exe` (the setup app uses this).
+pub fn set_start_with_windows_for(exe: &str, on: bool) -> std::io::Result<()> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let (run, _) = hkcu.create_subkey(RUN_KEY)?;
     if on {
-        run.set_value("Lustro", &format!("\"{}\" --tray", exe()?))
+        run.set_value("Lustro", &format!("\"{exe}\" --tray"))
     } else {
         match run.delete_value("Lustro") {
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
@@ -77,14 +82,19 @@ pub fn set_start_with_windows(on: bool) -> std::io::Result<()> {
 /// Adds or removes "Analyze with Lustro" in the right-click menu of folders and drives.
 /// It shows under "Show more options" on Windows 11 (the top-level menu needs a signed package).
 pub fn set_explorer_menu(on: bool) -> std::io::Result<()> {
+    set_explorer_menu_for(&exe()?, on)
+}
+
+/// Like `set_explorer_menu`, for the Lustro exe at `exe` (the setup app uses this).
+pub fn set_explorer_menu_for(exe: &str, on: bool) -> std::io::Result<()> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     for key in MENU_KEYS {
         if on {
             let (k, _) = hkcu.create_subkey(key)?;
             k.set_value("", &"Analyze with Lustro")?;
-            k.set_value("Icon", &exe()?)?;
+            k.set_value("Icon", &exe)?;
             let (cmd, _) = k.create_subkey("command")?;
-            cmd.set_value("", &format!("\"{}\" --scan \"%V\"", exe()?))?;
+            cmd.set_value("", &format!("\"{exe}\" --scan \"%V\""))?;
         } else {
             match hkcu.delete_subkey_all(key) {
                 Err(e) if e.kind() != std::io::ErrorKind::NotFound => return Err(e),
