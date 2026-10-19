@@ -3,7 +3,6 @@ import { api, type AppInfo, type DriveInfo, type Favorite, type ScanProgress, ty
 import { normalizeRoot } from "./lib/scanText";
 
 export type Screen = "home" | "explore" | "files" | "dupes" | "clean" | "apps" | "history" | "search" | "settings";
-export type Theme = "system" | "light" | "dark";
 
 export interface DialogSpec {
   title: string;
@@ -20,7 +19,6 @@ interface Toast {
 
 interface State {
   screen: Screen;
-  theme: Theme;
   info: AppInfo | null;
   drives: DriveInfo[] | null;
   /** Finished scans by root path, for example "C:\". */
@@ -39,7 +37,6 @@ interface State {
   deleteMode: "recycle" | "permanent";
   devAgeDays: number;
   go: (screen: Screen) => void;
-  setTheme: (theme: Theme) => void;
   loadInfo: () => Promise<void>;
   loadDrives: () => Promise<void>;
   loadCachedScans: () => Promise<void>;
@@ -62,10 +59,8 @@ interface State {
   openFavorite: (f: Favorite) => void;
 }
 
-const THEME_KEY = "lustro.theme";
 const DELETE_KEY = "lustro.deleteMode";
 const DEV_AGE_KEY = "lustro.devAgeDays";
-
 function savedDevAge(): number {
   try {
     const v = Number(localStorage.getItem(DEV_AGE_KEY));
@@ -83,21 +78,10 @@ function savedDeleteMode(): "recycle" | "permanent" {
   }
 }
 
-function savedTheme(): Theme {
-  try {
-    const t = localStorage.getItem(THEME_KEY);
-    if (t === "light" || t === "dark" || t === "system") return t;
-  } catch {
-    // Storage can be unavailable. The default theme is fine then.
-  }
-  return "system";
-}
-
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
 export const useStore = create<State>((set, get) => ({
   screen: "home",
-  theme: savedTheme(),
   info: null,
   drives: null,
   scans: {},
@@ -111,14 +95,6 @@ export const useStore = create<State>((set, get) => ({
   deleteMode: savedDeleteMode(),
   devAgeDays: savedDevAge(),
   go: (screen) => set({ screen }),
-  setTheme: (theme) => {
-    try {
-      localStorage.setItem(THEME_KEY, theme);
-    } catch {
-      // Not saved; the choice still applies to this session.
-    }
-    set({ theme });
-  },
   loadInfo: async () => set({ info: await api.appInfo() }),
   loadDrives: async () => set({ drives: await api.listDrives() }),
   loadCachedScans: async () => {

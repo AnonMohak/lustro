@@ -75,12 +75,6 @@
   },
   "settings": {
     "title": "Settings",
-    "appearance": "Appearance",
-    "theme": "Theme",
-    "themeHint": "System follows the Windows light or dark setting.",
-    "themeSystem": "System",
-    "themeLight": "Light",
-    "themeDark": "Dark",
     "about": "About",
     "version": "Lustro {{version}}",
     "aboutHint": "Free and open source (MIT). Lustro is Latin for “I purify” and “I survey”.",

@@ -1,52 +1,10 @@
 /* Lustro design tokens and components. Ported from the approved mockup (mockup/index.html).
-   Layout: Mica window. Title bar, then sidebar | list | main | detail, then status bar. */
+   Layout: dark Acrylic glass (Windows frosts the desktop behind Lustro; a light tint goes on top).
+   Title bar, then sidebar | list | main | detail, then status bar. */
 :root {
-  --win: rgba(243, 244, 247, .38);
-  --pane: rgba(255, 255, 255, .42);
-  --card: rgba(255, 255, 255, .74);
-  --ctl: rgba(255, 255, 255, .82);
-  --ctl-hover: rgba(250, 250, 252, .96);
-  --hover: rgba(20, 24, 40, .05);
-  --active: rgba(20, 24, 40, .085);
-  --stroke: rgba(20, 24, 40, .09);
-  --stroke-2: rgba(20, 24, 40, .17);
-  --fg: #191b20; --fg-2: #555b66; --fg-3: #7c828d;
-  --accent: #3d57d6; --accent-hover: #3248b8; --accent-fg: #ffffff; --accent-soft: rgba(61, 87, 214, .12);
-  --good: #13803f; --good-soft: rgba(19, 128, 63, .12);
-  --warn: #9a5400; --warn-soft: rgba(196, 120, 0, .14);
-  --bad: #c42b1c; --bad-soft: rgba(196, 43, 28, .10);
-  --c-video: #e46a8a; --c-image: #eeaa45; --c-doc: #5b95ea; --c-app: #9a7bec; --c-game: #43b98f;
-  --c-archive: #cf9561; --c-system: #7d8fab; --c-dev: #3cbccf; --c-other: #bab4aa;
-  --tile-fg: rgba(12, 14, 20, .88);
-  --popup: rgba(249, 249, 251, .92);
-  --shadow: 0 24px 64px rgba(20, 30, 50, .28), 0 0 0 1px rgba(20, 24, 40, .10);
-  --overlay: rgba(10, 12, 18, .30);
-  --f-ui: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
-  --f-display: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
-  --f-mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --win: rgba(28, 30, 34, .40); --pane: rgba(255, 255, 255, .025); --card: rgba(255, 255, 255, .045);
-    --ctl: rgba(255, 255, 255, .06); --ctl-hover: rgba(255, 255, 255, .095);
-    --hover: rgba(255, 255, 255, .05); --active: rgba(255, 255, 255, .085);
-    --stroke: rgba(255, 255, 255, .075); --stroke-2: rgba(255, 255, 255, .15);
-    --fg: #ebedf0; --fg-2: #a5aab3; --fg-3: #80868f;
-    --accent: #91a4ff; --accent-hover: #a9b8ff; --accent-fg: #0d1124; --accent-soft: rgba(145, 164, 255, .15);
-    --good: #5fd38d; --good-soft: rgba(95, 211, 141, .13);
-    --warn: #f0b35a; --warn-soft: rgba(240, 179, 90, .13);
-    --bad: #ff8a7a; --bad-soft: rgba(255, 138, 122, .12);
-    --c-video: #ec7c98; --c-image: #f2b65a; --c-doc: #6ea3f0; --c-app: #a88cf2; --c-game: #52c79c;
-    --c-archive: #d8a272; --c-system: #8a9dbb; --c-dev: #4fc8da; --c-other: #7f7a72;
-    --popup: rgba(44, 46, 51, .94);
-    --shadow: 0 24px 72px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .08);
-    --overlay: rgba(0, 0, 0, .5);
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --win: rgba(28, 30, 34, .40); --pane: rgba(255, 255, 255, .025); --card: rgba(255, 255, 255, .045);
+  --win: rgba(28, 30, 34, .15);
+  --pane: rgba(255, 255, 255, .0125);
+  --card: rgba(255, 255, 255, .045);
   --ctl: rgba(255, 255, 255, .06); --ctl-hover: rgba(255, 255, 255, .095);
   --hover: rgba(255, 255, 255, .05); --active: rgba(255, 255, 255, .085);
   --stroke: rgba(255, 255, 255, .075); --stroke-2: rgba(255, 255, 255, .15);
@@ -57,15 +15,19 @@
   --bad: #ff8a7a; --bad-soft: rgba(255, 138, 122, .12);
   --c-video: #ec7c98; --c-image: #f2b65a; --c-doc: #6ea3f0; --c-app: #a88cf2; --c-game: #52c79c;
   --c-archive: #d8a272; --c-system: #8a9dbb; --c-dev: #4fc8da; --c-other: #7f7a72;
+  --tile-fg: rgba(12, 14, 20, .88);
   --popup: rgba(44, 46, 51, .94);
   --shadow: 0 24px 72px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .08);
   --overlay: rgba(0, 0, 0, .5);
+  --f-ui: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --f-display: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "Cascadia Mono", Consolas, ui-monospace, monospace;
   color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
-/* Transparent so the Mica effect of the window shows through. */
+/* Transparent so the Acrylic of the window shows through. */
 body { background: transparent; font: 13px/1.45 var(--f-ui); color: var(--fg); overflow: hidden; user-select: none; }
 button { font: inherit; color: inherit; }
 .mono { font-family: var(--f-mono); font-size: 11.5px; }

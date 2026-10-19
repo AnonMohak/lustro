@@ -23,9 +23,10 @@
         "decorations": false,
         "transparent": true,
         "shadow": true,
+        "theme": "Dark",
         "windowEffects": {
           "effects": [
-            "mica"
+            "acrylic"
           ]
         }
       }

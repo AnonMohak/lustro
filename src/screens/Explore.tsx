@@ -385,7 +385,6 @@ function ExploreView({ root }: { root: string }) {
   const summary = useStore((s) => s.scans[root]);
   const isAdmin = useStore((s) => s.info?.isAdmin ?? false);
   const startScan = useStore((s) => s.startScan);
-  const theme = useStore((s) => s.theme);
   const showToast = useStore((s) => s.showToast);
 
   const [zoom, setZoom] = useState(ROOT_ID);
@@ -630,7 +629,6 @@ function ExploreView({ root }: { root: string }) {
               data={map}
               selected={sel}
               isProtected={isProtected}
-              themeKey={theme}
               onSelect={setSel}
               onZoom={(id) => {
                 setZoom(id);

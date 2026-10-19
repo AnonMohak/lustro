@@ -40,11 +40,9 @@ interface Props {
   isProtected?: (id: number) => boolean;
   onSelect: (id: number) => void;
   onZoom: (id: number) => void;
-  /** Changes when the theme changes, so colors are read again. */
-  themeKey: string;
 }
 
-export function Treemap({ data, selected, isProtected, onSelect, onZoom, themeKey }: Props) {
+export function Treemap({ data, selected, isProtected, onSelect, onZoom }: Props) {
   const wrap = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const tilesRef = useRef<Tile[]>([]);
@@ -148,7 +146,7 @@ export function Treemap({ data, selected, isProtected, onSelect, onZoom, themeKe
         ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
       }
     }
-  }, [data, size, selected, isProtected, themeKey]);
+  }, [data, size, selected, isProtected]);
 
   const hit = (e: React.MouseEvent): Tile | null => {
     const r = canvas.current!.getBoundingClientRect();

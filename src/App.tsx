@@ -1,5 +1,4 @@
 import { listen } from "@tauri-apps/api/event";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog, Toast } from "./components/Overlays";
@@ -56,24 +55,10 @@ function useScanEvents() {
   }, [t]);
 }
 
-function useTheme() {
-  const theme = useStore((s) => s.theme);
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === "system") root.removeAttribute("data-theme");
-    else root.setAttribute("data-theme", theme);
-    // The window theme drives the Mica tint and the system context menus.
-    getCurrentWindow()
-      .setTheme(theme === "system" ? null : theme)
-      .catch(() => {});
-  }, [theme]);
-}
-
 export default function App() {
   const screen = useStore((s) => s.screen);
   const go = useStore((s) => s.go);
 
-  useTheme();
   useScanEvents();
   useEffect(() => {
     const { loadInfo, loadDrives, loadCachedScans, showToast } = useStore.getState();

@@ -1,4 +1,24 @@
 /* Lustro Setup. Builds on the app tokens and components in src/styles/app.css. */
+/* The setup keeps its own Mica look and follows the Windows light or dark setting.
+   The app tokens (dark clear glass) are the dark values; light mode gets the light palette. */
+:root { --win: rgba(28, 30, 34, .40); --pane: rgba(255, 255, 255, .025); }
+@media (prefers-color-scheme: light) {
+  :root {
+    --win: rgba(243, 244, 247, .38); --pane: rgba(255, 255, 255, .42); --card: rgba(255, 255, 255, .74);
+    --ctl: rgba(255, 255, 255, .82); --ctl-hover: rgba(250, 250, 252, .96);
+    --hover: rgba(20, 24, 40, .05); --active: rgba(20, 24, 40, .085);
+    --stroke: rgba(20, 24, 40, .09); --stroke-2: rgba(20, 24, 40, .17);
+    --fg: #191b20; --fg-2: #555b66; --fg-3: #7c828d;
+    --accent: #3d57d6; --accent-hover: #3248b8; --accent-fg: #ffffff; --accent-soft: rgba(61, 87, 214, .12);
+    --good: #13803f; --good-soft: rgba(19, 128, 63, .12);
+    --warn: #9a5400; --warn-soft: rgba(196, 120, 0, .14);
+    --bad: #c42b1c; --bad-soft: rgba(196, 43, 28, .10);
+    --popup: rgba(249, 249, 251, .92);
+    --shadow: 0 24px 64px rgba(20, 30, 50, .28), 0 0 0 1px rgba(20, 24, 40, .10);
+    --overlay: rgba(10, 12, 18, .30);
+    color-scheme: light;
+  }
+}
 .app.su { grid-template-rows: 40px minmax(0, 1fr); }
 .su-body { display: flex; flex-direction: column; gap: 10px; padding: 18px 32px 22px; min-height: 0; border-top: 1px solid var(--stroke); background: var(--pane); }
 .su-body h1 { margin: 0; font: 600 20px/1.25 var(--f-display); text-wrap: balance; }
