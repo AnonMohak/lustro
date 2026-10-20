@@ -1,7 +1,36 @@
 //! The junk cleaner: rules from `rules.toml`, sizes of what they match, and the clean itself.
 
 pub mod dev;
+#[cfg(windows)]
 pub mod system;
+#[cfg(not(windows))]
+pub mod system {
+    //! The cleaner's system calls on Linux and macOS come in a later phase.
+    use std::collections::HashSet;
+    use std::path::Path;
+
+    use super::Measure;
+
+    pub fn running_processes() -> HashSet<String> {
+        HashSet::new()
+    }
+
+    pub fn recycle_bin_size() -> Measure {
+        Measure::default()
+    }
+
+    pub fn empty_recycle_bin() -> bool {
+        false
+    }
+
+    pub fn stop_service(_name: &str) -> bool {
+        false
+    }
+
+    pub fn start_service(_name: &str) {}
+
+    pub fn take_ownership(_path: &Path) {}
+}
 
 use std::sync::Arc;
 
@@ -10,7 +39,6 @@ pub use dev::RuleItem;
 
 use std::collections::HashSet;
 use std::fs;
-use std::os::windows::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
@@ -19,9 +47,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::ops::protect::cleaner_may_delete;
 
-const ATTR_READONLY: u32 = 0x1;
-const ATTR_DIRECTORY: u32 = 0x10;
-const ATTR_REPARSE_POINT: u32 = 0x400;
+use crate::system::{ATTR_DIRECTORY, ATTR_READONLY, ATTR_REPARSE_POINT, file_attributes};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Rule {
@@ -132,7 +158,7 @@ pub(crate) fn measure_dir(path: &Path, age: Option<Duration>) -> Measure {
     let mut dirs = Vec::new();
     for e in fs::read_dir(path).into_iter().flatten().flatten() {
         let Ok(meta) = e.metadata() else { continue };
-        let attrs = meta.file_attributes();
+        let attrs = file_attributes(&meta);
         if attrs & ATTR_REPARSE_POINT != 0 {
             continue; // links point elsewhere; the clean removes only the link
         }
@@ -190,7 +216,7 @@ pub fn measure(rule: &Rule) -> Measure {
     with_meta(matches(rule))
         .par_iter()
         .map(|(p, meta)| {
-            let attrs = meta.file_attributes();
+            let attrs = file_attributes(meta);
             if attrs & ATTR_REPARSE_POINT != 0 {
                 Measure::default()
             } else if attrs & ATTR_DIRECTORY != 0 {
@@ -220,7 +246,7 @@ pub struct CleanOutcome {
 }
 
 fn clean_path(path: &Path, meta: &fs::Metadata, age: Option<Duration>, out: &mut CleanOutcome) {
-    let attrs = meta.file_attributes();
+    let attrs = file_attributes(meta);
     if !cleaner_may_delete(&path.to_string_lossy()) {
         out.skipped_files += 1;
         return;

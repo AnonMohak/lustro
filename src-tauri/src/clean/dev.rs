@@ -1,6 +1,5 @@
 //! Dev junk: project build folders found in the scans, Docker, WSL disks, old JetBrains data.
 
-use std::os::windows::process::CommandExt;
 use std::path::Path;
 use std::process::Command;
 use std::sync::Arc;
@@ -9,8 +8,8 @@ use serde::Serialize;
 
 use crate::ops::protect::is_protected;
 use crate::scan::model::{NONE, Tree};
+use crate::system::no_window;
 
-const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 const DAY_100NS: u64 = 864_000_000_000;
 
 /// One folder or file inside a rule that the user can pick on its own.
@@ -209,11 +208,7 @@ pub fn parse_docker_size(s: &str) -> u64 {
 }
 
 fn docker(args: &[&str]) -> Option<String> {
-    let out = Command::new("docker")
-        .args(args)
-        .creation_flags(CREATE_NO_WINDOW)
-        .output()
-        .ok()?;
+    let out = no_window(Command::new("docker").args(args)).output().ok()?;
     out.status
         .success()
         .then(|| String::from_utf8_lossy(&out.stdout).into_owned())
@@ -293,10 +288,7 @@ pub fn wsl_compact(disks: &[String]) -> u64 {
     if disks.is_empty() {
         return 0;
     }
-    let _ = Command::new("wsl.exe")
-        .arg("--shutdown")
-        .creation_flags(CREATE_NO_WINDOW)
-        .output();
+    let _ = no_window(Command::new("wsl.exe").arg("--shutdown")).output();
     let mut saved = 0;
     for d in disks {
         let before = std::fs::metadata(d).map(|m| m.len()).unwrap_or(0);
@@ -306,11 +298,7 @@ pub fn wsl_compact(disks: &[String]) -> u64 {
             "select vdisk file=\"{d}\"\r\nattach vdisk readonly\r\ncompact vdisk\r\ndetach vdisk\r\n"
         );
         if std::fs::write(&script, body).is_ok() {
-            let _ = Command::new("diskpart.exe")
-                .arg("/s")
-                .arg(&script)
-                .creation_flags(CREATE_NO_WINDOW)
-                .output();
+            let _ = no_window(Command::new("diskpart.exe").arg("/s").arg(&script)).output();
             let _ = std::fs::remove_file(&script);
         }
         let after = std::fs::metadata(d).map(|m| m.len()).unwrap_or(before);

@@ -1,3 +1,6 @@
+// The Linux and macOS stubs leave shared scan code unused until those ports exist.
+#![cfg_attr(not(windows), allow(dead_code))]
+
 mod apps;
 mod clean;
 mod clean_cmds;
@@ -6,7 +9,13 @@ mod desktop;
 mod dupes;
 mod error;
 mod favorites;
+#[cfg(windows)]
 mod live;
+#[cfg(not(windows))]
+mod live {
+    /// Live updates on Linux and macOS come in a later phase.
+    pub fn watch(_app: &tauri::AppHandle, _root: &str) {}
+}
 mod ops;
 mod scan;
 mod settings;

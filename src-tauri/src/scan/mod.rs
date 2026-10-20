@@ -1,10 +1,26 @@
 pub mod cache;
 pub mod kind;
+#[cfg(windows)]
 pub mod mft;
 pub mod model;
 pub mod query;
+#[cfg(windows)]
 pub mod usn;
+#[cfg(windows)]
 pub mod walk;
+#[cfg(not(windows))]
+pub mod walk {
+    //! The folder walk on Linux and macOS comes in a later phase.
+    use super::model::Tree;
+    use super::{Progress, ScanError};
+
+    pub fn walk(_root: &str, _progress: &Progress) -> Result<Tree, ScanError> {
+        Err(ScanError::Io(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "Scans are not available on this system yet.",
+        )))
+    }
+}
 
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -72,6 +88,7 @@ pub fn is_drive_root(root: &str) -> Option<char> {
 /// Scans a drive or a folder. Whole NTFS drives use the MFT when `allow_mft` is true
 /// and the process has admin rights; everything else uses the folder walk.
 pub fn scan(root: &str, allow_mft: bool, progress: &Progress) -> Result<Tree, ScanError> {
+    #[cfg(windows)]
     if allow_mft && let Some(letter) = is_drive_root(root) {
         match mft::scan_volume(letter, progress) {
             Ok(tree) => return Ok(tree),
@@ -84,6 +101,8 @@ pub fn scan(root: &str, allow_mft: bool, progress: &Progress) -> Result<Tree, Sc
             }
         }
     }
+    #[cfg(not(windows))]
+    let _ = allow_mft;
     walk::walk(root, progress)
 }
 

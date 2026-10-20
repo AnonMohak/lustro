@@ -3,14 +3,11 @@
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
-use std::os::windows::io::AsRawHandle;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use rayon::prelude::*;
 use serde::Serialize;
-use windows::Win32::Foundation::HANDLE;
-use windows::Win32::Storage::FileSystem::{BY_HANDLE_FILE_INFORMATION, GetFileInformationByHandle};
 
 use crate::scan::model::{NONE, Tree, flags};
 
@@ -67,17 +64,31 @@ fn filetime_ms(ft: u64) -> i64 {
 }
 
 /// Volume serial and file index: the same value means the same file (a hard link).
-fn file_identity(f: &File) -> Option<(u32, u64)> {
+#[cfg(windows)]
+fn file_identity(f: &File) -> Option<(u64, u64)> {
+    use std::os::windows::io::AsRawHandle;
+    use windows::Win32::Foundation::HANDLE;
+    use windows::Win32::Storage::FileSystem::{
+        BY_HANDLE_FILE_INFORMATION, GetFileInformationByHandle,
+    };
     let mut info = BY_HANDLE_FILE_INFORMATION::default();
     unsafe { GetFileInformationByHandle(HANDLE(f.as_raw_handle()), &mut info) }.ok()?;
     Some((
-        info.dwVolumeSerialNumber,
+        info.dwVolumeSerialNumber as u64,
         ((info.nFileIndexHigh as u64) << 32) | info.nFileIndexLow as u64,
     ))
 }
 
+/// Device and inode: the same value means the same file (a hard link).
+#[cfg(unix)]
+fn file_identity(f: &File) -> Option<(u64, u64)> {
+    use std::os::unix::fs::MetadataExt;
+    let m = f.metadata().ok()?;
+    Some((m.dev(), m.ino()))
+}
+
 /// Hash of the first and last 64 KB (the whole file when it is small).
-fn partial_hash(path: &str, size: u64, p: &DupeProgress) -> Option<([u8; 32], (u32, u64))> {
+fn partial_hash(path: &str, size: u64, p: &DupeProgress) -> Option<([u8; 32], (u64, u64))> {
     let mut f = File::open(path).ok()?;
     let id = file_identity(&f)?;
     let mut h = blake3::Hasher::new();
