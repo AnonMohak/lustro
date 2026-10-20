@@ -620,22 +620,49 @@ pub async fn search(app: AppHandle, args: SearchArgs) -> Result<SearchResult> {
 /// Opens File Explorer with the item selected.
 #[tauri::command]
 pub fn reveal_path(path: String) -> Result<()> {
-    use std::os::windows::process::CommandExt;
     if !std::path::Path::new(&path).exists() {
         return Err(Error::Io(std::io::Error::new(
             std::io::ErrorKind::NotFound,
             format!("{path} no longer exists."),
         )));
     }
+    reveal_command(&path).spawn()?;
+    Ok(())
+}
+
+#[cfg(windows)]
+fn reveal_command(path: &str) -> std::process::Command {
+    use std::os::windows::process::CommandExt;
     let mut cmd = std::process::Command::new("explorer.exe");
-    if scan::is_drive_root(&path).is_some() {
-        cmd.arg(&path);
+    if scan::is_drive_root(path).is_some() {
+        cmd.arg(path);
     } else {
         // explorer.exe parses its own command line, so pass the quotes as they are.
         cmd.raw_arg(format!("/select,\"{}\"", path.replace('"', "")));
     }
-    cmd.spawn()?;
-    Ok(())
+    cmd
+}
+
+/// Finder selects the item.
+#[cfg(target_os = "macos")]
+fn reveal_command(path: &str) -> std::process::Command {
+    let mut cmd = std::process::Command::new("open");
+    cmd.arg("-R").arg(path);
+    cmd
+}
+
+/// The file manager opens the folder that holds the item.
+#[cfg(all(unix, not(target_os = "macos")))]
+fn reveal_command(path: &str) -> std::process::Command {
+    let p = std::path::Path::new(path);
+    let folder = if p.is_dir() {
+        p
+    } else {
+        p.parent().unwrap_or(p)
+    };
+    let mut cmd = std::process::Command::new("xdg-open");
+    cmd.arg(folder);
+    cmd
 }
 
 fn unix_ms_to_filetime(ms: i64) -> u64 {
@@ -864,6 +891,28 @@ fn long_lower(p: &str) -> String {
     p.to_lowercase()
 }
 
+/// Items in the Recycle Bin (the Trash on Linux).
+#[cfg(not(target_os = "macos"))]
+fn bin_items() -> std::result::Result<Vec<trash::TrashItem>, trash::Error> {
+    trash::os_limited::list()
+}
+
+/// The `trash` crate cannot list the macOS Trash: restore comes in a later phase.
+#[cfg(target_os = "macos")]
+fn bin_items() -> std::result::Result<Vec<trash::TrashItem>, trash::Error> {
+    Ok(Vec::new())
+}
+
+#[cfg(not(target_os = "macos"))]
+fn bin_restore(item: trash::TrashItem) -> std::result::Result<(), trash::Error> {
+    trash::os_limited::restore_all([item])
+}
+
+#[cfg(target_os = "macos")]
+fn bin_restore(_item: trash::TrashItem) -> std::result::Result<(), trash::Error> {
+    Ok(())
+}
+
 /// The delete log, newest first. Recycle Bin entries that are gone from the bin
 /// are marked as not restorable.
 #[tauri::command]
@@ -872,7 +921,7 @@ pub async fn history(app: AppHandle) -> Vec<history::Entry> {
     tauri::async_runtime::spawn_blocking(move || {
         with_history(&app2, |h| {
             if h.entries.iter().any(|e| e.restorable) {
-                let in_bin: std::collections::HashSet<String> = trash::os_limited::list()
+                let in_bin: std::collections::HashSet<String> = bin_items()
                     .unwrap_or_default()
                     .iter()
                     .map(|i| long_lower(&i.original_path().to_string_lossy()))
@@ -897,7 +946,7 @@ pub async fn restore(app: AppHandle, id: u64) -> Result<()> {
         let entry = with_history(&app2, |h| h.entries.iter().find(|e| e.id == id).cloned())
             .flatten()
             .ok_or(Error::NotInBin)?;
-        let items = trash::os_limited::list().map_err(|e| Error::Restore(e.to_string()))?;
+        let items = bin_items().map_err(|e| Error::Restore(e.to_string()))?;
         let target = long_lower(&entry.path);
         let deleted_at = entry.time / 1000;
         let item = items
@@ -912,7 +961,7 @@ pub async fn restore(app: AppHandle, id: u64) -> Result<()> {
             });
             return Err(Error::NotInBin);
         };
-        trash::os_limited::restore_all([item]).map_err(|e| Error::Restore(e.to_string()))?;
+        bin_restore(item).map_err(|e| Error::Restore(e.to_string()))?;
         with_history(&app2, |h| {
             if let Some(e) = h.entries.iter_mut().find(|e| e.id == id) {
                 e.restorable = false;

@@ -1,16 +1,20 @@
 //! Installed apps: desktop apps from the registry, Store apps from the package manager.
 
+#[cfg(windows)]
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use serde::Serialize;
+#[cfg(windows)]
 use winreg::RegKey;
+#[cfg(windows)]
 use winreg::enums::{
     HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ, KEY_WOW64_32KEY, KEY_WOW64_64KEY,
 };
 
 use crate::scan::model::Tree;
 
+#[cfg(windows)]
 const UNINSTALL: &str = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
 
 #[derive(Debug, Clone, Serialize)]
@@ -38,6 +42,7 @@ pub struct App {
     pub exe_name: Option<String>,
 }
 
+#[cfg(windows)]
 fn ymd_to_ms(s: &str) -> i64 {
     // InstallDate is "YYYYMMDD".
     if s.len() != 8 || !s.bytes().all(|b| b.is_ascii_digit()) {
@@ -62,6 +67,7 @@ fn ymd_to_ms(s: &str) -> i64 {
 }
 
 /// The program file name from a DisplayIcon value like `"C:\App\app.exe",0`.
+#[cfg(windows)]
 fn exe_from_icon(icon: &str) -> Option<String> {
     let s = icon.trim().trim_matches('"');
     let s = s.split(',').next()?.trim().trim_matches('"');
@@ -71,6 +77,7 @@ fn exe_from_icon(icon: &str) -> Option<String> {
         .then(|| name.to_ascii_uppercase())
 }
 
+#[cfg(windows)]
 fn read_hive(
     hive: &RegKey,
     hive_name: &str,
@@ -131,6 +138,7 @@ fn read_hive(
     }
 }
 
+#[cfg(windows)]
 fn desktop_apps() -> Vec<App> {
     let mut out = Vec::new();
     let mut seen = std::collections::HashSet::new();
@@ -142,6 +150,7 @@ fn desktop_apps() -> Vec<App> {
     out
 }
 
+#[cfg(windows)]
 fn store_apps() -> Vec<App> {
     use windows::ApplicationModel::PackageSignatureKind;
     use windows::Management::Deployment::PackageManager;
@@ -205,6 +214,7 @@ fn store_apps() -> Vec<App> {
 }
 
 /// Last start time per program from the Prefetch folder (readable only as admin).
+#[cfg(windows)]
 fn prefetch_times() -> HashMap<String, i64> {
     let mut out = HashMap::new();
     let dir = std::env::var("WINDIR")
@@ -231,9 +241,7 @@ fn prefetch_times() -> HashMap<String, i64> {
 
 /// All installed apps, biggest first. Missing sizes come from the scans when they cover the install folder.
 pub fn list(trees: &[Arc<Tree>]) -> Vec<App> {
-    let mut apps = desktop_apps();
-    apps.extend(store_apps());
-    let prefetch = prefetch_times();
+    let mut apps = installed();
     for a in &mut apps {
         if a.size.is_none() && !a.location.is_empty() {
             for t in trees {
@@ -244,15 +252,33 @@ pub fn list(trees: &[Arc<Tree>]) -> Vec<App> {
                 }
             }
         }
-        if let Some(exe) = &a.exe_name {
-            a.last_used = prefetch.get(exe).copied().unwrap_or(0);
-        }
     }
     apps.sort_by_key(|a| std::cmp::Reverse(a.size.unwrap_or(0)));
     apps
 }
 
+/// Desktop and Store apps, with the last start time from Prefetch.
+#[cfg(windows)]
+fn installed() -> Vec<App> {
+    let mut apps = desktop_apps();
+    apps.extend(store_apps());
+    let prefetch = prefetch_times();
+    for a in &mut apps {
+        if let Some(exe) = &a.exe_name {
+            a.last_used = prefetch.get(exe).copied().unwrap_or(0);
+        }
+    }
+    apps
+}
+
+/// App lists on Linux and macOS come in a later phase.
+#[cfg(not(windows))]
+fn installed() -> Vec<App> {
+    Vec::new()
+}
+
 /// Splits an UninstallString into a program and its arguments.
+#[cfg(windows)]
 pub fn split_command(cmd: &str) -> (String, String) {
     let c = cmd.trim();
     if let Some(rest) = c.strip_prefix('"')
@@ -273,6 +299,7 @@ pub fn split_command(cmd: &str) -> (String, String) {
 
 /// Starts the uninstaller of an app. Desktop apps run their own uninstaller (Windows asks for
 /// admin rights when it needs them); Store apps are removed through the package manager.
+#[cfg(windows)]
 pub fn uninstall(app: &App) -> Result<(), String> {
     if app.source == "store" {
         use windows::Management::Deployment::{PackageManager, RemovalOptions};
@@ -318,10 +345,16 @@ pub fn uninstall(app: &App) -> Result<(), String> {
     }
 }
 
+#[cfg(not(windows))]
+pub fn uninstall(_app: &App) -> Result<(), String> {
+    Err("Uninstall is not available on this system yet.".into())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[cfg(windows)]
     #[test]
     fn install_dates() {
         assert_eq!(ymd_to_ms("20000101"), 946_684_800_000);
@@ -330,6 +363,7 @@ mod tests {
         assert_eq!(ymd_to_ms("20261341"), 0);
     }
 
+    #[cfg(windows)]
     #[test]
     fn uninstall_commands() {
         assert_eq!(
@@ -349,6 +383,7 @@ mod tests {
         );
     }
 
+    #[cfg(windows)]
     #[test]
     fn icon_to_exe() {
         assert_eq!(

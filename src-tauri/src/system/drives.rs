@@ -1,19 +1,27 @@
 use serde::Serialize;
+#[cfg(windows)]
 use windows::Win32::Foundation::CloseHandle;
+#[cfg(windows)]
 use windows::Win32::Storage::FileSystem::{
     CreateFileW, FILE_FLAGS_AND_ATTRIBUTES, FILE_SHARE_READ, FILE_SHARE_WRITE, GetDiskFreeSpaceExW,
     GetDriveTypeW, GetLogicalDrives, GetVolumeInformationW, OPEN_EXISTING,
 };
+#[cfg(windows)]
 use windows::Win32::System::IO::DeviceIoControl;
+#[cfg(windows)]
 use windows::Win32::System::Ioctl::{
     DEVICE_SEEK_PENALTY_DESCRIPTOR, IOCTL_STORAGE_QUERY_PROPERTY, PropertyStandardQuery,
     STORAGE_PROPERTY_QUERY, StorageDeviceSeekPenaltyProperty,
 };
+#[cfg(windows)]
 use windows::core::PCWSTR;
 
+#[cfg(windows)]
 use super::{from_wide, wide};
 
+#[cfg(windows)]
 const DRIVE_REMOVABLE: u32 = 2;
+#[cfg(windows)]
 const DRIVE_FIXED: u32 = 3;
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
@@ -43,6 +51,7 @@ pub struct DriveInfo {
 
 /// Lists fixed and removable drives that have a mounted volume.
 /// Network drives and CD drives are skipped.
+#[cfg(windows)]
 pub fn list_drives() -> Vec<DriveInfo> {
     let mask = unsafe { GetLogicalDrives() };
     (0..26u8)
@@ -51,6 +60,13 @@ pub fn list_drives() -> Vec<DriveInfo> {
         .collect()
 }
 
+/// Lists mounted volumes. Linux and macOS come in a later phase.
+#[cfg(not(windows))]
+pub fn list_drives() -> Vec<DriveInfo> {
+    Vec::new()
+}
+
+#[cfg(windows)]
 fn drive_info(letter: char) -> Option<DriveInfo> {
     let root = format!("{letter}:\\");
     let root_w = wide(&root);
@@ -108,6 +124,7 @@ fn drive_info(letter: char) -> Option<DriveInfo> {
 
 /// Asks the storage driver whether the disk has a seek penalty (spinning disk).
 /// This query works without admin rights because the volume is opened with no access.
+#[cfg(windows)]
 fn seek_penalty(letter: char) -> Option<bool> {
     let path = wide(&format!("\\\\.\\{letter}:"));
     unsafe {
@@ -144,7 +161,7 @@ fn seek_penalty(letter: char) -> Option<bool> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, windows))]
 mod tests {
     use super::*;
 

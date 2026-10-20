@@ -17,6 +17,10 @@ pub enum Error {
     Restore(String),
     #[error("{0}")]
     Uninstall(String),
+    #[cfg(not(windows))]
+    #[error("{0} is not available on this system yet.")]
+    Unsupported(&'static str),
+    #[cfg(windows)]
     #[error("{0}")]
     Windows(#[from] windows::core::Error),
     #[error("{0}")]

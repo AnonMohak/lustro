@@ -3,7 +3,9 @@
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
+#[cfg(windows)]
 use winreg::RegKey;
+#[cfg(windows)]
 use winreg::enums::{HKEY_CURRENT_USER, KEY_READ, KEY_WRITE};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -52,23 +54,28 @@ pub fn save(dir: &Path, s: &Settings) -> std::io::Result<()> {
     std::fs::write(file(dir), serde_json::to_vec_pretty(s)?)
 }
 
+#[cfg(windows)]
 const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
+#[cfg(windows)]
 const MENU_KEYS: [&str; 3] = [
     r"Software\Classes\Directory\shell\Lustro",
     r"Software\Classes\Directory\Background\shell\Lustro",
     r"Software\Classes\Drive\shell\Lustro",
 ];
 
+#[cfg(windows)]
 fn exe() -> std::io::Result<String> {
     Ok(std::env::current_exe()?.to_string_lossy().into_owned())
 }
 
 /// Adds or removes the "start with Windows" entry (current user, no admin needed).
+#[cfg(windows)]
 pub fn set_start_with_windows(on: bool) -> std::io::Result<()> {
     set_start_with_windows_for(&exe()?, on)
 }
 
 /// Like `set_start_with_windows`, for the Lustro exe at `exe` (the setup app uses this).
+#[cfg(windows)]
 pub fn set_start_with_windows_for(exe: &str, on: bool) -> std::io::Result<()> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let (run, _) = hkcu.create_subkey(RUN_KEY)?;
@@ -84,11 +91,13 @@ pub fn set_start_with_windows_for(exe: &str, on: bool) -> std::io::Result<()> {
 
 /// Adds or removes "Analyze with Lustro" in the right-click menu of folders and drives.
 /// It shows under "Show more options" on Windows 11 (the top-level menu needs a signed package).
+#[cfg(windows)]
 pub fn set_explorer_menu(on: bool) -> std::io::Result<()> {
     set_explorer_menu_for(&exe()?, on)
 }
 
 /// Like `set_explorer_menu`, for the Lustro exe at `exe` (the setup app uses this).
+#[cfg(windows)]
 pub fn set_explorer_menu_for(exe: &str, on: bool) -> std::io::Result<()> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     for key in MENU_KEYS {
@@ -109,6 +118,7 @@ pub fn set_explorer_menu_for(exe: &str, on: bool) -> std::io::Result<()> {
 }
 
 /// True when the registry entries match the settings (for example after a move of the app).
+#[cfg(windows)]
 pub fn registry_matches(s: &Settings) -> bool {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let run_ok = hkcu
@@ -119,6 +129,36 @@ pub fn registry_matches(s: &Settings) -> bool {
         .open_subkey_with_flags(MENU_KEYS[0], KEY_READ | KEY_WRITE)
         .is_ok();
     run_ok == s.start_with_windows && menu_ok == s.explorer_menu
+}
+
+/// Start at login on Linux and macOS comes in a later phase.
+#[cfg(not(windows))]
+pub fn set_start_with_windows(on: bool) -> std::io::Result<()> {
+    unsupported(on, "Start at login")
+}
+
+/// A file manager menu on Linux and macOS comes in a later phase.
+#[cfg(not(windows))]
+pub fn set_explorer_menu(on: bool) -> std::io::Result<()> {
+    unsupported(on, "The file manager menu")
+}
+
+#[cfg(not(windows))]
+pub fn registry_matches(s: &Settings) -> bool {
+    !s.start_with_windows && !s.explorer_menu
+}
+
+/// Turning a feature off always works; turning it on fails until the feature exists.
+#[cfg(not(windows))]
+fn unsupported(on: bool, what: &str) -> std::io::Result<()> {
+    if on {
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            format!("{what} is not available on this system yet."),
+        ))
+    } else {
+        Ok(())
+    }
 }
 
 #[cfg(test)]

@@ -1,14 +1,24 @@
+#[cfg(windows)]
 use windows::Win32::Foundation::{CloseHandle, ERROR_CANCELLED, HANDLE};
+#[cfg(windows)]
 use windows::Win32::Security::{GetTokenInformation, TOKEN_ELEVATION, TOKEN_QUERY, TokenElevation};
+#[cfg(windows)]
 use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
+#[cfg(windows)]
 use windows::Win32::UI::Shell::ShellExecuteW;
+#[cfg(windows)]
 use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+#[cfg(windows)]
 use windows::core::PCWSTR;
 
+#[cfg(windows)]
 use super::wide;
-use crate::error::{Error, Result};
+#[cfg(windows)]
+use crate::error::Error;
+use crate::error::Result;
 
 /// True when the current process runs with an elevated (admin) token.
+#[cfg(windows)]
 pub fn is_elevated() -> bool {
     unsafe {
         let mut token = HANDLE::default();
@@ -30,7 +40,14 @@ pub fn is_elevated() -> bool {
     }
 }
 
+/// Linux and macOS: root and Full Disk Access come in a later phase.
+#[cfg(not(windows))]
+pub fn is_elevated() -> bool {
+    false
+}
+
 /// Quotes one command-line argument so that `CommandLineToArgvW` reads it back unchanged.
+#[cfg(windows)]
 pub fn quote_arg(arg: &str) -> String {
     if !arg.is_empty() && !arg.contains([' ', '\t', '"']) {
         return arg.to_string();
@@ -59,6 +76,7 @@ pub fn quote_arg(arg: &str) -> String {
 
 /// Starts a new elevated copy of this executable with the same arguments.
 /// Windows shows the UAC prompt. The caller exits the current process on success.
+#[cfg(windows)]
 pub fn relaunch_elevated() -> Result<()> {
     let exe = std::env::current_exe()?;
     let mut args: Vec<String> = std::env::args()
@@ -92,15 +110,23 @@ pub fn relaunch_elevated() -> Result<()> {
     }
 }
 
+#[cfg(not(windows))]
+pub fn relaunch_elevated() -> Result<()> {
+    Err(crate::error::Error::Unsupported("Run as admin"))
+}
+
 #[cfg(test)]
 mod tests {
+    #[cfg(windows)]
     use super::quote_arg;
 
+    #[cfg(windows)]
     #[test]
     fn plain_args_stay_unquoted() {
         assert_eq!(quote_arg("--scan"), "--scan");
     }
 
+    #[cfg(windows)]
     #[test]
     fn spaces_and_quotes_are_escaped() {
         assert_eq!(quote_arg("C:\\My Files"), "\"C:\\My Files\"");

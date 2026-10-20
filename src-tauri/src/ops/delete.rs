@@ -3,14 +3,10 @@
 
 use std::fs;
 use std::io;
-use std::os::windows::fs::MetadataExt;
 use std::path::Path;
 
 use super::protect::{is_app_folder, is_protected};
-
-const ATTR_READONLY: u32 = 0x1;
-const ATTR_DIRECTORY: u32 = 0x10;
-const ATTR_REPARSE_POINT: u32 = 0x400;
+use crate::system::{ATTR_DIRECTORY, ATTR_READONLY, ATTR_REPARSE_POINT, file_attributes};
 
 #[derive(Debug, thiserror::Error)]
 pub enum DeleteError {
@@ -65,7 +61,7 @@ pub fn delete_permanent(path: &Path, allow_app: bool) -> Result<(), DeleteError>
 }
 
 fn remove(path: &Path, meta: &fs::Metadata) -> io::Result<()> {
-    let attrs = meta.file_attributes();
+    let attrs = file_attributes(meta);
     // Use the attribute, not `is_dir()`: Rust reports a junction as a symlink, not a folder.
     let is_dir = attrs & ATTR_DIRECTORY != 0;
     if attrs & ATTR_REPARSE_POINT != 0 {
@@ -129,6 +125,7 @@ mod tests {
         fs::remove_dir_all(root).unwrap();
     }
 
+    #[cfg(windows)]
     #[test]
     fn junction_delete_never_touches_the_target() {
         let root = temp("junc");
@@ -159,6 +156,7 @@ mod tests {
         fs::remove_dir_all(target).unwrap();
     }
 
+    #[cfg(windows)]
     #[test]
     fn refuses_protected_and_missing_paths() {
         assert!(matches!(
@@ -199,6 +197,7 @@ mod tests {
 
     /// Needs a desktop session with a Recycle Bin. GitHub's Windows runners run as a
     /// service session where the shell Recycle Bin does not list the item, so CI skips it.
+    #[cfg(windows)]
     #[test]
     fn recycles_and_restores_a_file() {
         if std::env::var("CI").is_ok() {
