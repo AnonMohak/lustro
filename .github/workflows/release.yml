@@ -8,10 +8,49 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    runs-on: windows-latest
+  # One draft release for all platforms. The build jobs upload to it, so two jobs
+  # cannot make two drafts. The release stays a draft until someone publishes it on GitHub.
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      id: ${{ steps.draft.outputs.id }}
+    steps:
+      - id: draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --title "Lustro $TAG" --notes "$(cat <<'EOF'
+          **Windows:** download **Lustro-Setup-<version>.exe** and run it. The other .exe is the update
+          package that Lustro downloads by itself; you do not need it. Windows SmartScreen may warn about
+          an unknown publisher: the installer is not code-signed yet. Choose "More info", then "Run anyway".
+
+          **Linux (preview):** download the `.AppImage` (any distro: make it executable, then run it) or
+          the `.deb` (Ubuntu and Debian: `sudo apt install ./Lustro_<version>_amd64.deb`).
+
+          See the README for what Lustro does.
+          EOF
+          )"
+          echo "id=$(gh api "repos/$GITHUB_REPOSITORY/releases" --jq ".[] | select(.tag_name == \"$TAG\") | .id")" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: create-release
+    strategy:
+      fail-fast: false
+      # One at a time: each job reads latest.json, adds its platform and uploads it again.
+      # Two jobs at the same time could drop the entry of the other one.
+      max-parallel: 1
+      matrix:
+        os: [windows-latest, ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Linux packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev patchelf
 
       - uses: actions/setup-node@v4
         with:
@@ -29,31 +68,24 @@ jobs:
       - name: Install npm packages
         run: npm ci
 
-      # Builds the installer, signs the update package and uploads both with latest.json.
-      # The release stays a draft until someone publishes it on GitHub.
+      # Builds the packages, signs the update packages and uploads them. latest.json gets the
+      # entries of each platform.
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "Lustro ${{ github.ref_name }}"
-          releaseBody: |
-            Download **Lustro-Setup-<version>.exe** and run it. The other .exe is the update package
-            that Lustro downloads by itself; you do not need it.
-
-            See the README for what Lustro does. Windows SmartScreen may warn about an unknown
-            publisher: the installer is not code-signed yet. Choose "More info", then "Run anyway".
-          releaseDraft: true
-          prerelease: false
+          releaseId: ${{ needs.create-release.outputs.id }}
           includeUpdaterJson: true
 
       # The themed installer (setup/) holds the NSIS installer that tauri-action just built.
       - name: Build Lustro Setup
+        if: runner.os == 'Windows'
         run: npm run build:setup
 
       - name: Upload Lustro Setup
+        if: runner.os == 'Windows'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

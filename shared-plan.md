@@ -269,4 +269,8 @@ Android can start right after Phase 2a if it is more important than Linux. Phase
    - Admin rights on Unix mean that Lustro runs as root (`geteuid`). "Run as admin" still says that it is not available.
    - `apps/linux.rs` lists deb packages with a menu entry, snaps and Flatpak apps. It is read-only: "Uninstall" shows the command to run (`sudo apt remove ...`, `sudo snap remove ...`, `flatpak uninstall ...`). Until Phase 4, deb apps use the source "desktop", and snaps and Flatpak apps use "store".
    - Start at login writes `~/.config/autostart/lustro.desktop` (with the AppImage path when Lustro runs from one). The file manager menu is not available yet.
-7. Next (Phase 2b, part 3): Linux packages (`.deb` and AppImage) in `release.yml`, and a manual test on a Linux desktop.
+7. Phase 2b, part 3: Linux packages.
+   - Done: `src-tauri/tauri.linux.conf.json` (Tauri merges it on Linux): `.deb` and AppImage, the deb needs `libayatana-appindicator3-1` (tray), and the window has no transparency and a solid dark background (`#1c1e22`), because Linux has no Acrylic.
+   - Done: CI job `linux-bundle` builds both packages on `ubuntu-22.04` and keeps them as the artifact `lustro-linux`, for manual tests.
+   - Done: `release.yml` makes one draft release first, then builds Windows and Linux one after the other (so the two jobs do not overwrite each other's entry in `latest.json`). It runs only on a `v*` tag, so it is not tested yet.
+   - To do: a manual test of the AppImage and the `.deb` on a Linux desktop (WSLg or a VM).
