@@ -3,6 +3,7 @@
 use bytemuck::{Pod, Zeroable};
 
 use super::kind::{KIND_COUNT, Kind, apply_zone, kind_of_name, zone_of_dir};
+use crate::paths::{self, SEP};
 
 pub const NONE: u32 = u32::MAX;
 
@@ -196,7 +197,7 @@ impl Tree {
         }
     }
 
-    /// Full path. Folders have no trailing backslash, except a drive root.
+    /// Full path. Folders have no trailing separator, except a drive root.
     pub fn path(&self, id: u32) -> String {
         if id == Self::ROOT {
             return self.root_path.clone();
@@ -210,29 +211,33 @@ impl Tree {
         let mut out = self.root_path.clone();
         for (i, p) in parts.iter().rev().enumerate() {
             if i > 0 {
-                out.push('\\');
+                out.push(SEP);
             }
             out.push_str(p);
         }
         out
     }
 
-    /// The node of an absolute path inside this scan (case-insensitive), if the scan has it.
+    /// The node of an absolute path inside this scan, if the scan has it.
+    /// Case matters only where the platform's file system cares about it.
     pub fn find_path(&self, path: &str) -> Option<u32> {
-        let root = self.root_path.trim_end_matches('\\');
-        let p = path.trim_end_matches('\\');
-        if p.len() < root.len() || !p[..root.len()].eq_ignore_ascii_case(root) {
+        let root = self.root_path.trim_end_matches(SEP);
+        let p = path.trim_end_matches(SEP);
+        if !p
+            .get(..root.len())
+            .is_some_and(|head| paths::same(head, root))
+        {
             return None;
         }
         let rest = &p[root.len()..];
-        if !rest.is_empty() && !rest.starts_with('\\') {
+        if !rest.is_empty() && !rest.starts_with(SEP) {
             return None;
         }
         let mut cur = Self::ROOT;
-        for part in rest.split('\\').filter(|s| !s.is_empty()) {
+        for part in rest.split(SEP).filter(|s| !s.is_empty()) {
             cur = self
                 .children(cur)
-                .find(|&c| self.name(c).eq_ignore_ascii_case(part))?;
+                .find(|&c| paths::same(self.name(c), part))?;
         }
         Some(cur)
     }
@@ -503,6 +508,7 @@ impl TreeBuilder {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    use crate::paths::{IGNORE_CASE, os};
 
     /// C:\ with Users\me\{a.mp4 (100), b.txt (10)}, Windows\x.dll (50), pagefile.sys (40).
     pub fn sample() -> Tree {
@@ -521,7 +527,7 @@ pub(crate) mod tests {
         b.link(win, 0);
         b.link(x, win);
         b.link(pf, 0);
-        b.finish("C:\\".into(), ScanMethod::Walk, 1, 0)
+        b.finish(os("C:\\"), ScanMethod::Walk, 1, 0)
     }
 
     #[test]
@@ -550,27 +556,27 @@ pub(crate) mod tests {
         let users = t.children(0).next().unwrap();
         let me = t.children(users).next().unwrap();
         let a = t.children(me).next().unwrap();
-        assert_eq!(t.path(0), "C:\\");
-        assert_eq!(t.path(a), "C:\\Users\\me\\a.mp4");
+        assert_eq!(t.path(0), os("C:\\"));
+        assert_eq!(t.path(a), os("C:\\Users\\me\\a.mp4"));
     }
 
     #[test]
     fn add_move_and_resize_keep_totals() {
         let mut t = sample();
-        let users = t.find_path("C:\\Users").unwrap();
-        let me = t.find_path("C:\\Users\\me").unwrap();
-        let win = t.find_path("C:\\Windows").unwrap();
+        let users = t.find_path(&os("C:\\Users")).unwrap();
+        let me = t.find_path(&os("C:\\Users\\me")).unwrap();
+        let win = t.find_path(&os("C:\\Windows")).unwrap();
         let f = t.add_child(me, "new.iso", 0, 1000, 4096, 1);
         assert_eq!(t.total_size(), 1200);
         assert_eq!(t.node(users).size, 1110);
         assert_eq!(t.file_count(), 5);
-        assert_eq!(t.path(f), "C:\\Users\\me\\new.iso");
+        assert_eq!(t.path(f), os("C:\\Users\\me\\new.iso"));
 
         assert!(t.move_node(f, win, "renamed.iso"));
         assert_eq!(t.node(users).size, 110);
         assert_eq!(t.node(win).size, 1050);
         assert_eq!(t.total_size(), 1200);
-        assert_eq!(t.path(f), "C:\\Windows\\renamed.iso");
+        assert_eq!(t.path(f), os("C:\\Windows\\renamed.iso"));
 
         t.set_file_size(f, 10, 4096, 2);
         assert_eq!(t.node(win).size, 60);
@@ -583,12 +589,17 @@ pub(crate) mod tests {
     #[test]
     fn finds_paths() {
         let t = sample();
-        let me = t.find_path("c:\\users\\ME").unwrap();
+        let me = t.find_path(&os("C:\\Users\\me")).unwrap();
         assert_eq!(t.name(me), "me");
-        assert_eq!(t.find_path("C:\\"), Some(Tree::ROOT));
-        assert_eq!(t.find_path("C:\\Users\\nobody"), None);
-        assert_eq!(t.find_path("D:\\Users"), None);
-        assert_eq!(t.find_path("C:\\UsersX"), None);
+        assert_eq!(
+            t.find_path(&os("C:\\users\\ME")).is_some(),
+            IGNORE_CASE,
+            "case matters only where the file system cares"
+        );
+        assert_eq!(t.find_path(&os("C:\\")), Some(Tree::ROOT));
+        assert_eq!(t.find_path(&os("C:\\Users\\nobody")), None);
+        assert_eq!(t.find_path(&os("D:\\Users")), None);
+        assert_eq!(t.find_path(&os("C:\\UsersX")), None);
     }
 
     #[test]

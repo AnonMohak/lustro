@@ -108,6 +108,8 @@ mod tests {
         p
     }
 
+    // Unix: needs the protected paths of Phase 2b (until then every Unix path is protected).
+    #[cfg(windows)]
     #[test]
     fn deletes_a_folder_tree_with_read_only_files() {
         let root = temp("tree");

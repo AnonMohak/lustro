@@ -431,6 +431,7 @@ pub fn clean(rule: &Rule) -> CleanOutcome {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::paths::SEP;
 
     fn temp(name: &str) -> PathBuf {
         let p = std::env::temp_dir().join(format!("lustro-clean-{name}-{}", std::process::id()));
@@ -495,6 +496,8 @@ mod tests {
         assert_eq!(expand("C:\\plain\\*", &env).unwrap(), "C:\\plain\\*");
     }
 
+    // Unix: needs the protected paths of Phase 2b (until then every Unix path is protected).
+    #[cfg(windows)]
     #[test]
     fn measures_and_cleans_matching_files_only() {
         let root = temp("rule");
@@ -503,7 +506,7 @@ mod tests {
         fs::write(root.join("cache/sub/b.bin"), vec![0u8; 500]).unwrap();
         fs::write(root.join("keep.txt"), b"keep").unwrap();
         let pattern = format!(
-            "{}\\cache\\*",
+            "{}{SEP}cache{SEP}*",
             glob::Pattern::escape(&root.to_string_lossy())
         );
         let rule = Rule {
@@ -537,7 +540,7 @@ mod tests {
     fn min_age_keeps_new_files() {
         let root = temp("age");
         fs::write(root.join("new.tmp"), b"new").unwrap();
-        let pattern = format!("{}\\*", glob::Pattern::escape(&root.to_string_lossy()));
+        let pattern = format!("{}{SEP}*", glob::Pattern::escape(&root.to_string_lossy()));
         let rule = Rule {
             id: "t".into(),
             group: "sys".into(),

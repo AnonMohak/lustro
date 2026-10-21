@@ -233,7 +233,8 @@ pub fn find(
     groups
 }
 
-#[cfg(test)]
+// Unix: needs the Unix folder walk.
+#[cfg(all(test, windows))]
 mod tests {
     use super::*;
     use crate::scan::walk::walk;
@@ -267,7 +268,7 @@ mod tests {
         let mut names: Vec<String> = big_group
             .files
             .iter()
-            .map(|f| f.path.rsplit('\\').next().unwrap().to_string())
+            .map(|f| f.path.rsplit(crate::paths::SEP).next().unwrap().to_string())
             .collect();
         names.sort();
         assert_eq!(

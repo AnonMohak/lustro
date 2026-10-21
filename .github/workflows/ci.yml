@@ -73,8 +73,8 @@ jobs:
             src-tauri/target/release/bundle/nsis/*.exe
           if-no-files-found: error
 
-  # Phase 1 of shared-plan.md: the backend compiles on Linux and macOS (stubs only).
-  # Tests run there from Phase 2, when the scan code supports Unix paths.
+  # shared-plan.md: the backend compiles and its tests pass on Linux and macOS.
+  # Tests that need the Unix walk or the Unix protected paths are Windows-only until those exist.
   unix-check:
     strategy:
       fail-fast: false
@@ -101,3 +101,7 @@ jobs:
       - name: Rust lint
         working-directory: src-tauri
         run: cargo clippy --all-targets -- -D warnings
+
+      - name: Rust tests
+        working-directory: src-tauri
+        run: cargo test

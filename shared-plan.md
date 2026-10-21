@@ -249,6 +249,9 @@ Android can start right after Phase 2a if it is more important than Linux. Phase
 
 1. Done: PR #1 passed CI on Windows, Linux and macOS and is merged into `master`.
 2. Install a Linux test system: run `wsl --install -d Ubuntu` (needs admin rights), or use a Linux VM.
-3. Start Phase 2a with portable paths: the tree code, `normalize_root` and the tests use `C:\` and `\`. Everything else in Phase 2 depends on this.
-4. Then add the Unix folder walk and `cargo test` in `unix-check`. Remove the dead-code line in `lib.rs`.
+3. Done: portable paths. `paths.rs` has the separator (`SEP`) and the case rule (`IGNORE_CASE`, `same`, `key`). The tree code, `normalize_root`, `is_drive_root`, the cache name, favorites and the delete checks use it. Tests use `paths::os` to write `C:\` paths in the platform form. `unix-check` now runs `cargo test`.
+   These tests stay Windows-only until a later step:
+   - Unix walk: `dupes::tests`.
+   - Phase 2b protected paths (until then every Unix path is protected, so deletes fail safely): `clean::dev` project tests, `clean::tests::measures_and_cleans_matching_files_only`, `ops::delete::tests::deletes_a_folder_tree_with_read_only_files`.
+4. Then add the Unix folder walk, and turn on the walk tests on Unix. Remove the dead-code line in `lib.rs`.
 5. Phase 2b: add the drive list from `/proc/self/mountinfo`, then port trash and restore, clean rules, protected paths, the app list and autostart for Linux.

@@ -306,7 +306,7 @@ mod tests {
             );
             b.link(id, dirs[1 + (i as usize % 2000)]);
         }
-        let t = b.finish("C:\\".into(), ScanMethod::Walk, 0, 0);
+        let t = b.finish(crate::paths::os("C:\\"), ScanMethod::Walk, 0, 0);
         for text in ["*.iso", "REPORT", "file-12345*", "nothing-here"] {
             let q = SearchQuery {
                 text: text.into(),

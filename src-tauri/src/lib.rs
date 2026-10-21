@@ -17,6 +17,7 @@ mod live {
     pub fn watch(_app: &tauri::AppHandle, _root: &str) {}
 }
 mod ops;
+mod paths;
 mod scan;
 mod settings;
 mod state;

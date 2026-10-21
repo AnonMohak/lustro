@@ -37,6 +37,7 @@ impl AppState {
 }
 
 /// `c:` and `C:\` become `C:\`. Folders get one trailing backslash.
+#[cfg(windows)]
 pub fn normalize_root(root: &str) -> String {
     if let Some(letter) = crate::scan::is_drive_root(root) {
         return format!("{letter}:\\");
@@ -47,15 +48,30 @@ pub fn normalize_root(root: &str) -> String {
     )
 }
 
+/// `/home/me/` and `/home/me` become `/home/me/`. The root stays `/`.
+#[cfg(not(windows))]
+pub fn normalize_root(root: &str) -> String {
+    format!("{}/", root.trim_end_matches('/'))
+}
+
 #[cfg(test)]
 mod tests {
     use super::normalize_root;
 
+    #[cfg(windows)]
     #[test]
     fn roots_are_normalized() {
         assert_eq!(normalize_root("c:"), "C:\\");
         assert_eq!(normalize_root("C:\\"), "C:\\");
         assert_eq!(normalize_root("D:/Photos/"), "D:\\Photos\\");
         assert_eq!(normalize_root("D:\\Photos"), "D:\\Photos\\");
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn roots_are_normalized() {
+        assert_eq!(normalize_root("/"), "/");
+        assert_eq!(normalize_root("/home/me"), "/home/me/");
+        assert_eq!(normalize_root("/home/me//"), "/home/me/");
     }
 }

@@ -76,7 +76,8 @@ impl Progress {
     }
 }
 
-/// True when `root` is a whole drive, like `C:\` or `C:`.
+/// True when `root` is a whole drive, like `C:\` or `C:`. Other platforms have no drive letters.
+#[cfg(windows)]
 pub fn is_drive_root(root: &str) -> Option<char> {
     let b = root.as_bytes();
     let ok = (b.len() == 2 || (b.len() == 3 && b[2] == b'\\'))
@@ -106,6 +107,11 @@ pub fn scan(root: &str, allow_mft: bool, progress: &Progress) -> Result<Tree, Sc
     walk::walk(root, progress)
 }
 
+#[cfg(not(windows))]
+pub fn is_drive_root(_root: &str) -> Option<char> {
+    None
+}
+
 pub fn method_name(m: ScanMethod) -> &'static str {
     match m {
         ScanMethod::Mft => "mft",
@@ -113,7 +119,7 @@ pub fn method_name(m: ScanMethod) -> &'static str {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, windows))]
 mod tests {
     use super::is_drive_root;
 
