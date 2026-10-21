@@ -97,8 +97,8 @@ fn clear_readonly(path: &Path, attrs: u32) {
     }
 }
 
-// Unix: these need the protected paths of Phase 2b (until then every Unix path is protected).
-#[cfg(all(test, windows))]
+// macOS: needs its protected paths (until then every macOS path is protected).
+#[cfg(all(test, any(windows, target_os = "linux")))]
 mod tests {
     use super::*;
 
@@ -126,6 +126,7 @@ mod tests {
         fs::remove_dir_all(root).unwrap();
     }
 
+    #[cfg(windows)]
     #[test]
     fn junction_delete_never_touches_the_target() {
         let root = temp("junc");
@@ -156,6 +157,7 @@ mod tests {
         fs::remove_dir_all(target).unwrap();
     }
 
+    #[cfg(windows)]
     #[test]
     fn refuses_protected_and_missing_paths() {
         assert!(matches!(
@@ -194,8 +196,25 @@ mod tests {
         ));
     }
 
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn refuses_protected_and_missing_paths() {
+        for p in ["/usr", "/etc/passwd", "/", "/opt/app"] {
+            assert!(
+                delete_permanent(Path::new(p), false).is_err(),
+                "{p} must not be deleted"
+            );
+        }
+        let missing = std::env::temp_dir().join("lustro-surely-missing-9f8e7d");
+        assert!(matches!(
+            delete_permanent(&missing, false),
+            Err(DeleteError::Missing(_))
+        ));
+    }
+
     /// Needs a desktop session with a Recycle Bin. GitHub's Windows runners run as a
     /// service session where the shell Recycle Bin does not list the item, so CI skips it.
+    #[cfg(windows)]
     #[test]
     fn recycles_and_restores_a_file() {
         if std::env::var("CI").is_ok() {

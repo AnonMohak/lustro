@@ -368,7 +368,7 @@ pub fn jetbrains_old() -> Vec<RuleItem> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[cfg(windows)]
+    #[cfg(any(windows, target_os = "linux"))]
     use crate::scan::model::{ScanMethod, TreeBuilder, flags};
 
     #[test]
@@ -400,7 +400,7 @@ mod tests {
 
     /// C:\Users\me\code\{app\{package.json, src\a.js, node_modules\{x\...}}, lib\{Cargo.toml, target\b}},
     /// plus C:\Users\me\AppData\...\node_modules (must be skipped).
-    #[cfg(windows)]
+    #[cfg(any(windows, target_os = "linux"))]
     fn tree(app_modified: u64) -> Arc<Tree> {
         let mut b = TreeBuilder::new("C:", 32);
         let d = |b: &mut TreeBuilder, name: &str, parent: u32| {
@@ -440,8 +440,8 @@ mod tests {
         Arc::new(b.finish("C:\\".into(), ScanMethod::Walk, 1, 0))
     }
 
-    // Unix: needs the protected paths of Phase 2b (until then every Unix path is protected).
-    #[cfg(windows)]
+    // macOS: needs its protected paths (until then every macOS path is protected).
+    #[cfg(any(windows, target_os = "linux"))]
     #[test]
     fn finds_build_folders_of_projects_only() {
         let items = find_projects(&[tree(now_filetime())], 30);
@@ -460,8 +460,8 @@ mod tests {
         assert_eq!(items[1].age_days, Some(0));
     }
 
-    // Unix: needs the protected paths of Phase 2b (until then every Unix path is protected).
-    #[cfg(windows)]
+    // macOS: needs its protected paths (until then every macOS path is protected).
+    #[cfg(any(windows, target_os = "linux"))]
     #[test]
     fn a_folder_in_two_scans_is_listed_once() {
         let t = tree(now_filetime());

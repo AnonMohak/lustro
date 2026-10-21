@@ -258,4 +258,8 @@ Android can start right after Phase 2a if it is more important than Linux. Phase
    - marks dot files as hidden, and uses `st_blocks` for the size on disk.
    The dead-code line in `lib.rs` is gone. Items that only Windows or a later step uses have their own `cfg` or `allow(dead_code)` with a note.
    Known limits: names that are not UTF-8 get replacement characters. On macOS, the firmlinked Data volume can count as another file system (Phase 3).
-5. Phase 2b: add the drive list from `/proc/self/mountinfo`, then port trash and restore, clean rules, protected paths, the app list and autostart for Linux.
+5. Done (Phase 2b, part 1): the Linux drive list and protected paths.
+   - `system/drives/linux.rs` reads `/proc/self/mountinfo`. It keeps file systems on a disk (`/dev/...`, not loop) and ZFS, and skips network, memory, kernel, snap and Docker mounts. A bind mount of the same device and folder shows once. SSD, HDD and removable come from `/sys/dev/block`, and the space from `statvfs` (new dependency `libc` on Unix). `letter` holds the mount point until the frontend work of Phase 4.
+   - `ops/protect.rs` picks the rules of the platform: `protect/win.rs` (the old rules, moved) and `protect/linux.rs`. Linux protects `/`, the system folders (`/usr`, `/etc`, `/var`, `/opt`, ...) with their contents, `/home`, `/tmp`, `/media/<user>` and the home folders themselves, the standard folders in a home folder (but not their contents), and `.ssh`, `.gnupg` and `.pki` with their contents. Apps in `/opt` work like Program Files. macOS and Android still protect every path.
+   - The delete, duplicate and clean tests now run on Linux too.
+6. Phase 2b, part 2: port trash and restore, clean rules, the app list and autostart for Linux.

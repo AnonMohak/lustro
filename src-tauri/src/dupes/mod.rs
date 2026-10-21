@@ -233,8 +233,8 @@ pub fn find(
     groups
 }
 
-// Unix: needs the protected paths of Phase 2b (until then every Unix path is protected).
-#[cfg(all(test, windows))]
+// macOS: needs its protected paths (until then every macOS path is protected).
+#[cfg(all(test, any(windows, target_os = "linux")))]
 mod tests {
     use super::*;
     use crate::scan::walk::walk;

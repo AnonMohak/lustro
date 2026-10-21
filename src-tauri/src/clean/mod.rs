@@ -496,8 +496,8 @@ mod tests {
         assert_eq!(expand("C:\\plain\\*", &env).unwrap(), "C:\\plain\\*");
     }
 
-    // Unix: needs the protected paths of Phase 2b (until then every Unix path is protected).
-    #[cfg(windows)]
+    // macOS: needs its protected paths (until then every macOS path is protected).
+    #[cfg(any(windows, target_os = "linux"))]
     #[test]
     fn measures_and_cleans_matching_files_only() {
         let root = temp("rule");

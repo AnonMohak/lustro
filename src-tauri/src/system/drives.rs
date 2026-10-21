@@ -26,8 +26,8 @@ const DRIVE_FIXED: u32 = 3;
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
-// Only Windows lists drives until the Linux drive list exists.
-#[cfg_attr(not(windows), allow(dead_code))]
+// macOS and Android list no drives until their ports exist.
+#[cfg_attr(not(any(windows, target_os = "linux")), allow(dead_code))]
 pub enum DriveKind {
     Ssd,
     Hdd,
@@ -62,8 +62,13 @@ pub fn list_drives() -> Vec<DriveInfo> {
         .collect()
 }
 
-/// Lists mounted volumes. Linux and macOS come in a later phase.
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
+mod linux;
+#[cfg(target_os = "linux")]
+pub use linux::list_drives;
+
+/// Lists mounted volumes. macOS and Android come in a later phase.
+#[cfg(not(any(windows, target_os = "linux")))]
 pub fn list_drives() -> Vec<DriveInfo> {
     Vec::new()
 }
