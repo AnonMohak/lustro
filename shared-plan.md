@@ -250,8 +250,12 @@ Android can start right after Phase 2a if it is more important than Linux. Phase
 1. Done: PR #1 passed CI on Windows, Linux and macOS and is merged into `master`.
 2. Install a Linux test system: run `wsl --install -d Ubuntu` (needs admin rights), or use a Linux VM.
 3. Done: portable paths. `paths.rs` has the separator (`SEP`) and the case rule (`IGNORE_CASE`, `same`, `key`). The tree code, `normalize_root`, `is_drive_root`, the cache name, favorites and the delete checks use it. Tests use `paths::os` to write `C:\` paths in the platform form. `unix-check` now runs `cargo test`.
-   These tests stay Windows-only until a later step:
-   - Unix walk: `dupes::tests`.
-   - Phase 2b protected paths (until then every Unix path is protected, so deletes fail safely): `clean::dev` project tests, `clean::tests::measures_and_cleans_matching_files_only`, `ops::delete::tests::deletes_a_folder_tree_with_read_only_files`.
-4. Then add the Unix folder walk, and turn on the walk tests on Unix. Remove the dead-code line in `lib.rs`.
+   These tests stay Windows-only until the Phase 2b protected paths exist (until then every Unix path is protected, so deletes fail safely): `dupes::tests`, the `clean::dev` project tests, `clean::tests::measures_and_cleans_matching_files_only`, `ops::delete::tests`.
+4. Done: the Unix folder walk. `scan/walk.rs` has the shared walk; `walk/win.rs` (the old Windows code, moved) and `walk/unix.rs` list one folder each. The Unix listing:
+   - stays on the file system of the root (like `du -x`) and does not go into `/proc`, `/sys`, `/dev` and `/run`,
+   - does not follow symbolic links (a link to a folder shows as a folder with the link flag),
+   - counts each hard-linked file once (later links count 0 bytes),
+   - marks dot files as hidden, and uses `st_blocks` for the size on disk.
+   The dead-code line in `lib.rs` is gone. Items that only Windows or a later step uses have their own `cfg` or `allow(dead_code)` with a note.
+   Known limits: names that are not UTF-8 get replacement characters. On macOS, the firmlinked Data volume can count as another file system (Phase 3).
 5. Phase 2b: add the drive list from `/proc/self/mountinfo`, then port trash and restore, clean rules, protected paths, the app list and autostart for Linux.

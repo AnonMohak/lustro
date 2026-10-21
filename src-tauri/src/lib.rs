@@ -1,6 +1,3 @@
-// The Linux and macOS stubs leave shared scan code unused until those ports exist.
-#![cfg_attr(not(windows), allow(dead_code))]
-
 mod apps;
 mod clean;
 mod clean_cmds;

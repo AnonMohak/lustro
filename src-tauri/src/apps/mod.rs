@@ -36,8 +36,12 @@ pub struct App {
     /// Unix time in milliseconds of the last start (from Prefetch, needs admin), or 0.
     pub last_used: i64,
     pub location: String,
+    /// What starts the uninstall. Only Windows lists apps until the other ports exist.
+    #[cfg_attr(not(windows), allow(dead_code))]
     #[serde(skip)]
     pub uninstall: String,
+    /// The program file name, for the last start time from Prefetch.
+    #[cfg_attr(not(windows), allow(dead_code))]
     #[serde(skip)]
     pub exe_name: Option<String>,
 }

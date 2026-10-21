@@ -3,6 +3,7 @@ use serde::{Serialize, Serializer};
 /// Errors that a command can return to the UI.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[cfg(windows)]
     #[error("The user cancelled the admin prompt.")]
     ElevationCancelled,
     #[error("Another scan is running. Wait for it to finish, or cancel it.")]

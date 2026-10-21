@@ -26,6 +26,8 @@ const DRIVE_FIXED: u32 = 3;
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
+// Only Windows lists drives until the Linux drive list exists.
+#[cfg_attr(not(windows), allow(dead_code))]
 pub enum DriveKind {
     Ssd,
     Hdd,

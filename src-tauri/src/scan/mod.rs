@@ -6,21 +6,7 @@ pub mod model;
 pub mod query;
 #[cfg(windows)]
 pub mod usn;
-#[cfg(windows)]
 pub mod walk;
-#[cfg(not(windows))]
-pub mod walk {
-    //! The folder walk on Linux and macOS comes in a later phase.
-    use super::model::Tree;
-    use super::{Progress, ScanError};
-
-    pub fn walk(_root: &str, _progress: &Progress) -> Result<Tree, ScanError> {
-        Err(ScanError::Io(std::io::Error::new(
-            std::io::ErrorKind::Unsupported,
-            "Scans are not available on this system yet.",
-        )))
-    }
-}
 
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -31,12 +17,15 @@ use model::{ScanMethod, Tree};
 pub enum ScanError {
     #[error("The scan was cancelled.")]
     Cancelled,
+    #[cfg(windows)]
     #[error("The fast scan needs admin rights.")]
     NeedsAdmin,
+    #[cfg(windows)]
     #[error("This drive does not use NTFS.")]
     NotNtfs,
     #[error("Windows refused access to {0}.")]
     AccessDenied(String),
+    #[cfg(windows)]
     #[error("The file table looks damaged ({0}).")]
     Corrupt(&'static str),
     #[error("{0}")]

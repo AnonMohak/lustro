@@ -97,7 +97,8 @@ fn clear_readonly(path: &Path, attrs: u32) {
     }
 }
 
-#[cfg(test)]
+// Unix: these need the protected paths of Phase 2b (until then every Unix path is protected).
+#[cfg(all(test, windows))]
 mod tests {
     use super::*;
 
@@ -108,8 +109,6 @@ mod tests {
         p
     }
 
-    // Unix: needs the protected paths of Phase 2b (until then every Unix path is protected).
-    #[cfg(windows)]
     #[test]
     fn deletes_a_folder_tree_with_read_only_files() {
         let root = temp("tree");
@@ -127,7 +126,6 @@ mod tests {
         fs::remove_dir_all(root).unwrap();
     }
 
-    #[cfg(windows)]
     #[test]
     fn junction_delete_never_touches_the_target() {
         let root = temp("junc");
@@ -158,7 +156,6 @@ mod tests {
         fs::remove_dir_all(target).unwrap();
     }
 
-    #[cfg(windows)]
     #[test]
     fn refuses_protected_and_missing_paths() {
         assert!(matches!(
@@ -199,7 +196,6 @@ mod tests {
 
     /// Needs a desktop session with a Recycle Bin. GitHub's Windows runners run as a
     /// service session where the shell Recycle Bin does not list the item, so CI skips it.
-    #[cfg(windows)]
     #[test]
     fn recycles_and_restores_a_file() {
         if std::env::var("CI").is_ok() {

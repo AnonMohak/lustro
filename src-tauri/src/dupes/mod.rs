@@ -233,7 +233,7 @@ pub fn find(
     groups
 }
 
-// Unix: needs the Unix folder walk.
+// Unix: needs the protected paths of Phase 2b (until then every Unix path is protected).
 #[cfg(all(test, windows))]
 mod tests {
     use super::*;

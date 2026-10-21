@@ -76,6 +76,8 @@ pub struct Tree {
 impl Tree {
     pub const ROOT: u32 = 0;
 
+    // Live updates use this. They are Windows-only until the Unix live updates exist.
+    #[cfg_attr(not(windows), allow(dead_code))]
     /// Adds a new file or folder under `parent` and adds its totals to every ancestor.
     pub fn add_child(
         &mut self,
@@ -113,6 +115,8 @@ impl Tree {
         id
     }
 
+    // Live updates use this. They are Windows-only until the Unix live updates exist.
+    #[cfg_attr(not(windows), allow(dead_code))]
     /// Links a detached node under `parent` and adds its totals up the tree.
     fn attach(&mut self, id: u32, parent: u32) {
         let n = self.nodes[id as usize];
@@ -129,6 +133,8 @@ impl Tree {
         }
     }
 
+    // Live updates use this. They are Windows-only until the Unix live updates exist.
+    #[cfg_attr(not(windows), allow(dead_code))]
     /// Moves a node to a new parent and/or gives it a new name.
     pub fn move_node(&mut self, id: u32, new_parent: u32, new_name: &str) -> bool {
         if id == Self::ROOT || new_parent as usize >= self.nodes.len() {
@@ -162,6 +168,8 @@ impl Tree {
         true
     }
 
+    // Live updates use this. They are Windows-only until the Unix live updates exist.
+    #[cfg_attr(not(windows), allow(dead_code))]
     /// Sets the size of a file and adjusts every ancestor by the difference.
     pub fn set_file_size(&mut self, id: u32, size: u64, alloc: u64, modified: u64) {
         let old = self.nodes[id as usize];
