@@ -123,43 +123,114 @@ Tauri 2 builds Android apps. The Rust backend runs as a native library in the ap
 | Admin, tray, start with Windows, Explorer menu | Not applicable. Remove them from the Android UI. |
 | Export | Save the CSV and HTML files through the Android file picker. |
 
-### Work items
+### Steps
 
-1. **Entry point:** Add `#[cfg_attr(mobile, tauri::mobile_entry_point)]` to `run()` in `lib.rs`. The crate already builds as `cdylib`.
-2. **Desktop-only plugins:** Put the tray, `tauri-plugin-single-instance`, `tauri-plugin-updater` and `tauri-plugin-process` behind `cfg(desktop)`. The dialog and notification plugins support Android.
-3. **Android plugin (Kotlin):** Write one Tauri mobile plugin for the Android APIs: permission requests, storage volumes, `StorageStatsManager`, the installed app list, the uninstall screen, the app settings page and the MediaStore trash. The Rust backend calls it through the Tauri plugin bridge.
-4. **Permissions screen:** On the first start, explain and request "All files access", then "Usage access". The app must work with less access: without "All files access" it scans only folders that the user picks.
-5. **Scan code:** Reuse the Unix walk and the portable paths from Phase 2. Add `cfg(target_os = "android")` where Android differs from Linux (protected paths, clean rules, no `/proc/self/mountinfo` drives).
-6. **Mobile UI:** This is the largest item. The desktop layout needs a width of 960 px or more. Android needs:
-   - a bottom navigation bar in place of the sidebar,
-   - one pane at a time in place of tree, treemap and details next to each other,
-   - touch gestures for the treemap (tap to zoom, back to zoom out),
-   - no hover tooltips,
-   - the Android back button.
-7. **Updates:** The Tauri updater does not support Android. Use Google Play updates, or a check that opens the GitHub release page.
-8. **Build and CI:** Install Java 17, the Android SDK and the NDK, and the Rust targets `aarch64-linux-android`, `armv7-linux-androideabi` and `x86_64-linux-android` (for the emulator). Run `npm run tauri android init` one time, and then `npm run tauri android build`. Add an Android job on `ubuntu-latest` to CI and to `release.yml`.
+The first release is an APK on GitHub that users install from the web. Google Play comes last.
+
+#### Step 0: Tools (one time)
+
+1. Install Android Studio, with the Android SDK, the NDK and Java 17.
+2. Set `ANDROID_HOME`, `NDK_HOME` and `JAVA_HOME`.
+3. Add the Rust targets `aarch64-linux-android` (phones) and `x86_64-linux-android` (emulator).
+4. Make an emulator with Android 11 (API 30) or later. The emulator runs on the Windows PC, so Android tests do not need WSL.
+
+#### Step 1: Shared Unix core
+
+This is Phase 2a (see "Order"). Android needs the portable paths, the Unix walk and `cargo test` in `unix-check`.
+
+#### Step 2: The app starts on Android
+
+1. Add `#[cfg_attr(mobile, tauri::mobile_entry_point)]` to `run()` in `lib.rs`. The crate already builds as `cdylib`.
+2. Put the tray, `tauri-plugin-single-instance`, `tauri-plugin-updater` and `tauri-plugin-process` behind `cfg(desktop)`. The dialog and notification plugins support Android.
+3. Run `npm run tauri android init`. Set `minSdkVersion` to 30. Commit `src-tauri/gen/android`.
+4. Goal: the app opens in the emulator and shows the UI with no data.
+
+#### Step 3: Android plugin (Kotlin)
+
+1. Write one Tauri mobile plugin for the Android APIs. The Rust backend calls it through the Tauri plugin bridge.
+2. Permissions: "All files access" (open the system screen with `ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION`) and "Usage access".
+3. Storage volumes: internal storage, SD card and USB drives. Each volume is a "drive" in the UI.
+4. A first-start screen explains each permission before the app asks for it. Without "All files access", the app scans only folders that the user picks.
+
+#### Step 4: Scan and explore
+
+1. Walk `/storage/emulated/0` and the other volumes with the Unix walk.
+2. Add `cfg(target_os = "android")` where Android differs from Linux: protected paths (the volume root, `Android/data`, `Android/obb`), clean rules, and drives (no `/proc/self/mountinfo`).
+3. Goal: scan, treemap, large files, search and duplicates work in the emulator.
+
+#### Step 5: Mobile UI
+
+This is the largest step. The desktop layout needs a width of 960 px or more. Android needs:
+
+- a bottom navigation bar in place of the sidebar,
+- one pane at a time in place of tree, treemap and details next to each other,
+- touch gestures for the treemap (tap to zoom, back to zoom out),
+- no hover tooltips,
+- the Android back button.
+
+Hide the desktop-only features: admin mode, tray, the Explorer menu and start with Windows.
+
+#### Step 6: Delete, clean up and apps
+
+1. Delete: a direct delete works with "All files access". For media, use the MediaStore trash, so that the user can restore items for 30 days. Other files get a permanent delete, with a confirmation each time.
+2. Clean up: the Android rules from the table above.
+3. Apps: app, data and cache size from `StorageStatsManager`. "Uninstall" opens the system uninstall screen. "Clear cache" opens the app's settings page.
+
+#### Step 7: Sign and release on GitHub
+
+1. Make a release key with `keytool`. Put the keystore and its password in GitHub secrets.
+2. Add an Android job to CI and to `release.yml` on `ubuntu-latest`. It runs `npm run tauri android build -- --apk` and uploads the signed APK to the GitHub release.
+3. Build for `arm64-v8a` only. Almost all phones with Android 11 or later use it, and the APK stays small.
+
+**Warning:** Back up the keystore. Without it, users cannot install updates over the old app.
+
+#### Step 8: Updates without the Tauri updater
+
+The Tauri updater does not support Android. The app checks the latest GitHub release and opens the APK download. The new APK installs over the old one, because both have the same key.
+
+#### Step 9: Install from the web
+
+The README tells users to:
+
+1. Download the APK in the browser.
+2. Let the browser install unknown apps (one time).
+3. Accept the Play Protect warning about an unknown app.
+
+**Caution:** Google started developer verification for apps that are installed from outside Google Play. It started in September 2026 in some countries and comes to all countries in 2027. On certified phones, an app from a developer that is not registered can be blocked. Check the current rules and register in the Android Developer Console before the first public APK.
+
+#### Step 10: Google Play (last)
+
+1. Set up Play App Signing with your own key, so that the GitHub APK and the Play version have the same signature.
+2. Send the "All files access" declaration. Play can refuse it (see "Open questions").
 
 ### Signing and distribution
 
-- An Android app must have a signature, but you make the key yourself with `keytool`. It costs nothing. Keep the keystore and its password in GitHub secrets.
-- **Warning:** Back up the keystore. If you lose it, you cannot publish updates to the same app.
-- **GitHub releases (APK):** This is the easiest start. Users allow "Install unknown apps" one time.
-- **Google Play:** The account costs a one-time fee. Play reviews "All files access" and the full app list (`QUERY_ALL_PACKAGES`). A storage manager can qualify, but you must send a declaration, and Play can refuse it.
-- **F-Droid:** It is free and open source friendly. F-Droid builds the app from source with its own key. Not chosen for now.
-- **Chosen:** GitHub releases and Google Play. A user can move between the APK and the Play version without an uninstall only when both have the same signature. New Play apps use Play App Signing, where Google signs the app. When you set up Play App Signing, give Google your own key (do not let Google make a new one). Then the GitHub APK and the Play version have the same signature.
+- An Android app must have a signature, but you make the key yourself with `keytool`. It costs nothing.
+- **GitHub releases (APK):** First. Users allow "Install unknown apps" one time.
+- **Google Play:** Last. The account costs a one-time fee. Play reviews "All files access" and the full app list (`QUERY_ALL_PACKAGES`). A storage manager can qualify, but you must send a declaration, and Play can refuse it.
+- **F-Droid:** Free and open source friendly. F-Droid builds the app from source with its own key. Not chosen for now.
+- A user can move between the APK and the Play version without an uninstall only when both have the same signature. When you set up Play App Signing, give Google your own key (do not let Google make a new one).
 
 ### Tests
 
-- Use the Android emulator on the Windows PC (Android Studio) for most tests.
+- Use the Android emulator on the Windows PC for most tests.
 - Test on one real phone before a release. Emulators do not show real storage speed, SD cards or the vendor's own storage rules.
 
 ## Order
 
-1. Phase 1. Release it as Windows only.
-2. Phase 2 (Linux). Test in a VM or in WSLg on the Windows PC.
-3. Phase 3 (macOS). Test on a real Mac. CI alone cannot prove TCC, APFS and signing.
-4. Phase 4 runs next to Phases 2 and 3.
-5. Phase 5 (Android) starts after Phase 2 and the frontend part of Phase 4, because it reuses the Unix walk and the portable paths.
+Phase 2 has two parts. Android needs only the first part.
+
+- **Phase 2a, shared Unix core:** portable paths, the Unix walk, `cargo test` in `unix-check`. Linux, macOS and Android all use it.
+- **Phase 2b, Linux only:** drives from `/proc/self/mountinfo`, trash and restore, clean rules, protected paths, apps, autostart, `.deb` and AppImage.
+
+1. Phase 1. Done.
+2. Phase 2a (shared Unix core).
+3. Phase 2b (Linux). It is small after 2a, and it tests the Unix code on a desktop before the mobile UI work. Test in WSLg or a Linux VM.
+4. Phase 5 (Android), with the frontend part of Phase 4.
+5. Phase 3 (macOS). CI checks the build only, because no Mac is available.
+6. Phase 4 runs next to the other phases.
+
+Android can start right after Phase 2a if it is more important than Linux. Phase 2b does not block Android.
 
 ## Open questions
 
@@ -171,14 +242,13 @@ Tauri 2 builds Android apps. The Rust backend runs as a native library in the ap
 - **macOS tests:** No Mac is available. CI on `macos-14` checks the build only. The TCC, APFS, Gatekeeper and Full Disk Access items in Phase 3 stay untested until someone tests on a real Mac. Mark the first macOS release as a preview.
 - **Feature parity:** Not needed. Each platform gets the features that fit it. A feature that a platform does not have is hidden in the UI on that platform (for example the Explorer menu, the MFT scan and admin mode).
 - **Linux distros:** Ubuntu and Debian first (`.deb` and AppImage). Other distros come later.
-- **Android distribution:** GitHub releases (APK) and Google Play.
+- **Android distribution:** GitHub releases (APK, install from the web) first. Google Play last.
 - **Android minimum version:** Android 11 (API 30). Set `minSdkVersion` to 30.
 
 ## Next steps
 
-1. Push `cross-platform` and let CI run `unix-check` on Linux and macOS.
-2. Merge into `master` when CI passes. Windows behavior does not change.
-3. Install a Linux test system: run `wsl --install -d Ubuntu` (needs admin rights), or use a Linux VM.
-4. Start Phase 2 with portable paths: the tree code, `normalize_root` and the tests use `C:\` and `\`. Everything else in Phase 2 depends on this.
-5. Then add the Unix folder walk, the drive list from `/proc/self/mountinfo`, and `cargo test` in `unix-check`. Remove the dead-code line in `lib.rs`.
-6. Then port trash and restore, clean rules, protected paths, the app list and autostart for Linux.
+1. Done: PR #1 passed CI on Windows, Linux and macOS and is merged into `master`.
+2. Install a Linux test system: run `wsl --install -d Ubuntu` (needs admin rights), or use a Linux VM.
+3. Start Phase 2a with portable paths: the tree code, `normalize_root` and the tests use `C:\` and `\`. Everything else in Phase 2 depends on this.
+4. Then add the Unix folder walk and `cargo test` in `unix-check`. Remove the dead-code line in `lib.rs`.
+5. Phase 2b: add the drive list from `/proc/self/mountinfo`, then port trash and restore, clean rules, protected paths, the app list and autostart for Linux.
