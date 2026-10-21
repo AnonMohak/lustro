@@ -437,7 +437,7 @@ mod tests {
         f(&mut b, "package.json", tool, 10, 1);
         let nm2 = d(&mut b, "node_modules", tool); // inside AppData: skip
         f(&mut b, "t.js", nm2, 9000, 1);
-        Arc::new(b.finish("C:\\".into(), ScanMethod::Walk, 1, 0))
+        Arc::new(b.finish(crate::paths::os("C:\\"), ScanMethod::Walk, 1, 0))
     }
 
     // macOS: needs its protected paths (until then every macOS path is protected).
@@ -449,8 +449,8 @@ mod tests {
         assert_eq!(
             paths,
             [
-                "C:\\Users\\me\\code\\lib\\target",
-                "C:\\Users\\me\\code\\app\\node_modules"
+                crate::paths::os("C:\\Users\\me\\code\\lib\\target"),
+                crate::paths::os("C:\\Users\\me\\code\\app\\node_modules")
             ]
         );
         assert_eq!(items[1].bytes, 1500);
