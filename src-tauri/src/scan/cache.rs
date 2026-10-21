@@ -155,7 +155,7 @@ mod tests {
         tree.usn = Some((7, 99));
         tree.frn = vec![crate::scan::model::NONE, 0, 1];
         let path = save(&tree, &dir).unwrap();
-        assert!(path.ends_with("C.bin"));
+        assert!(path.ends_with(file_name(&tree.root_path)));
         let back = load(&path).unwrap();
         assert_eq!(back.total_size(), tree.total_size());
         assert_eq!(back.root_path, crate::paths::os("C:\\"));
