@@ -1,0 +1,85 @@
+{
+  "titlebar": {
+    "admin": "Root"
+  },
+  "home": {
+    "noAdminTitle": "Lustro runs without root rights.",
+    "noAdminBody": "Some system folders stay hidden, and the system cleaner is not available."
+  },
+  "admin": {
+    "unixHint": "To get root rights, close Lustro and start it as root (for example with sudo)."
+  },
+  "status": {
+    "admin": "Running as root",
+    "standard": "Running without root rights"
+  },
+  "settings": {
+    "protectedHint": "The root folder, the system folders (/usr, /etc, /var, /opt and others), home folders and their standard folders, and SSH and GPG keys. Lustro never deletes them.",
+    "needsAdmin": "Needs root",
+    "allowAppFoldersHint": "Only as root. You can then delete app folders inside /opt, with a warning each time.",
+    "windows": "Alerts and desktop",
+    "lowSpaceHint": "Sends a notification when a drive has less free space than this. Once a day per drive.",
+    "startWithWindows": "Start at login",
+    "startWithWindowsHint": "Starts in the tray, without root rights."
+  },
+  "scan": {
+    "deniedNote_one": "Lustro could not read 1 folder. Run it as root to include it.",
+    "deniedNote_other": "Lustro could not read {{count}} folders. Run it as root to include them.",
+    "needsAdmin": "Needs root"
+  },
+  "explore": {
+    "reveal": "Show in file manager",
+    "appFolder": "App folder in /opt. You can delete it, but you must confirm a warning.",
+    "appFolderLocked": "App folder in /opt. To delete it, run Lustro as root and turn on Settings > Allow deleting app folders.",
+    "denied": "Only root can read this folder."
+  },
+  "files": {
+    "binNote": "Files in the Trash still use space. Empty the Trash, or use Shift+Delete to delete permanently."
+  },
+  "job": {
+    "recycle": "Moving to the Trash",
+    "recycled": "{{size}} to the Trash"
+  },
+  "del": {
+    "recycle": "Move to Trash",
+    "recycleTitleOne": "Move to Trash?",
+    "recycleNote": "You can restore it from History or from the Trash.",
+    "permanentWarn": "You cannot undo this. The item does not go to the Trash.",
+    "recycleConfirm": "Move to Trash",
+    "doneRecycled_one": "Moved 1 item to the Trash ({{size}}).",
+    "doneRecycled_other": "Moved {{n}} items to the Trash ({{size}}).",
+    "recycleTitleMany": "Move {{n}} items to the Trash?",
+    "appWarn_one": "This item is inside /opt. The app can stop working, and the package manager can still list it as installed. If you can, remove it with the package manager instead.",
+    "appWarn_other": "{{count}} items are inside /opt. These apps can stop working, and the package manager can still list them as installed. If you can, remove them with the package manager instead."
+  },
+  "history": {
+    "gone": "No longer in the Trash",
+    "actions": {
+      "recycle": "Trash"
+    }
+  },
+  "clean": {
+    "needsAdmin": "Needs root",
+    "admin": "Root",
+    "adminNote_one": "1 item needs root rights.",
+    "adminNote_other": "{{count}} items need root rights."
+  },
+  "dupes": {
+    "recycleBtn": "Move {{n}} copies to Trash",
+    "note": "Files with the same size and the same content hash are duplicates. The copies go to the Trash, so you can restore them.",
+    "openFolder": "Show in file manager"
+  },
+  "apps": {
+    "desktop": "Packages",
+    "store": "Snap and Flatpak",
+    "sourceDesktop": "Package (deb)",
+    "sourceStore": "Snap or Flatpak",
+    "uninstallDesktop": "Lustro shows the command that removes this package.",
+    "uninstallStore": "Lustro shows the command that removes this app.",
+    "note": "Lustro lists the apps. To remove one, run the command that Lustro shows.",
+    "lastUsedNote": "Linux does not record when an app was last used."
+  },
+  "live": {
+    "off": "Live updates are not available on Linux yet"
+  }
+}

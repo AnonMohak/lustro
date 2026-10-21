@@ -99,6 +99,10 @@ A Developer ID certificate and notarization stay optional for later. They remove
 ## Phase 4: Shared work
 
 - **Frontend:** Remove the Windows assumptions in `drives.ts`, `admin.ts`, the path display and `en.json` (drive letters, `\`, "Program Files"). Get the OS from the backend and hide features that an OS does not have.
+  - Done (Linux): `lib/platform.ts` finds the platform from the WebView user agent and has the path helpers (`sepOf`, `baseName`, `dirName`, `pathParts`, `isDriveRoot`). `rootLabel` and `normalizeRoot` follow the platform. The Clean, Dupes, History, Explore and sidebar code use the helpers in place of `\`.
+  - Done (Linux): `i18n/en-linux.json` replaces the texts that name Windows features (Recycle Bin → Trash, Program Files → /opt, admin → root, Explorer → file manager, Store → Snap and Flatpak). A test checks that each replaced key exists in `en.json`.
+  - Done (Linux): "Run as admin" and the File Explorer menu setting are hidden on other platforms. Other buttons that ask for admin rights say how to start Lustro as root. Drive names show the mount point ("Local Disk (/)").
+  - To do: macOS and Android texts, and the mobile layout (Phase 5).
 - **Release:** Change `release.yml` to a matrix. `latest.json` must list all platforms. The `setup/` installer stays Windows only.
 - **Branding:** Change "Storage manager for Windows 11" in `Cargo.toml`, `tauri.conf.json`, the README and the app text.
 

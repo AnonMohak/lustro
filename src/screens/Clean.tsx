@@ -4,6 +4,7 @@ import { Icon, type IconName } from "../components/Icon";
 import { requestAdmin } from "../lib/admin";
 import { api, type CleanRule } from "../lib/api";
 import { formatBytes, formatCount, timeAgo } from "../lib/format";
+import { sepOf } from "../lib/platform";
 import { useStore } from "../store";
 
 const GROUPS: { id: CleanRule["group"]; icon: IconName }[] = [
@@ -16,8 +17,9 @@ const GROUPS: { id: CleanRule["group"]; icon: IconName }[] = [
 
 /** The last three parts of a path, for example "…\\app\\web\\node_modules". */
 function shortPath(path: string): string {
-  const parts = path.split("\\");
-  return parts.length > 4 ? `…\\${parts.slice(-3).join("\\")}` : path;
+  const sep = sepOf();
+  const parts = path.split(sep);
+  return parts.length > 4 ? `…${sep}${parts.slice(-3).join(sep)}` : path;
 }
 
 function ageText(days: number | null, t: (k: string, o?: Record<string, unknown>) => string): string {

@@ -5,6 +5,7 @@ import i18n from "../i18n";
 import { api, type HistoryEntry } from "../lib/api";
 import { saveExport, toCsv } from "../lib/exporters";
 import { formatBytes } from "../lib/format";
+import { baseName, dirName } from "../lib/platform";
 import { useStore } from "../store";
 
 const PILL: Record<HistoryEntry["action"], string> = {
@@ -25,14 +26,8 @@ function when(ms: number): string {
   return `${d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}, ${time}`;
 }
 
-function baseName(path: string): string {
-  const parts = path.replace(/\\+$/, "").split("\\");
-  return parts[parts.length - 1] || path;
-}
-
 function parent(path: string): string {
-  const i = path.replace(/\\+$/, "").lastIndexOf("\\");
-  return i > 0 ? path.slice(0, i) : path;
+  return dirName(path) || path;
 }
 
 export function History() {
