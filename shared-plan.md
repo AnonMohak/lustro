@@ -262,4 +262,11 @@ Android can start right after Phase 2a if it is more important than Linux. Phase
    - `system/drives/linux.rs` reads `/proc/self/mountinfo`. It keeps file systems on a disk (`/dev/...`, not loop) and ZFS, and skips network, memory, kernel, snap and Docker mounts. A bind mount of the same device and folder shows once. SSD, HDD and removable come from `/sys/dev/block`, and the space from `statvfs` (new dependency `libc` on Unix). `letter` holds the mount point until the frontend work of Phase 4.
    - `ops/protect.rs` picks the rules of the platform: `protect/win.rs` (the old rules, moved) and `protect/linux.rs`. Linux protects `/`, the system folders (`/usr`, `/etc`, `/var`, `/opt`, ...) with their contents, `/home`, `/tmp`, `/media/<user>` and the home folders themselves, the standard folders in a home folder (but not their contents), and `.ssh`, `.gnupg` and `.pki` with their contents. Apps in `/opt` work like Program Files. macOS and Android still protect every path.
    - The delete, duplicate and clean tests now run on Linux too.
-6. Phase 2b, part 2: port trash and restore, clean rules, the app list and autostart for Linux.
+6. Done (Phase 2b, part 2): trash, clean rules, apps and autostart for Linux.
+   - Trash and restore use the freedesktop.org Trash through the `trash` crate (this already worked from Phase 1). New: a Linux test that moves a file to the Trash and restores it.
+   - `clean/rules-linux.toml` has the Linux rules (thumbnails, shader caches, Trash, apt packages, `/var/tmp`, crash reports, browser caches and history, dev caches, Docker, VS Code, old JetBrains data). `rules()` loads the file of the platform. Glob matches are case-sensitive where the file system is.
+   - `clean/system_unix.rs`: running programs from `/proc/<pid>/comm`, the Trash size (the home Trash only) and "empty the Trash" (all Trash folders).
+   - Admin rights on Unix mean that Lustro runs as root (`geteuid`). "Run as admin" still says that it is not available.
+   - `apps/linux.rs` lists deb packages with a menu entry, snaps and Flatpak apps. It is read-only: "Uninstall" shows the command to run (`sudo apt remove ...`, `sudo snap remove ...`, `flatpak uninstall ...`). Until Phase 4, deb apps use the source "desktop", and snaps and Flatpak apps use "store".
+   - Start at login writes `~/.config/autostart/lustro.desktop` (with the AppImage path when Lustro runs from one). The file manager menu is not available yet.
+7. Next (Phase 2b, part 3): Linux packages (`.deb` and AppImage) in `release.yml`, and a manual test on a Linux desktop.

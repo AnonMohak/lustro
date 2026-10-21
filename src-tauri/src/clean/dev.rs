@@ -76,6 +76,14 @@ const SKIP_SEGMENTS: &[&str] = &[
     ".local",
     ".volta",
     ".fnm",
+    #[cfg(unix)]
+    ".cache",
+    #[cfg(unix)]
+    ".config",
+    #[cfg(unix)]
+    "snap",
+    #[cfg(unix)]
+    "flatpak",
 ];
 
 fn junk_markers(name: &str) -> Option<&'static [&'static str]> {
@@ -327,12 +335,32 @@ pub fn jetbrains_version(name: &str) -> Option<(String, Vec<u32>)> {
     (parts.len() >= 2 && parts[0] >= 2015).then(|| (product.to_ascii_lowercase(), parts))
 }
 
+/// The folder with the caches and logs of each JetBrains IDE version.
+#[cfg(windows)]
+fn jetbrains_base() -> Option<std::path::PathBuf> {
+    let local = std::env::var("LOCALAPPDATA").ok()?;
+    Some(Path::new(&local).join("JetBrains"))
+}
+
+#[cfg(not(windows))]
+fn jetbrains_base() -> Option<std::path::PathBuf> {
+    let cache = std::env::var("XDG_CACHE_HOME")
+        .ok()
+        .filter(|c| !c.is_empty())
+        .map(std::path::PathBuf::from)
+        .or_else(|| {
+            std::env::var("HOME")
+                .ok()
+                .map(|h| Path::new(&h).join(".cache"))
+        })?;
+    Some(cache.join("JetBrains"))
+}
+
 /// Data folders of JetBrains IDE versions that a newer version of the same IDE replaced.
 pub fn jetbrains_old() -> Vec<RuleItem> {
-    let Ok(local) = std::env::var("LOCALAPPDATA") else {
+    let Some(base) = jetbrains_base() else {
         return Vec::new();
     };
-    let base = Path::new(&local).join("JetBrains");
     let mut found: Vec<(String, Vec<u32>, std::path::PathBuf)> = Vec::new();
     for e in std::fs::read_dir(&base).into_iter().flatten().flatten() {
         if e.file_type().map(|t| t.is_dir()).unwrap_or(false)

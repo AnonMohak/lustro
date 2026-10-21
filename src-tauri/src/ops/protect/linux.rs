@@ -51,7 +51,12 @@ const HOME_ITEMS: &[&str] = &[
 ];
 
 /// Places inside protected folders where the cleaner may delete the contents (never the folder itself).
-const CLEANER_EXCEPTIONS: &[&str] = &["var/tmp", "var/crash", "var/cache/apt/archives"];
+const CLEANER_EXCEPTIONS: &[&str] = &[
+    "var/tmp",
+    "var/crash",
+    "var/cache/apt/archives",
+    "var/lib/systemd/coredump",
+];
 
 /// Protected folders whose contents (apps) an admin may delete after a warning,
 /// when Settings > "Allow deleting app folders" is on. The folders themselves stay.

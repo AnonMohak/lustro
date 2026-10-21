@@ -212,6 +212,28 @@ mod tests {
         ));
     }
 
+    /// The file is in the home folder, so it goes to the Trash of the home folder.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn trashes_and_restores_a_file() {
+        let home = std::env::var("HOME").unwrap();
+        let dir = Path::new(&home).join(format!("lustro-trash-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let f = dir.join("trash-me.txt");
+        fs::write(&f, b"trash me").unwrap();
+        recycle(&f, false).unwrap();
+        assert!(!f.exists());
+        let item = trash::os_limited::list()
+            .unwrap()
+            .into_iter()
+            .find(|i| i.original_path() == f)
+            .expect("the item is in the Trash");
+        trash::os_limited::restore_all([item]).unwrap();
+        assert_eq!(fs::read(&f).unwrap(), b"trash me");
+        fs::remove_dir_all(dir).unwrap();
+    }
+
     /// Needs a desktop session with a Recycle Bin. GitHub's Windows runners run as a
     /// service session where the shell Recycle Bin does not list the item, so CI skips it.
     #[cfg(windows)]

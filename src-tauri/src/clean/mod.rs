@@ -4,33 +4,8 @@ pub mod dev;
 #[cfg(windows)]
 pub mod system;
 #[cfg(not(windows))]
-pub mod system {
-    //! The cleaner's system calls on Linux and macOS come in a later phase.
-    use std::collections::HashSet;
-    use std::path::Path;
-
-    use super::Measure;
-
-    pub fn running_processes() -> HashSet<String> {
-        HashSet::new()
-    }
-
-    pub fn recycle_bin_size() -> Measure {
-        Measure::default()
-    }
-
-    pub fn empty_recycle_bin() -> bool {
-        false
-    }
-
-    pub fn stop_service(_name: &str) -> bool {
-        false
-    }
-
-    pub fn start_service(_name: &str) {}
-
-    pub fn take_ownership(_path: &Path) {}
-}
+#[path = "system_unix.rs"]
+pub mod system;
 
 use std::sync::Arc;
 
@@ -73,16 +48,29 @@ pub struct Rule {
     pub special: Option<String>,
 }
 
+#[cfg(any(windows, target_os = "linux"))]
 #[derive(Deserialize)]
 struct RuleFile {
     rule: Vec<Rule>,
 }
 
-/// The built-in rules.
+#[cfg(windows)]
+const RULES: &str = include_str!("rules.toml");
+#[cfg(target_os = "linux")]
+const RULES: &str = include_str!("rules-linux.toml");
+
+/// The built-in rules of this platform.
+#[cfg(any(windows, target_os = "linux"))]
 pub fn rules() -> Vec<Rule> {
-    toml::from_str::<RuleFile>(include_str!("rules.toml"))
-        .expect("rules.toml is valid")
+    toml::from_str::<RuleFile>(RULES)
+        .expect("the rules file is valid")
         .rule
+}
+
+/// macOS and Android: their rules come in a later phase.
+#[cfg(not(any(windows, target_os = "linux")))]
+pub fn rules() -> Vec<Rule> {
+    Vec::new()
 }
 
 /// Expands `%VAR%` and turns the pattern into a glob. Values of variables are escaped,
@@ -109,7 +97,7 @@ fn env_var(name: &str) -> Option<String> {
 /// All existing paths that a rule matches.
 pub fn matches(rule: &Rule) -> Vec<PathBuf> {
     let opts = glob::MatchOptions {
-        case_sensitive: false,
+        case_sensitive: !crate::paths::IGNORE_CASE,
         require_literal_separator: true,
         require_literal_leading_dot: false,
     };
@@ -123,7 +111,7 @@ pub fn matches(rule: &Rule) -> Vec<PathBuf> {
             continue;
         };
         for path in paths.flatten() {
-            if seen.insert(path.to_string_lossy().to_lowercase()) {
+            if seen.insert(crate::paths::key(&path.to_string_lossy())) {
                 out.push(path);
             }
         }
@@ -367,7 +355,7 @@ pub fn clean_rule(rule: &Rule, ctx: &Ctx, picked: Option<&[String]>) -> CleanOut
                 .items
                 .into_iter()
                 .filter(|i| match picked {
-                    Some(p) => p.iter().any(|x| x.eq_ignore_ascii_case(&i.path)),
+                    Some(p) => p.iter().any(|x| crate::paths::same(x, &i.path)),
                     None => i.selected,
                 })
                 .collect();
@@ -457,6 +445,7 @@ mod tests {
         }
     }
 
+    #[cfg(any(windows, target_os = "linux"))]
     #[test]
     fn rules_file_is_valid() {
         let r = rules();
