@@ -76,6 +76,14 @@ const SKIP_SEGMENTS: &[&str] = &[
     ".local",
     ".volta",
     ".fnm",
+    #[cfg(unix)]
+    ".cache",
+    #[cfg(unix)]
+    ".config",
+    #[cfg(unix)]
+    "snap",
+    #[cfg(unix)]
+    "flatpak",
 ];
 
 fn junk_markers(name: &str) -> Option<&'static [&'static str]> {
@@ -155,7 +163,11 @@ pub fn find_projects(trees: &[Arc<Tree>], age_days: u32) -> Vec<RuleItem> {
             }
             let path = t.path(id);
             let lower = path.to_lowercase();
-            if is_protected(&path) || lower.split('\\').any(|s| SKIP_SEGMENTS.contains(&s)) {
+            if is_protected(&path)
+                || lower
+                    .split(crate::paths::SEP)
+                    .any(|s| SKIP_SEGMENTS.contains(&s))
+            {
                 continue;
             }
             let modified = project_modified(t, n.parent);
@@ -323,12 +335,32 @@ pub fn jetbrains_version(name: &str) -> Option<(String, Vec<u32>)> {
     (parts.len() >= 2 && parts[0] >= 2015).then(|| (product.to_ascii_lowercase(), parts))
 }
 
+/// The folder with the caches and logs of each JetBrains IDE version.
+#[cfg(windows)]
+fn jetbrains_base() -> Option<std::path::PathBuf> {
+    let local = std::env::var("LOCALAPPDATA").ok()?;
+    Some(Path::new(&local).join("JetBrains"))
+}
+
+#[cfg(not(windows))]
+fn jetbrains_base() -> Option<std::path::PathBuf> {
+    let cache = std::env::var("XDG_CACHE_HOME")
+        .ok()
+        .filter(|c| !c.is_empty())
+        .map(std::path::PathBuf::from)
+        .or_else(|| {
+            std::env::var("HOME")
+                .ok()
+                .map(|h| Path::new(&h).join(".cache"))
+        })?;
+    Some(cache.join("JetBrains"))
+}
+
 /// Data folders of JetBrains IDE versions that a newer version of the same IDE replaced.
 pub fn jetbrains_old() -> Vec<RuleItem> {
-    let Ok(local) = std::env::var("LOCALAPPDATA") else {
+    let Some(base) = jetbrains_base() else {
         return Vec::new();
     };
-    let base = Path::new(&local).join("JetBrains");
     let mut found: Vec<(String, Vec<u32>, std::path::PathBuf)> = Vec::new();
     for e in std::fs::read_dir(&base).into_iter().flatten().flatten() {
         if e.file_type().map(|t| t.is_dir()).unwrap_or(false)
@@ -364,6 +396,7 @@ pub fn jetbrains_old() -> Vec<RuleItem> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(any(windows, target_os = "linux"))]
     use crate::scan::model::{ScanMethod, TreeBuilder, flags};
 
     #[test]
@@ -395,6 +428,7 @@ mod tests {
 
     /// C:\Users\me\code\{app\{package.json, src\a.js, node_modules\{x\...}}, lib\{Cargo.toml, target\b}},
     /// plus C:\Users\me\AppData\...\node_modules (must be skipped).
+    #[cfg(any(windows, target_os = "linux"))]
     fn tree(app_modified: u64) -> Arc<Tree> {
         let mut b = TreeBuilder::new("C:", 32);
         let d = |b: &mut TreeBuilder, name: &str, parent: u32| {
@@ -431,9 +465,11 @@ mod tests {
         f(&mut b, "package.json", tool, 10, 1);
         let nm2 = d(&mut b, "node_modules", tool); // inside AppData: skip
         f(&mut b, "t.js", nm2, 9000, 1);
-        Arc::new(b.finish("C:\\".into(), ScanMethod::Walk, 1, 0))
+        Arc::new(b.finish(crate::paths::os("C:\\"), ScanMethod::Walk, 1, 0))
     }
 
+    // macOS: needs its protected paths (until then every macOS path is protected).
+    #[cfg(any(windows, target_os = "linux"))]
     #[test]
     fn finds_build_folders_of_projects_only() {
         let items = find_projects(&[tree(now_filetime())], 30);
@@ -441,8 +477,8 @@ mod tests {
         assert_eq!(
             paths,
             [
-                "C:\\Users\\me\\code\\lib\\target",
-                "C:\\Users\\me\\code\\app\\node_modules"
+                crate::paths::os("C:\\Users\\me\\code\\lib\\target"),
+                crate::paths::os("C:\\Users\\me\\code\\app\\node_modules")
             ]
         );
         assert_eq!(items[1].bytes, 1500);
@@ -452,6 +488,8 @@ mod tests {
         assert_eq!(items[1].age_days, Some(0));
     }
 
+    // macOS: needs its protected paths (until then every macOS path is protected).
+    #[cfg(any(windows, target_os = "linux"))]
     #[test]
     fn a_folder_in_two_scans_is_listed_once() {
         let t = tree(now_filetime());

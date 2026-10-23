@@ -30,6 +30,7 @@
   "drive": {
     "localDisk": "Local Disk",
     "nameWithLetter": "{{label}} ({{letter}}:)",
+    "nameWithMount": "{{label}} ({{mount}})",
     "free": "{{size}} free",
     "usedOf": "used of {{total}}",
     "full": "{{pct}}% full",
@@ -65,7 +66,8 @@
     "dialogBody2": "With admin rights you get the fast scan, live updates, system folders and the system cleaner.",
     "confirm": "Restart as admin",
     "cancelled": "Lustro still runs without admin rights. You cancelled the Windows prompt.",
-    "failed": "Lustro could not restart as administrator: {{error}}"
+    "failed": "Lustro could not restart as administrator: {{error}}",
+    "unixHint": "To get admin rights, close Lustro and start it as root (for example with sudo)."
   },
   "status": {
     "admin": "Running as administrator",

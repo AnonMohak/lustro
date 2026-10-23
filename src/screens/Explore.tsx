@@ -9,6 +9,7 @@ import { saveExport, scanReportHtml } from "../lib/exporters";
 import { driveIcon, driveName } from "../lib/drives";
 import { formatBytes, formatCount, percent } from "../lib/format";
 import { KIND_ICON, kindColor, sortedBreakdown } from "../lib/kinds";
+import { isDriveRoot } from "../lib/platform";
 import { rootLabel, scanSummaryText } from "../lib/scanText";
 import { useAppsUnlocked, useStore } from "../store";
 
@@ -16,8 +17,8 @@ const CHILD_LIMIT = 1000;
 const ROW_H = 30;
 
 /** Any folder can be a favourite, except a drive root. */
-function canStar(root: string, n: NodeDto): boolean {
-  return n.isDir && !(n.id === ROOT_ID && /^[A-Z]:\\$/.test(root));
+function canStar(root: string, n: NodeDto, driveRoots: string[]): boolean {
+  return n.isDir && !(n.id === ROOT_ID && isDriveRoot(root, driveRoots));
 }
 
 function ScanProgressView({ root }: { root: string }) {
@@ -253,6 +254,8 @@ function DetailPane({
   const { t } = useTranslation();
   const showToast = useStore((s) => s.showToast);
   const isAdmin = useStore((s) => s.info?.isAdmin ?? false);
+  const drives = useStore((s) => s.drives);
+  const driveRoots = drives?.map((d) => d.root) ?? [];
   const appsUnlocked = useAppsUnlocked();
   if (!detail) return <aside className="detail"><div className="dt muted">{t("explore.selectHint")}</div></aside>;
   const n = detail.node;
@@ -348,7 +351,7 @@ function DetailPane({
               {t("explore.copyPath")}
             </button>
           </div>
-          {canStar(root, n) && (
+          {canStar(root, n, driveRoots) && (
             <button className="btn sm block" onClick={() => onStar(n.id)}>
               <Icon name="star" className={starred ? "fill" : undefined} />
               {t(starred ? "explore.unstar" : "explore.star")}

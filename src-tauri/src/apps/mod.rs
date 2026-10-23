@@ -14,6 +14,9 @@ use winreg::enums::{
 
 use crate::scan::model::Tree;
 
+#[cfg(target_os = "linux")]
+mod linux;
+
 #[cfg(windows)]
 const UNINSTALL: &str = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
 
@@ -36,8 +39,12 @@ pub struct App {
     /// Unix time in milliseconds of the last start (from Prefetch, needs admin), or 0.
     pub last_used: i64,
     pub location: String,
+    /// What starts the uninstall (on Linux, the command that the user runs).
+    #[cfg_attr(not(any(windows, target_os = "linux")), allow(dead_code))]
     #[serde(skip)]
     pub uninstall: String,
+    /// The program file name, for the last start time from Prefetch.
+    #[cfg_attr(not(windows), allow(dead_code))]
     #[serde(skip)]
     pub exe_name: Option<String>,
 }
@@ -271,8 +278,13 @@ fn installed() -> Vec<App> {
     apps
 }
 
-/// App lists on Linux and macOS come in a later phase.
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
+fn installed() -> Vec<App> {
+    linux::installed()
+}
+
+/// App lists on macOS and Android come in a later phase.
+#[cfg(not(any(windows, target_os = "linux")))]
 fn installed() -> Vec<App> {
     Vec::new()
 }
@@ -345,7 +357,16 @@ pub fn uninstall(app: &App) -> Result<(), String> {
     }
 }
 
-#[cfg(not(windows))]
+/// Lustro does not remove Linux packages itself yet: the user runs the command.
+#[cfg(target_os = "linux")]
+pub fn uninstall(app: &App) -> Result<(), String> {
+    Err(format!(
+        "Lustro cannot remove apps on Linux yet. To remove {}, run: {}",
+        app.name, app.uninstall
+    ))
+}
+
+#[cfg(not(any(windows, target_os = "linux")))]
 pub fn uninstall(_app: &App) -> Result<(), String> {
     Err("Uninstall is not available on this system yet.".into())
 }

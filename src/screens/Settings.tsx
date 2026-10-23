@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Icon } from "../components/Icon";
 import { Select } from "../components/Select";
 import { api, type BackendSettings } from "../lib/api";
+import { IS_WINDOWS } from "../lib/platform";
 import { autoUpdateOn, checkForUpdates, setAutoUpdate } from "../lib/updates";
 
 function Switch({ id, on, onChange }: { id: string; on: boolean; onChange: (v: boolean) => void }) {
@@ -160,13 +161,15 @@ export function Settings() {
             </div>
             <Switch id="setStart" on={backend.startWithWindows} onChange={(v) => update({ startWithWindows: v })} />
           </div>
-          <div className="srow">
-            <div>
-              <div>{t("settings.explorerMenu")}</div>
-              <div className="sd">{t("settings.explorerMenuHint")}</div>
+          {IS_WINDOWS && (
+            <div className="srow">
+              <div>
+                <div>{t("settings.explorerMenu")}</div>
+                <div className="sd">{t("settings.explorerMenuHint")}</div>
+              </div>
+              <Switch id="setMenu" on={backend.explorerMenu} onChange={(v) => update({ explorerMenu: v })} />
             </div>
-            <Switch id="setMenu" on={backend.explorerMenu} onChange={(v) => update({ explorerMenu: v })} />
-          </div>
+          )}
         </div>
       )}
 

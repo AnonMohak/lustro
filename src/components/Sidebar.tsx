@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { driveIcon, driveName } from "../lib/drives";
 import { formatBytes, formatCount, percent } from "../lib/format";
+import { isDriveRoot } from "../lib/platform";
 import { rootLabel } from "../lib/scanText";
 import { checkForUpdates } from "../lib/updates";
 import { useStore, type Screen } from "../store";
@@ -81,7 +82,8 @@ export function Sidebar() {
   const version = useStore((s) => s.info?.version);
   const scans = useStore((s) => s.scans);
   const exploreRoot = useStore((s) => s.exploreRoot);
-  const folders = Object.keys(scans).filter((r) => !/^[A-Z]:\\$/.test(r));
+  const driveRoots = drives?.map((d) => d.root) ?? [];
+  const folders = Object.keys(scans).filter((r) => !isDriveRoot(r, driveRoots));
   const favorites = useStore((s) => s.favorites);
   const loadFavorites = useStore((s) => s.loadFavorites);
   const setFavorite = useStore((s) => s.setFavorite);

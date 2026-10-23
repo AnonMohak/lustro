@@ -1,6 +1,3 @@
-// The Linux and macOS stubs leave shared scan code unused until those ports exist.
-#![cfg_attr(not(windows), allow(dead_code))]
-
 mod apps;
 mod clean;
 mod clean_cmds;
@@ -17,6 +14,7 @@ mod live {
     pub fn watch(_app: &tauri::AppHandle, _root: &str) {}
 }
 mod ops;
+mod paths;
 mod scan;
 mod settings;
 mod state;

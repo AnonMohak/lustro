@@ -8,6 +8,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use crate::error::{Error, Result};
 use crate::ops::history::{self, Action, History};
 use crate::ops::{delete, protect};
+use crate::paths::{self, SEP};
 use crate::scan::kind::{KIND_COUNT, Kind};
 use crate::scan::model::{Tree, flags};
 use crate::scan::{self, Progress, cache, query};
@@ -768,10 +769,10 @@ pub async fn delete_items(
     // Skip items inside another selected folder: deleting the folder removes them too.
     let folders: Vec<String> = targets
         .iter()
-        .map(|t| format!("{}\\", t.2.trim_end_matches('\\').to_lowercase()))
+        .map(|t| format!("{}{SEP}", paths::key(t.2.trim_end_matches(SEP))))
         .collect();
     targets.retain(|t| {
-        let p = t.2.to_lowercase();
+        let p = paths::key(&t.2);
         !folders
             .iter()
             .any(|f| p.starts_with(f.as_str()) && p.len() > f.len())
@@ -875,20 +876,17 @@ pub async fn delete_items(
     .map_err(|e| Error::Io(std::io::Error::other(e.to_string())))
 }
 
-/// Lower-case long form of a path, so short 8.3 names (`RUNNER~1`) match long ones.
-/// The item itself may be gone, so only its folder is resolved.
+/// Long form of a path as a key (see `paths::key`), so short 8.3 names (`RUNNER~1`) match
+/// long ones. The item itself may be gone, so only its folder is resolved.
 fn long_lower(p: &str) -> String {
     let path = std::path::Path::new(p);
     if let (Some(parent), Some(name)) = (path.parent(), path.file_name())
         && let Ok(full) = std::fs::canonicalize(parent)
     {
         let joined = full.join(name);
-        return joined
-            .to_string_lossy()
-            .trim_start_matches("\\\\?\\")
-            .to_lowercase();
+        return paths::key(joined.to_string_lossy().trim_start_matches("\\\\?\\"));
     }
-    p.to_lowercase()
+    paths::key(p)
 }
 
 /// Items in the Recycle Bin (the Trash on Linux).

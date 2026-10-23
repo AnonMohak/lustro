@@ -1,0 +1,240 @@
+# Lustro cleaner rules for Linux. Built into the app; the UI cannot add paths or commands.
+# The fields are the same as in rules.toml. %HOME% is the home folder.
+# Paths outside the home folder need admin rights (Lustro started as root).
+
+# ---------- System junk ----------
+
+[[rule]]
+id = "thumbnails"
+group = "sys"
+name = "Thumbnail cache"
+desc = "The file manager makes new thumbnails when it needs them."
+paths = ['%HOME%/.cache/thumbnails/*']
+safe = true
+
+[[rule]]
+id = "shader-cache"
+group = "sys"
+name = "Shader caches"
+desc = "Games and apps build their shaders again at the next start."
+paths = ['%HOME%/.cache/mesa_shader_cache/*', '%HOME%/.cache/mesa_shader_cache_db/*', '%HOME%/.cache/nvidia/GLCache/*']
+safe = true
+
+[[rule]]
+id = "recycle-bin"
+group = "sys"
+name = "Trash"
+desc = "After this, you cannot restore these items."
+special = "recycle-bin"
+safe = false
+
+[[rule]]
+id = "apt-cache"
+group = "sys"
+name = "Downloaded packages (apt)"
+desc = "Package files that apt already installed. apt downloads them again when it needs them."
+paths = ['/var/cache/apt/archives/*.deb']
+safe = true
+admin = true
+
+[[rule]]
+id = "var-tmp"
+group = "sys"
+name = "Old system temporary files"
+desc = "Files in /var/tmp that nobody changed for 30 days."
+paths = ['/var/tmp/*']
+safe = true
+admin = true
+min_age_h = 720
+
+[[rule]]
+id = "crash-dumps"
+group = "sys"
+name = "Crash reports and core dumps"
+desc = "Reports of programs that crashed, and their memory dumps."
+paths = ['/var/crash/*', '/var/lib/systemd/coredump/*']
+safe = true
+admin = true
+
+# ---------- Browsers ----------
+
+[[rule]]
+id = "chrome-cache"
+group = "web"
+name = "Chrome cache"
+desc = "Cached web pages and images of all Chrome profiles."
+paths = ['%HOME%/.cache/google-chrome/*/Cache', '%HOME%/.cache/google-chrome/*/Code Cache', '%HOME%/.config/google-chrome/*/GPUCache', '%HOME%/.config/google-chrome/ShaderCache']
+safe = true
+process = ["chrome"]
+
+[[rule]]
+id = "chromium-cache"
+group = "web"
+name = "Chromium cache"
+desc = "Cached web pages and images of all Chromium profiles."
+paths = ['%HOME%/.cache/chromium/*/Cache', '%HOME%/.cache/chromium/*/Code Cache', '%HOME%/.config/chromium/*/GPUCache', '%HOME%/snap/chromium/common/.cache/chromium/*/Cache']
+safe = true
+process = ["chromium", "chromium-browse"]
+
+[[rule]]
+id = "edge-cache"
+group = "web"
+name = "Edge cache"
+desc = "Cached web pages and images of all Edge profiles."
+paths = ['%HOME%/.cache/microsoft-edge/*/Cache', '%HOME%/.cache/microsoft-edge/*/Code Cache', '%HOME%/.config/microsoft-edge/*/GPUCache']
+safe = true
+process = ["msedge"]
+
+[[rule]]
+id = "brave-cache"
+group = "web"
+name = "Brave cache"
+desc = "Cached web pages and images of all Brave profiles."
+paths = ['%HOME%/.cache/BraveSoftware/Brave-Browser/*/Cache', '%HOME%/.cache/BraveSoftware/Brave-Browser/*/Code Cache', '%HOME%/.config/BraveSoftware/Brave-Browser/*/GPUCache']
+safe = true
+process = ["brave"]
+
+[[rule]]
+id = "firefox-cache"
+group = "web"
+name = "Firefox cache"
+desc = "Cached web pages and images of all Firefox profiles."
+paths = ['%HOME%/.cache/mozilla/firefox/*/cache2', '%HOME%/.cache/mozilla/firefox/*/startupCache', '%HOME%/snap/firefox/common/.cache/mozilla/firefox/*/cache2']
+safe = true
+process = ["firefox", "firefox-bin"]
+
+[[rule]]
+id = "chrome-history"
+group = "web"
+name = "Chrome history and cookies"
+desc = "Signs you out of websites. Passwords, bookmarks and extensions stay."
+paths = ['%HOME%/.config/google-chrome/*/History', '%HOME%/.config/google-chrome/*/History-journal', '%HOME%/.config/google-chrome/*/Cookies', '%HOME%/.config/google-chrome/*/Cookies-journal']
+warn = true
+process = ["chrome"]
+
+[[rule]]
+id = "brave-history"
+group = "web"
+name = "Brave history and cookies"
+desc = "Signs you out of websites. Passwords, bookmarks and extensions stay."
+paths = ['%HOME%/.config/BraveSoftware/Brave-Browser/*/History', '%HOME%/.config/BraveSoftware/Brave-Browser/*/Cookies']
+warn = true
+process = ["brave"]
+
+[[rule]]
+id = "firefox-history"
+group = "web"
+name = "Firefox cookies and form history"
+desc = "Signs you out of websites. Browsing history, passwords and bookmarks stay (Firefox keeps history together with bookmarks)."
+paths = ['%HOME%/.mozilla/firefox/*/cookies.sqlite', '%HOME%/.mozilla/firefox/*/formhistory.sqlite', '%HOME%/snap/firefox/common/.mozilla/firefox/*/cookies.sqlite']
+warn = true
+process = ["firefox", "firefox-bin"]
+
+# ---------- Dev junk ----------
+# "dev-projects" finds node_modules, target, bin/obj and similar folders in your scans.
+
+[[rule]]
+id = "dev-projects"
+group = "dev"
+name = "Build and package folders in projects"
+desc = "node_modules, Rust target, .NET bin/obj, .venv, .next, .gradle. Projects with no change for 30 days are selected."
+special = "dev-projects"
+safe = true
+
+[[rule]]
+id = "npm-cache"
+group = "dev"
+name = "npm cache"
+desc = "Packages download again when you need them."
+paths = ['%HOME%/.npm/_cacache', '%HOME%/.npm/_npx']
+safe = true
+
+[[rule]]
+id = "yarn-pnpm-cache"
+group = "dev"
+name = "Yarn and pnpm caches"
+desc = "Packages download again when you need them."
+paths = ['%HOME%/.cache/yarn', '%HOME%/.cache/pnpm', '%HOME%/.local/share/pnpm/store']
+safe = true
+
+[[rule]]
+id = "pip-cache"
+group = "dev"
+name = "pip cache"
+desc = "Python packages download again when you need them."
+paths = ['%HOME%/.cache/pip']
+safe = true
+
+[[rule]]
+id = "go-cache"
+group = "dev"
+name = "Go build cache"
+desc = "Go builds the packages again at the next build."
+paths = ['%HOME%/.cache/go-build']
+safe = true
+
+[[rule]]
+id = "cargo-cache"
+group = "dev"
+name = "Cargo registry cache"
+desc = "Crates download again at the next build."
+paths = ['%HOME%/.cargo/registry/cache', '%HOME%/.cargo/registry/src', '%HOME%/.cargo/git/checkouts']
+
+[[rule]]
+id = "nuget-cache"
+group = "dev"
+name = "NuGet caches"
+desc = "Packages download again at the next restore."
+paths = ['%HOME%/.local/share/NuGet/v3-cache', '%HOME%/.nuget/packages']
+
+[[rule]]
+id = "gradle-maven-cache"
+group = "dev"
+name = "Gradle and Maven caches"
+desc = "Dependencies download again at the next build."
+paths = ['%HOME%/.gradle/caches', '%HOME%/.m2/repository']
+
+# ---------- Docker ----------
+
+[[rule]]
+id = "docker-images"
+group = "docker"
+name = "Docker images that no container uses"
+desc = "Runs docker image prune -a. Images download again when you need them."
+special = "docker-images"
+safe = true
+
+[[rule]]
+id = "docker-build"
+group = "docker"
+name = "Docker build cache"
+desc = "Runs docker builder prune. Builds run slower one time."
+special = "docker-build"
+safe = true
+
+[[rule]]
+id = "docker-containers"
+group = "docker"
+name = "Stopped Docker containers"
+desc = "Runs docker container prune. The data inside these containers is lost."
+special = "docker-containers"
+warn = true
+
+# ---------- IDE caches ----------
+
+[[rule]]
+id = "vscode-cache"
+group = "ide"
+name = "VS Code cache"
+desc = "Caches, logs and downloaded extension packages. VS Code makes them again."
+paths = ['%HOME%/.config/Code/Cache', '%HOME%/.config/Code/CachedData', '%HOME%/.config/Code/CachedExtensionVSIXs', '%HOME%/.config/Code/Code Cache', '%HOME%/.config/Code/GPUCache', '%HOME%/.config/Code/logs']
+safe = true
+process = ["code"]
+
+[[rule]]
+id = "jetbrains-old"
+group = "ide"
+name = "JetBrains data of old versions"
+desc = "Caches and logs of IDE versions that a newer version replaced."
+special = "jetbrains-old"
+safe = true

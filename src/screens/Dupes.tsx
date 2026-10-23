@@ -6,6 +6,7 @@ import { Select } from "../components/Select";
 import { api, type DupeGroup, type DupeProgress } from "../lib/api";
 import { confirmDelete } from "../lib/deleteFlow";
 import { formatBytes, formatCount, percent } from "../lib/format";
+import { baseName, dirName } from "../lib/platform";
 import { useStore } from "../store";
 
 const SIZES = [
@@ -15,8 +16,8 @@ const SIZES = [
   [100 * 1024 * 1024, "100 MB"],
 ] as const;
 
-const fileName = (p: string) => p.split("\\").pop() ?? p;
-const folderOf = (p: string) => p.slice(0, p.lastIndexOf("\\"));
+const fileName = (p: string) => baseName(p);
+const folderOf = (p: string) => dirName(p);
 
 /** Index of the copy to keep in a group for a keep rule. */
 function keepIndex(g: DupeGroup, rule: "oldest" | "newest" | "shortest"): number {
@@ -47,7 +48,8 @@ export function Dupes() {
     // Lustro selects extra copies only of plain user files (media, documents, archives) outside
     // tool folders. Programs, libraries and app data stay unselected: something may need each copy.
     const userFile = /\.(mp4|mkv|mov|avi|wmv|webm|m4v|mp3|flac|wav|m4a|aac|ogg|jpe?g|png|gif|heic|webp|tiff?|raw|cr2|nef|arw|dng|psd|pdf|docx?|xlsx?|pptx?|txt|epub|zip|rar|7z|iso)$/i;
-    const toolFolder = /\\(appdata|programdata|program files[^\\]*|node_modules|\.local|\.cargo|\.rustup|\.gradle|\.m2|\.nuget|site-packages|\.venv|venv|target|\.git)\\/i;
+    const toolFolder =
+      /[\\/](appdata|programdata|program files[^\\/]*|node_modules|\.local|\.cache|\.config|snap|flatpak|\.cargo|\.rustup|\.gradle|\.m2|\.nuget|site-packages|\.venv|venv|target|\.git)[\\/]/i;
     const unsafe = (p: string) => !userFile.test(p) || toolFolder.test(p);
     setDel(
       list.map((g) =>

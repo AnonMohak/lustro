@@ -1,0 +1,31 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Lustro",
+        "width": 1320,
+        "height": 840,
+        "minWidth": 960,
+        "minHeight": 620,
+        "center": true,
+        "visible": false,
+        "decorations": false,
+        "transparent": false,
+        "backgroundColor": "#1c1e22",
+        "shadow": true,
+        "theme": "Dark"
+      }
+    ]
+  },
+  "bundle": {
+    "targets": ["deb", "appimage"],
+    "shortDescription": "Storage manager",
+    "linux": {
+      "deb": {
+        "depends": ["libayatana-appindicator3-1"]
+      }
+    }
+  }
+}

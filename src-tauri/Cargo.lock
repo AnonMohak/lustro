@@ -2138,6 +2138,7 @@ dependencies = [
  "blake3",
  "bytemuck",
  "glob",
+ "libc",
  "log",
  "rayon",
  "serde",
