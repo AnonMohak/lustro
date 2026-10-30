@@ -12,15 +12,36 @@ use super::super::model::flags;
 use super::{WDir, WFile};
 
 /// Kernel file systems with no files on a disk. The walk lists them, but does not go in.
+#[cfg(not(target_os = "macos"))]
 const PSEUDO: &[&str] = &["/proc", "/sys", "/dev", "/run"];
+/// On macOS, `/System/Volumes` holds the Data volume (its folders already show through the
+/// firmlinks, for example `/Users`) and the VM, Preboot and Update volumes.
+#[cfg(target_os = "macos")]
+const PSEUDO: &[&str] = &["/dev", "/System/Volumes"];
+
+/// The devices that belong to the scan of `root`. On macOS, the read-only system volume
+/// (`/`) and the Data volume are one disk for the user: firmlinks such as `/Users` and
+/// `/Applications` lead from `/` into the Data volume.
+fn devices(root: &str) -> Vec<u64> {
+    let Ok(dev) = fs::metadata(root).map(|m| m.dev()) else {
+        return Vec::new();
+    };
+    #[cfg(target_os = "macos")]
+    if fs::metadata("/").is_ok_and(|m| m.dev() == dev)
+        && let Ok(data) = fs::metadata("/System/Volumes/Data")
+    {
+        return vec![dev, data.dev()];
+    }
+    vec![dev]
+}
 
 /// Seconds from 1601-01-01 (the start of the tree's FILETIME values) to 1970-01-01.
 const FILETIME_UNIX_SECS: i64 = 11_644_473_600;
 
 /// What every folder listing of one walk needs.
 pub(super) struct Ctx {
-    /// The device of the root. The walk stays on this file system, like `du -x`.
-    dev: Option<u64>,
+    /// The devices of the root. The walk stays on this file system, like `du -x`.
+    devs: Vec<u64>,
     /// Files with more than one hard link that the walk counted already.
     linked: Mutex<HashSet<(u64, u64)>>,
 }
@@ -28,7 +49,7 @@ pub(super) struct Ctx {
 impl Ctx {
     pub(super) fn new(root: &str) -> Ctx {
         Ctx {
-            dev: fs::metadata(root).ok().map(|m| m.dev()),
+            devs: devices(root),
             linked: Mutex::default(),
         }
     }
@@ -82,7 +103,8 @@ pub(super) fn list_dir(path: &str, ctx: &Ctx, progress: &Progress, dir: &mut WDi
         };
         if is_dir {
             f |= flags::DIR;
-            let other_fs = !kind.is_symlink() && ctx.dev.is_some_and(|d| d != meta.dev());
+            let other_fs =
+                !kind.is_symlink() && !ctx.devs.is_empty() && !ctx.devs.contains(&meta.dev());
             if other_fs || PSEUDO.contains(&format!("{base}/{name}").as_str()) {
                 f |= flags::LINK; // a mount point: it is not part of this scan
             }
