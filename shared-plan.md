@@ -290,3 +290,7 @@ Android can start right after Phase 2a if it is more important than Linux. Phase
    - All three rules files are in every build, and one test checks all of them on every platform.
    - Running programs come from `ps -Axco comm=` (for example "google chrome").
    - `ops/trash_mac.rs`: the Trash size and "empty the Trash" use `~/.Trash` and `/Volumes/<disk>/.Trashes/<uid>`. History finds a deleted item by its name in the Trash of its volume and moves it back. It does not read the `.DS_Store` of the Finder, so an item that the Finder renamed (`photo 2.jpg`) cannot be restored.
+10. Phase 3 (macOS), part 3: apps and start at login. Not tested on a Mac.
+   - `apps/macos.rs` lists the `.app` bundles in `/Applications` and `~/Applications` (also one folder deeper). Name and version come from `Info.plist` (new macOS dependency `plist`, which Tauri already used), the size from the bundle folder, the install date from the creation time, and the last start from Spotlight (`mdls -name kMDItemLastUsedDate`, one call for all apps). An app with a Mac App Store receipt has the source "store".
+   - Uninstall moves the bundle to the Trash, then its data in `~/Library` that has the exact bundle id in its name (Application Support, Caches, Containers, HTTPStorages, Logs, Preferences, Saved Application State, WebKit). A bundle id that is not like `com.example.app` gives no data folders.
+   - Start at login writes `~/Library/LaunchAgents/com.anonmohak.lustro.plist` (the program with `--tray`, `RunAtLoad`).

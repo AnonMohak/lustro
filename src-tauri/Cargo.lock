@@ -2140,6 +2140,7 @@ dependencies = [
  "glob",
  "libc",
  "log",
+ "plist",
  "rayon",
  "serde",
  "serde_json",
