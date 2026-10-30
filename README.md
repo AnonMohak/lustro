@@ -26,17 +26,40 @@ Lustro is a free and open source storage manager for Windows 11 and Linux. It sc
 - **Windows integration.** Tray icon, low space alert, start with Windows, and "Analyze with Lustro" in the File Explorer menu (all optional).
 - **Export.** CSV lists and an HTML report of a scan.
 
+### On Linux
+
+Linux support is a preview. Most features work as on Windows, with these differences:
+
+- The scan walks the folders. There is no MFT scan and no live update, so rescan to see changes. The scan stays on one file system and skips `/proc`, `/sys`, `/dev` and `/run`.
+- Delete moves items to the Trash. History restores them from the Trash.
+- Clean up has Linux rules: thumbnails, shader caches, the Trash, apt packages, `/var/tmp`, crash reports, browser caches and dev caches.
+- Installed apps lists deb packages with a menu entry, snaps and Flatpak apps. Lustro does not uninstall them. It shows the command to run.
+- Start at login uses `~/.config/autostart`. There is no file manager menu entry.
+
 | Light theme | Large and old files | Search |
 |---|---|---|
 | ![Light theme](docs/screenshots/explore-light.png) | ![Large and old files](docs/screenshots/large-files.png) | ![Search](docs/screenshots/search.png) |
 
 ## Install
 
+### Windows
+
 Download `Lustro-Setup-x.y.z.exe` from [Releases](https://github.com/AnonMohak/lustro/releases) and run it. The installer needs no admin rights. You can choose the folder, a desktop shortcut, start with Windows and the Explorer menu entry. Lustro updates itself from GitHub Releases (you can turn this off in Settings).
 
 The release also has `Lustro_x.y.z_x64-setup.exe`. It is the update package that Lustro downloads by itself.
 
 > **SmartScreen warning.** The installer is not code-signed yet, so Windows may show "Windows protected your PC". Choose **More info**, then **Run anyway**.
+
+### Linux (preview)
+
+Lustro is built and tested for Ubuntu and Debian (x86-64). Download one of these files from [Releases](https://github.com/AnonMohak/lustro/releases):
+
+- **`.deb`** (Ubuntu and Debian): `sudo apt install ./Lustro_x.y.z_amd64.deb`. To update, install the new `.deb` the same way.
+- **`.AppImage`** (other distros too): run `chmod +x Lustro_x.y.z_amd64.AppImage`, then start the file. The AppImage updates itself from GitHub Releases.
+
+The AppImage needs FUSE 2. On Ubuntu 24.04 and later, run `sudo apt install libfuse2t64`. On Ubuntu 22.04, run `sudo apt install libfuse2`.
+
+The tray icon needs AppIndicator support. GNOME shows it only with the "AppIndicator and KStatusNotifierItem Support" extension (Ubuntu has it on by default).
 
 ## Admin rights
 
@@ -48,6 +71,8 @@ Lustro starts as a normal user. Use **Run as admin** in the title bar to restart
 
 Everything else works without admin rights.
 
+On Linux, admin rights mean that Lustro runs as root. Lustro cannot restart itself as root, so **Run as admin** is not available. Normally you do not need root: start Lustro as root only to scan or clean folders that your user cannot read.
+
 ## Safety
 
 - Lustro never deletes protected paths: `C:\Windows`, `Program Files`, the page file, drive roots, user profile folders and similar. The backend checks every path before it deletes.
@@ -55,10 +80,11 @@ Everything else works without admin rights.
 - Delete moves items to the Recycle Bin. A permanent delete always asks first.
 - Lustro removes junctions and symbolic links as links. It never deletes the files that they point to.
 - The cleaner deletes caches and temp files permanently. Apps make them again.
+- On Linux, the protected paths are `/`, the system folders (`/usr`, `/etc`, `/var`, `/boot`, ...) with their contents, `/home`, `/tmp`, the home folders and their standard folders, and `.ssh`, `.gnupg` and `.pki`. Apps in `/opt` work like apps in `Program Files`.
 
 ## Privacy
 
-Lustro has no account, no telemetry and no ads. The only network request is the update check to GitHub, which you can turn off. Scans, history and settings stay in `%LOCALAPPDATA%\com.anonmohak.lustro`.
+Lustro has no account, no telemetry and no ads. The only network request is the update check to GitHub, which you can turn off. Scans, history and settings stay in `%LOCALAPPDATA%\com.anonmohak.lustro` (on Linux, `~/.local/share/com.anonmohak.lustro`).
 
 ## Build from source
 
@@ -88,13 +114,27 @@ cd src-tauri
 cargo test --profile perf -- --ignored usn_sees_new_file mft_matches_walk --nocapture
 ```
 
+### On Linux
+
+You need [Rust](https://rustup.rs), Node.js 22 or later, and the WebKitGTK build packages. On Ubuntu 22.04 or later:
+
+```sh
+sudo apt install build-essential libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libdbus-1-dev patchelf
+npm install
+npm run tauri dev
+npm run tauri build -- --config src-tauri/tauri.ci.conf.json   # .deb and AppImage in src-tauri/target/release/bundle
+cd src-tauri && cargo test
+```
+
+Tauri adds `src-tauri/tauri.linux.conf.json` to the config on Linux. The themed installer (`setup/`) is for Windows only.
+
 ## Screenshots
 
 The README screenshots show a demo folder, not real user data. `scripts/make-demo.ps1 -Root "C:\Users\you\Lustro Demo"` makes that folder from sparse files: about 117 GB in size, but almost no space on the disk. Scan it with "Scan a folder", then delete it.
 
 ## Release
 
-Push a tag like `v1.0.1`. The release workflow builds the installer, signs the update package, and makes a draft release with `latest.json`. Publish the draft on GitHub; then installed copies update.
+Push a tag like `v1.0.1`. The release workflow builds the Windows installer and the Linux `.deb` and AppImage, signs the update packages, and makes a draft release with `latest.json`. Publish the draft on GitHub; then installed copies update.
 
 ## Logo
 
