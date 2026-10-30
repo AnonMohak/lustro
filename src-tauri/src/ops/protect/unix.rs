@@ -1,4 +1,4 @@
-//! The protected path check for Linux and macOS. Each platform gives its own tables.
+//! The protected path check for Linux, macOS and Android. Each platform gives its own tables.
 
 /// The protected paths of one platform. Paths are relative to `/`.
 pub struct Rules {
@@ -8,6 +8,9 @@ pub struct Rules {
     pub system_items: &'static [&'static str],
     /// Folders whose direct subfolders are protected (mount points: `/media/<user>`, `/Volumes/<disk>`).
     pub mount_parents: &'static [&'static str],
+    /// Folders inside each mounted volume (a child of a mount parent) that are protected with
+    /// everything inside (Android: `Android/data` on an SD card).
+    pub volume_trees: &'static [&'static str],
     /// The folder that holds the home folders (`home`, `Users`).
     pub homes: &'static str,
     /// The home folder of root.
@@ -107,12 +110,20 @@ pub fn protected(r: &Rules, path: &str, home: Option<&str>) -> bool {
     if r.system_trees.iter().any(|t| rel == *t || inside(rel, t)) {
         return true;
     }
-    if r.mount_parents.iter().any(|m| {
-        rel.strip_prefix(m)
-            .and_then(|x| x.strip_prefix('/'))
-            .is_some_and(|x| !x.contains('/'))
-    }) {
-        return true;
+    for m in r.mount_parents {
+        if let Some(in_parent) = rel.strip_prefix(m).and_then(|x| x.strip_prefix('/')) {
+            match in_parent.split_once('/') {
+                None => return true,
+                Some((_, in_volume)) => {
+                    if r.volume_trees
+                        .iter()
+                        .any(|t| in_volume == *t || inside(in_volume, t))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
     }
     if let Some(h) = in_home(r, &p, home.as_deref()) {
         return h.is_empty()

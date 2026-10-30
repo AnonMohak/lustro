@@ -310,3 +310,6 @@ Android can start right after Phase 2a if it is more important than Linux. Phase
    - CI job `android-check` runs `cargo clippy --target aarch64-linux-android` with the NDK of the runner. It does not link or run the app.
    - To do: `npm run tauri android init` (needs Android Studio, Step 0), and the frontend must not call the updater and process plugins on Android.
 13. CI: GitHub retires the `macos-14` runner image on 2026-11-02, so all macOS jobs use `macos-15`.
+14. Phase 5 (Android), Step 4 code part: protected paths and clean rules. The tests run on every platform; nothing ran on a phone yet.
+   - `ops/protect/android.rs`: the system (`/system`, `/data`, `/vendor`, `/sdcard`, ...), `/storage` and each volume root, the user folders in `/storage/emulated`, the standard folders in them (DCIM, Download, ...) and `Android/data` and `Android/obb` with their contents. The check ignores case, like the shared storage. The shared check has a new table `volume_trees`, so `Android/data` and `Android/obb` stay protected on SD cards too.
+   - `clean/rules-android.toml`: thumbnail caches, APK files in Download (30 days old), old downloads (6 months, warn), the gallery Trash (`.trashed-*`, warn), `LOST.DIR`, viewed WhatsApp statuses, WhatsApp media that you sent (warn) and Telegram downloads (warn).

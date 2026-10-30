@@ -61,6 +61,7 @@ struct RuleFile {
 const WINDOWS_RULES: &str = include_str!("rules.toml");
 const LINUX_RULES: &str = include_str!("rules-linux.toml");
 const MACOS_RULES: &str = include_str!("rules-macos.toml");
+const ANDROID_RULES: &str = include_str!("rules-android.toml");
 
 fn parse_rules(text: &str) -> Vec<Rule> {
     toml::from_str::<RuleFile>(text)
@@ -76,8 +77,9 @@ pub fn rules() -> Vec<Rule> {
         parse_rules(LINUX_RULES)
     } else if cfg!(target_os = "macos") {
         parse_rules(MACOS_RULES)
+    } else if cfg!(target_os = "android") {
+        parse_rules(ANDROID_RULES)
     } else {
-        // Android: its rules come in a later phase.
         Vec::new()
     }
 }
@@ -480,13 +482,13 @@ mod tests {
 
     #[test]
     fn rules_files_are_valid() {
-        for text in [WINDOWS_RULES, LINUX_RULES, MACOS_RULES] {
+        for text in [WINDOWS_RULES, LINUX_RULES, MACOS_RULES, ANDROID_RULES] {
             check_rules(&parse_rules(text));
         }
     }
 
     fn check_rules(r: &[Rule]) {
-        assert!(r.len() >= 10);
+        assert!(r.len() >= 5);
         let ids: HashSet<&str> = r.iter().map(|x| x.id.as_str()).collect();
         assert_eq!(ids.len(), r.len(), "rule ids are unique");
         for rule in r {

@@ -28,6 +28,7 @@ pub const RULES: Rules = Rules {
     ],
     // The folder of each user under /media, where removable disks are mounted.
     mount_parents: &["media"],
+    volume_trees: &[],
     homes: "home",
     root_home: "/root",
     home_trees: &[".ssh", ".gnupg", ".pki"],

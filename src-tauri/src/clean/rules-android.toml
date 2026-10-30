@@ -1,0 +1,71 @@
+# Lustro cleaner rules for Android. Built into the app; the UI cannot add paths or commands.
+# The fields are the same as in rules.toml. The paths are in the shared storage of the
+# phone's owner (/storage/emulated/0), which needs "All files access".
+# Android does not let Lustro clean the caches of other apps: the Apps screen opens the
+# settings page of an app instead (shared-plan.md, Phase 5).
+
+[[rule]]
+id = "thumbnails"
+group = "sys"
+name = "Thumbnail caches"
+desc = "Gallery apps make new thumbnails when they need them."
+paths = ['/storage/emulated/0/DCIM/.thumbnails/*', '/storage/emulated/0/Pictures/.thumbnails/*', '/storage/emulated/0/Movies/.thumbnails/*']
+safe = true
+
+[[rule]]
+id = "old-apks"
+group = "sys"
+name = "App installers in Download"
+desc = "APK files that nobody changed for 30 days. The apps stay installed."
+paths = ['/storage/emulated/0/Download/*.apk', '/storage/emulated/0/Download/*.apks', '/storage/emulated/0/Download/*.xapk']
+safe = true
+min_age_h = 720
+
+[[rule]]
+id = "old-downloads"
+group = "sys"
+name = "Old downloads"
+desc = "Files in Download that nobody changed for 6 months. Check that you do not need them."
+paths = ['/storage/emulated/0/Download/*']
+warn = true
+min_age_h = 4320
+
+[[rule]]
+id = "trashed-media"
+group = "sys"
+name = "Photos and videos in the Trash"
+desc = "Items that you deleted in a gallery app. Android removes them after 30 days. After this, you cannot restore them."
+paths = ['/storage/emulated/0/*/.trashed-*', '/storage/emulated/0/*/*/.trashed-*']
+warn = true
+
+[[rule]]
+id = "lost-dir"
+group = "sys"
+name = "Recovered file fragments"
+desc = "Parts of files that Android found on a memory card after an error (LOST.DIR)."
+paths = ['/storage/*/LOST.DIR/*']
+safe = true
+
+[[rule]]
+id = "whatsapp-statuses"
+group = "sys"
+name = "WhatsApp statuses that you viewed"
+desc = "Copies of the statuses of your contacts. WhatsApp downloads them again when you view them."
+paths = ['/storage/emulated/0/Android/media/com.whatsapp/WhatsApp/Media/.Statuses/*']
+safe = true
+
+[[rule]]
+id = "whatsapp-sent"
+group = "sys"
+name = "WhatsApp media that you sent"
+desc = "Copies of the photos, videos and files that you sent. The chats keep them only if this phone has them."
+paths = ['/storage/emulated/0/Android/media/com.whatsapp/WhatsApp/Media/*/Sent/*']
+warn = true
+
+[[rule]]
+id = "telegram-files"
+group = "sys"
+name = "Telegram downloads"
+desc = "Files that Telegram downloaded. It downloads them again from the chat when you open them."
+paths = ['/storage/emulated/0/Android/media/org.telegram.messenger/Telegram/*', '/storage/emulated/0/Telegram/*']
+warn = true

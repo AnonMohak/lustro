@@ -21,6 +21,7 @@ pub const RULES: Rules = Rules {
     system_items: &["cores", "network", "tmp", "users/shared", "volumes"],
     // Each disk is mounted at /Volumes/<name>.
     mount_parents: &["volumes"],
+    volume_trees: &[],
     homes: "users",
     root_home: "/var/root",
     home_trees: &[".ssh", ".gnupg", "library/keychains"],
