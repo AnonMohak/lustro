@@ -45,7 +45,7 @@ jobs:
       # Two jobs at the same time could drop the entry of the other one.
       max-parallel: 1
       matrix:
-        os: [windows-latest, ubuntu-22.04, macos-14]
+        os: [windows-latest, ubuntu-22.04, macos-15]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

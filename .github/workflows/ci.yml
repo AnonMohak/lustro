@@ -79,7 +79,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-14]
+        os: [ubuntu-22.04, macos-15]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -105,6 +105,30 @@ jobs:
       - name: Rust tests
         working-directory: src-tauri
         run: cargo test
+
+  # shared-plan.md Phase 5: the backend compiles for Android (phones, arm64). It does not link
+  # or run there yet. The runner has the Android NDK; its clang compiles the C parts of crates.
+  android-check:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Rust lint (Android)
+        working-directory: src-tauri
+        run: |
+          bin="$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          export CC_aarch64_linux_android="$bin/aarch64-linux-android30-clang"
+          export AR_aarch64_linux_android="$bin/llvm-ar"
+          cargo clippy --target aarch64-linux-android --all-targets -- -D warnings
 
   # The Linux packages (.deb and AppImage), for manual tests. Like the Windows build,
   # it skips the update package (pull requests cannot read the signing key).
@@ -145,7 +169,7 @@ jobs:
 
   # The macOS app and .dmg (Apple silicon, ad-hoc signature), for manual tests on a Mac.
   macos-bundle:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
 

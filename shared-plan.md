@@ -16,7 +16,7 @@ This plan ports Lustro from Windows 11 to Linux and to macOS on Apple silicon. W
 2. Put the OS-specific code behind `cfg` gates, with one interface for each area: drives, elevation, protected paths, fast scan, live updates, apps, clean rules, desktop integration and the window effect.
 3. Keep the Windows code. Its behavior must not change.
 4. Add stubs for Linux and macOS, so that `cargo check` passes for both targets. A stub returns an empty list or a clear "not supported" error.
-5. Add CI jobs on `ubuntu-latest` and `macos-14` that compile the backend and run the tests.
+5. Add CI jobs on `ubuntu-latest` and `macos-15` that compile the backend and run the tests.
 
 This phase has low risk because Windows stays the same.
 
@@ -32,7 +32,7 @@ Done on branch `cross-platform`:
 - `reveal_path` uses `open -R` on macOS and `xdg-open` on Linux.
 - History restore uses `trash::os_limited` on Windows and Linux. On macOS the stub reports that nothing is in the Trash.
 - `lib.rs` allows dead code on non-Windows targets until the stubs become real code. Remove this line in Phases 2 and 3.
-- CI job `unix-check` runs `cargo clippy --all-targets` on `ubuntu-22.04` and `macos-14`.
+- CI job `unix-check` runs `cargo clippy --all-targets` on `ubuntu-22.04` and `macos-15`.
 
 Not done yet:
 
@@ -245,7 +245,7 @@ Android can start right after Phase 2a if it is more important than Linux. Phase
 ## Decisions
 
 - **macOS signing:** Ad-hoc signature, no Apple certificate.
-- **macOS tests:** No Mac is available. CI on `macos-14` checks the build only. The TCC, APFS, Gatekeeper and Full Disk Access items in Phase 3 stay untested until someone tests on a real Mac. Mark the first macOS release as a preview.
+- **macOS tests:** No Mac is available. CI on `macos-15` checks the build only. The TCC, APFS, Gatekeeper and Full Disk Access items in Phase 3 stay untested until someone tests on a real Mac. Mark the first macOS release as a preview.
 - **Feature parity:** Not needed. Each platform gets the features that fit it. A feature that a platform does not have is hidden in the UI on that platform (for example the Explorer menu, the MFT scan and admin mode).
 - **Linux distros:** Ubuntu and Debian first (`.deb` and AppImage). Other distros come later.
 - **Android distribution:** GitHub releases (APK, install from the web) first. Google Play last.
@@ -281,7 +281,7 @@ Android can start right after Phase 2a if it is more important than Linux. Phase
    - Done: CI job `linux-bundle` builds both packages on `ubuntu-22.04` and keeps them as the artifact `lustro-linux`, for manual tests.
    - Done: `release.yml` makes one draft release first, then builds Windows and Linux one after the other (so the two jobs do not overwrite each other's entry in `latest.json`). It runs only on a `v*` tag, so it is not tested yet.
    - To do: a manual test of the AppImage and the `.deb` on a Linux desktop (WSLg or a VM).
-8. Phase 3 (macOS), part 1: drives, protected paths and the walk. CI checks the build and runs the tests on `macos-14`. Nobody tested it on a Mac.
+8. Phase 3 (macOS), part 1: drives, protected paths and the walk. CI checks the build and runs the tests on `macos-15`. Nobody tested it on a Mac.
    - `system/drives/macos.rs` lists the volumes from `getmntinfo`: local volumes that the Finder shows (not "nobrowse", not a read-only disk image). `statfs` gives the space of the APFS container. `/` is an SSD, a volume with the removable flag is removable, other volumes are "unknown". Purgeable space and Time Machine snapshots are not shown yet.
    - `ops/protect/unix.rs` has the protected path check for Linux and macOS. `protect/linux.rs` and `protect/macos.rs` only give the tables, and their tests run on every platform. macOS protects `/System`, `/usr` (also `/usr/local`), `/opt` (Homebrew), `/private` with `/etc` and `/var`, `/Library` and `/Applications` with their contents, the home folders, the standard folders in a home folder, `~/Library` and some folders in it, and `.ssh`, `.gnupg` and `~/Library/Keychains`. The cleaner may delete in `/Library/Caches`, `/Library/Logs` and `/var/folders` (the temp folders). Apps in `/Applications` work like Program Files. The check ignores case.
    - The walk: when the scan starts on the system volume, the Data volume counts as the same disk, so the firmlinks (`/Users`, `/Applications`, ...) are part of the scan. `/System/Volumes` is skipped, so the Data volume does not count twice. APFS clones still count once for each copy.
@@ -299,7 +299,14 @@ Android can start right after Phase 2a if it is more important than Linux. Phase
 11. Phase 3 (macOS), part 4: packages, CI, release and README. Not tested on a Mac.
    - `tauri.macos.conf.json` builds `Lustro.app` and a `.dmg` for macOS 11 and later, with an ad-hoc signature (`signingIdentity` `-`). `src-tauri/Info.plist` adds the texts for the macOS prompts (Desktop, Documents, Downloads, removable and network disks).
    - Delete on macOS uses `NSFileManager` (`ops/trash_mac.rs::to_trash`), not the Finder through AppleScript, so Lustro needs no Automation permission. The Finder then has no "Put Back" for these items; History restores them.
-   - CI job `macos-bundle` builds the app and the `.dmg` on `macos-14`, checks the signature with `codesign --verify --deep --strict` and keeps the `.dmg` as the artifact `lustro-macos`.
+   - CI job `macos-bundle` builds the app and the `.dmg` on `macos-15`, checks the signature with `codesign --verify --deep --strict` and keeps the `.dmg` as the artifact `lustro-macos`.
    - `release.yml` builds macOS after Windows and Linux, and the release text tells users how to pass Gatekeeper. Not tested yet (it runs only on a `v*` tag).
    - The README has the macOS install steps (Gatekeeper, Full Disk Access), the differences, the protected paths and the build steps.
    - Not done: purgeable space and Time Machine snapshots in the drive list, FSEvents live updates, `getattrlistbulk` for a faster walk, a Finder menu entry, Cmd shortcuts. The manual test on a Mac is open.
+12. Phase 5 (Android), Step 2 code part (no emulator yet):
+   - `run()` has `#[cfg_attr(mobile, tauri::mobile_entry_point)]`.
+   - The tray, `tauri-plugin-single-instance`, `tauri-plugin-updater`, `tauri-plugin-process` and the `trash` crate are desktop only (`cfg(desktop)` and target dependencies). Their permissions moved to `capabilities/desktop.json` (`platforms`: Linux, macOS, Windows), because the Android build refuses permissions of plugins that it does not have.
+   - On Android, "move to Trash" reports that it is not available yet, and History restores nothing. Every path is still protected, so nothing is deleted. Drives, rules and apps are empty lists.
+   - CI job `android-check` runs `cargo clippy --target aarch64-linux-android` with the NDK of the runner. It does not link or run the app.
+   - To do: `npm run tauri android init` (needs Android Studio, Step 0), and the frontend must not call the updater and process plugins on Android.
+13. CI: GitHub retires the `macos-14` runner image on 2026-11-02, so all macOS jobs use `macos-15`.
