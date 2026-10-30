@@ -56,6 +56,26 @@ paths = ['/var/crash/*', '/var/lib/systemd/coredump/*']
 safe = true
 admin = true
 
+# Measured from the paths; the clean runs journalctl --vacuum-time with min_age_h.
+[[rule]]
+id = "journal"
+group = "sys"
+name = "Old system logs (journal)"
+desc = "Archived journal files older than 2 weeks. Runs journalctl --vacuum-time=14d."
+paths = ['/var/log/journal/*/*@*.journal', '/var/log/journal/*/*@*.journal~']
+special = "journal"
+safe = true
+admin = true
+min_age_h = 336
+
+[[rule]]
+id = "snap-old"
+group = "sys"
+name = "Old snap revisions"
+desc = "snapd keeps the previous version of each snap. After this, you cannot roll back a snap."
+special = "snap-old"
+admin = true
+
 # ---------- Browsers ----------
 
 [[rule]]

@@ -1,6 +1,8 @@
 //! The junk cleaner: rules from `rules.toml`, sizes of what they match, and the clean itself.
 
 pub mod dev;
+#[cfg(target_os = "linux")]
+mod linux;
 #[cfg(windows)]
 pub mod system;
 #[cfg(not(windows))]
@@ -336,6 +338,15 @@ pub fn scan_rule(rule: &Rule, ctx: &Ctx) -> Scanned {
                 },
             }
         }
+        #[cfg(target_os = "linux")]
+        Some("snap-old") => {
+            let size = linux::snap_old_size();
+            Scanned {
+                unavailable: size.is_none().then(|| "Snap is not installed.".into()),
+                measure: size.unwrap_or_default(),
+                items: Vec::new(),
+            }
+        }
         _ => Scanned {
             measure: measure(rule),
             items: Vec::new(),
@@ -404,6 +415,10 @@ pub fn clean(rule: &Rule) -> CleanOutcome {
             }
             return out;
         }
+        #[cfg(target_os = "linux")]
+        Some("snap-old") => return linux::snap_remove_old(),
+        #[cfg(target_os = "linux")]
+        Some("journal") => return linux::vacuum_journal(rule),
         _ => {}
     }
     let stopped = rule.service.as_deref().is_some_and(system::stop_service);

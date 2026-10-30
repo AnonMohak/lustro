@@ -32,7 +32,7 @@ Linux support is a preview. Most features work as on Windows, with these differe
 
 - The scan walks the folders. There is no MFT scan and no live update, so rescan to see changes. The scan stays on one file system and skips `/proc`, `/sys`, `/dev` and `/run`.
 - Delete moves items to the Trash. History restores them from the Trash.
-- Clean up has Linux rules: thumbnails, shader caches, the Trash, apt packages, `/var/tmp`, crash reports, browser caches and dev caches.
+- Clean up has Linux rules: thumbnails, shader caches, the Trash, apt packages, old snap revisions, old journal files, `/var/tmp`, crash reports, browser caches and dev caches.
 - Installed apps lists deb packages with a menu entry, snaps and Flatpak apps. Lustro does not uninstall them. It shows the command to run.
 - Start at login uses `~/.config/autostart`. There is no file manager menu entry.
 
