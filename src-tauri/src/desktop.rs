@@ -83,6 +83,15 @@ pub fn on_window_event(window: &tauri::Window, event: &WindowEvent) {
     }
 }
 
+/// "Drive C: is almost full" on Windows; other platforms name the mount point ("Drive / is ...").
+fn drive_full_title(letter: &str) -> String {
+    if cfg!(windows) {
+        format!("Drive {letter}: is almost full")
+    } else {
+        format!("Drive {letter} is almost full")
+    }
+}
+
 /// Checks free space every 15 minutes and sends one notification per drive per day.
 pub fn start_space_monitor(app: AppHandle) {
     std::thread::spawn(move || {
@@ -106,7 +115,7 @@ pub fn start_space_monitor(app: AppHandle) {
                         let _ = app
                             .notification()
                             .builder()
-                            .title(format!("Drive {}: is almost full", d.letter))
+                            .title(drive_full_title(&d.letter))
                             .body(format!(
                                 "{pct:.0}% free ({free_gb:.1} GB). Open Lustro to free space."
                             ))
