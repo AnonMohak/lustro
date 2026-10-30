@@ -102,7 +102,9 @@ A Developer ID certificate and notarization stay optional for later. They remove
   - Done (Linux): `lib/platform.ts` finds the platform from the WebView user agent and has the path helpers (`sepOf`, `baseName`, `dirName`, `pathParts`, `isDriveRoot`). `rootLabel` and `normalizeRoot` follow the platform. The Clean, Dupes, History, Explore and sidebar code use the helpers in place of `\`.
   - Done (Linux): `i18n/en-linux.json` replaces the texts that name Windows features (Recycle Bin → Trash, Program Files → /opt, admin → root, Explorer → file manager, Store → Snap and Flatpak). A test checks that each replaced key exists in `en.json`.
   - Done (Linux): "Run as admin" and the File Explorer menu setting are hidden on other platforms. Other buttons that ask for admin rights say how to start Lustro as root. Drive names show the mount point ("Local Disk (/)").
-  - To do: macOS and Android texts, and the mobile layout (Phase 5).
+  - Done (macOS): `i18n/en-macos.json` goes on top of the Linux texts (Trash, root) and replaces the texts that differ on macOS: Finder, `/Applications`, Full Disk Access, "Open at login", the menu bar, Spotlight and "Macintosh HD" for the system volume. A test checks that each key exists in `en.json`.
+  - Done (macOS): the title bar hides its own window buttons and leaves space for the native ones. `tauri.macos.conf.json` gives the window a native title bar in "Overlay" style, with the traffic lights in the Lustro title bar, and a solid background. Vibrancy needs the private macOS API of Tauri, so it is not used.
+  - To do: Android texts, and the mobile layout (Phase 5).
 - **Release:** Change `release.yml` to a matrix. `latest.json` must list all platforms. The `setup/` installer stays Windows only.
 - **Branding:** Done: `package.json`, `Cargo.toml` and `tauri.conf.json` say "Storage manager", and the README names Windows 11 and Linux. The app text had no platform name. The `setup/` installer keeps "for Windows 11", because it is Windows only.
 

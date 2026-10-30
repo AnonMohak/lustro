@@ -1,0 +1,50 @@
+{
+  "drive": {
+    "localDisk": "Macintosh HD"
+  },
+  "home": {
+    "noAdminBody": "Some system folders stay hidden, and the system cleaner is not available. For the folders in ~/Library, give Lustro Full Disk Access."
+  },
+  "admin": {
+    "unixHint": "To get root rights, close Lustro and start it as root: sudo /Applications/Lustro.app/Contents/MacOS/lustro. For most folders, Full Disk Access is enough."
+  },
+  "settings": {
+    "protectedHint": "The root folder, the system folders (/System, /usr, /Library, /Applications and others), home folders and their standard folders, ~/Library, SSH keys and the keychains. Lustro never deletes them.",
+    "allowAppFoldersHint": "Only as root. You can then delete apps in /Applications, with a warning each time. To remove an app with its data, use Apps > Uninstall.",
+    "startWithWindows": "Open at login",
+    "startWithWindowsHint": "Starts in the menu bar, without root rights."
+  },
+  "scan": {
+    "deniedNote_one": "macOS did not let Lustro read 1 folder. Give Lustro Full Disk Access in System Settings > Privacy & Security to include it.",
+    "deniedNote_other": "macOS did not let Lustro read {{count}} folders. Give Lustro Full Disk Access in System Settings > Privacy & Security to include them."
+  },
+  "explore": {
+    "reveal": "Show in Finder",
+    "appFolder": "App in /Applications. You can delete it, but you must confirm a warning.",
+    "appFolderLocked": "App in /Applications. To remove it with its data, use Apps > Uninstall.",
+    "denied": "macOS did not let Lustro read this folder. Give Lustro Full Disk Access in System Settings > Privacy & Security."
+  },
+  "del": {
+    "appWarn_one": "This item is inside /Applications. If you delete a part of an app, the app can stop working. To remove an app with its data, use Apps > Uninstall instead.",
+    "appWarn_other": "{{count}} items are inside /Applications. If you delete parts of apps, the apps can stop working. To remove an app with its data, use Apps > Uninstall instead."
+  },
+  "history": {
+    "gone": "No longer in the Trash, or renamed there"
+  },
+  "dupes": {
+    "openFolder": "Show in Finder"
+  },
+  "apps": {
+    "desktop": "Apps",
+    "store": "App Store",
+    "sourceDesktop": "App",
+    "sourceStore": "App Store",
+    "uninstallDesktop": "Moves the app and its data in ~/Library to the Trash.",
+    "uninstallStore": "Moves the app and its data in ~/Library to the Trash.",
+    "note": "Uninstall moves the app and its data in ~/Library to the Trash. You can restore them from the Trash.",
+    "lastUsedNote": "Last used comes from Spotlight."
+  },
+  "live": {
+    "off": "Live updates are not available on macOS yet"
+  }
+}

@@ -44,6 +44,7 @@ button { font: inherit; color: inherit; }
 /* app frame */
 .app { height: 100%; display: grid; grid-template-rows: 40px minmax(0, 1fr) 30px; background: var(--win); }
 .titlebar { display: flex; align-items: center; gap: 10px; padding-left: 14px; }
+.titlebar.mac { padding-left: 84px; padding-right: 14px; }
 .logo { width: 18px; height: 18px; flex: none; display: block; }
 .appname { font-family: var(--f-display); font-weight: 600; font-size: 13px; }
 .titlebar .grow { flex: 1; align-self: stretch; }

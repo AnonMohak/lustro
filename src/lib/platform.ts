@@ -11,6 +11,7 @@ export function detectPlatform(ua: string): Platform {
 
 export const PLATFORM: Platform = detectPlatform(typeof navigator === "undefined" ? "" : navigator.userAgent);
 export const IS_WINDOWS = PLATFORM === "windows";
+export const IS_MACOS = PLATFORM === "macos";
 
 /** The path separator of the platform. */
 export function sepOf(p: Platform = PLATFORM): string {

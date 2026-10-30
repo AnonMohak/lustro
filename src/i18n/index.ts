@@ -1,8 +1,9 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
-import { PLATFORM } from "../lib/platform";
+import { PLATFORM, type Platform } from "../lib/platform";
 import en from "./en.json";
 import enLinux from "./en-linux.json";
+import enMacos from "./en-macos.json";
 
 type Tree = { [key: string]: string | Tree };
 
@@ -16,10 +17,18 @@ export function mergeTexts(base: Tree, over: Tree): Tree {
   return out;
 }
 
+/** The English texts of a platform. */
+export function textsFor(platform: Platform): Tree {
+  if (platform === "linux") return mergeTexts(en, enLinux);
+  if (platform === "macos") return mergeTexts(mergeTexts(en, enLinux), enMacos);
+  return en;
+}
+
 // All UI text lives in the JSON files in this folder. Add a language by adding a file here.
 // en-linux.json replaces the texts that name Windows features (Recycle Bin, Program Files, ...).
+// macOS uses these Unix texts too, and en-macos.json replaces the ones that differ there.
 i18n.use(initReactI18next).init({
-  resources: { en: { translation: PLATFORM === "linux" ? mergeTexts(en, enLinux) : en } },
+  resources: { en: { translation: textsFor(PLATFORM) } },
   lng: "en",
   fallbackLng: "en",
   interpolation: { escapeValue: false },
