@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Tauri adds these keys to the Info.plist of the macOS app. macOS shows the texts when
+     Lustro first reads one of these places. Full Disk Access has no text: the user turns it on
+     in System Settings. -->
+<plist version="1.0">
+<dict>
+  <key>NSDesktopFolderUsageDescription</key>
+  <string>Lustro scans your Desktop folder to show what uses space.</string>
+  <key>NSDocumentsFolderUsageDescription</key>
+  <string>Lustro scans your Documents folder to show what uses space.</string>
+  <key>NSDownloadsFolderUsageDescription</key>
+  <string>Lustro scans your Downloads folder to show what uses space.</string>
+  <key>NSRemovableVolumesUsageDescription</key>
+  <string>Lustro scans removable disks to show what uses space.</string>
+  <key>NSNetworkVolumesUsageDescription</key>
+  <string>Lustro scans network disks to show what uses space.</string>
+</dict>
+</plist>

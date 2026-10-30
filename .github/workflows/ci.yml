@@ -74,7 +74,7 @@ jobs:
           if-no-files-found: error
 
   # shared-plan.md: the backend compiles and its tests pass on Linux and macOS.
-  # Tests that need the Unix walk or the Unix protected paths are Windows-only until those exist.
+  # Tests that delete in the temp folder stay off on macOS (it is under the protected /var/folders).
   unix-check:
     strategy:
       fail-fast: false
@@ -141,4 +141,37 @@ jobs:
           path: |
             src-tauri/target/release/bundle/deb/*.deb
             src-tauri/target/release/bundle/appimage/*.AppImage
+          if-no-files-found: error
+
+  # The macOS app and .dmg (Apple silicon, ad-hoc signature), for manual tests on a Mac.
+  macos-bundle:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install npm packages
+        run: npm ci
+
+      - name: Build packages
+        run: npm run tauri build -- --config src-tauri/tauri.ci.conf.json
+
+      # The ad-hoc signature must be valid; Gatekeeper rejects it (no Developer ID), as expected.
+      - name: Check the signature
+        run: codesign --verify --deep --strict --verbose=2 src-tauri/target/release/bundle/macos/Lustro.app
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lustro-macos
+          path: src-tauri/target/release/bundle/dmg/*.dmg
           if-no-files-found: error

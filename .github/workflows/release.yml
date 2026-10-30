@@ -28,6 +28,10 @@ jobs:
           **Linux (preview):** download the `.AppImage` (any distro: make it executable, then run it) or
           the `.deb` (Ubuntu and Debian: `sudo apt install ./Lustro_<version>_amd64.deb`).
 
+          **macOS (preview, Apple silicon):** download the `.dmg` and drag Lustro to Applications. The app
+          has no Apple Developer ID, so macOS blocks the first start: open System Settings > Privacy & Security
+          and choose "Open Anyway". The `.app.tar.gz` is the update package.
+
           See the README for what Lustro does.
           EOF
           )"
@@ -41,7 +45,7 @@ jobs:
       # Two jobs at the same time could drop the entry of the other one.
       max-parallel: 1
       matrix:
-        os: [windows-latest, ubuntu-22.04]
+        os: [windows-latest, ubuntu-22.04, macos-14]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

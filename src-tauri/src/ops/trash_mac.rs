@@ -57,6 +57,15 @@ pub fn find(original: &str) -> Option<PathBuf> {
     std::fs::symlink_metadata(&p).is_ok().then_some(p)
 }
 
+/// Moves `path` to the Trash with `NSFileManager`. The default method of the `trash` crate
+/// asks the Finder through AppleScript, which needs the Automation permission.
+pub fn to_trash(path: &Path) -> Result<(), trash::Error> {
+    use trash::macos::{DeleteMethod, TrashContextExtMacos};
+    let mut ctx = trash::TrashContext::default();
+    ctx.set_delete_method(DeleteMethod::NsFileManager);
+    ctx.delete(path)
+}
+
 /// Moves the item back to `original`. Fails when an item with that path exists again.
 pub fn restore(item: &Path, original: &str) -> std::io::Result<()> {
     if std::fs::symlink_metadata(original).is_ok() {

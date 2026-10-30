@@ -2,7 +2,7 @@
 
 # Lustro
 
-Lustro is a free and open source storage manager for Windows 11 and Linux. It scans your drives, shows what uses the space, and helps you remove what you do not need.
+Lustro is a free and open source storage manager for Windows 11, with previews for Linux and macOS. It scans your drives, shows what uses the space, and helps you remove what you do not need.
 
 <p align="center">
   <img src="docs/demo.gif" width="800" alt="Lustro: fast scan, Explore, large files, duplicates, clean up, search and safe delete">
@@ -36,6 +36,16 @@ Linux support is a preview. Most features work as on Windows, with these differe
 - Installed apps lists deb packages with a menu entry, snaps and Flatpak apps. Lustro does not uninstall them. It shows the command to run.
 - Start at login uses `~/.config/autostart`. There is no file manager menu entry.
 
+### On macOS
+
+macOS support is a preview for Macs with Apple silicon. Nobody tested it on a Mac yet. The differences from Linux:
+
+- The scan of the system volume includes the Data volume (`/Users`, `/Applications`, ...) once. Many folders in `~/Library` need **Full Disk Access** (System Settings > Privacy & Security). Without it, Lustro skips them.
+- Clean up has macOS rules: logs and crash reports, Quick Look thumbnails, iPhone backups and update files, browser caches, Xcode DerivedData, device support files and old simulators, and the Homebrew and dev caches.
+- Installed apps lists the apps in `/Applications` and `~/Applications`, with the last use from Spotlight. Uninstall moves the app and its data in `~/Library` to the Trash.
+- History restores an item only when the Trash still has it under its own name.
+- Start at login uses a launch agent. There is no Finder menu entry.
+
 | Light theme | Large and old files | Search |
 |---|---|---|
 | ![Light theme](docs/screenshots/explore-light.png) | ![Large and old files](docs/screenshots/large-files.png) | ![Search](docs/screenshots/search.png) |
@@ -61,6 +71,16 @@ The AppImage needs FUSE 2. On Ubuntu 24.04 and later, run `sudo apt install libf
 
 The tray icon needs AppIndicator support. GNOME shows it only with the "AppIndicator and KStatusNotifierItem Support" extension (Ubuntu has it on by default).
 
+### macOS (preview)
+
+For Macs with Apple silicon and macOS 11 or later. Download `Lustro_x.y.z_aarch64.dmg` from [Releases](https://github.com/AnonMohak/lustro/releases), open it, and drag Lustro to Applications. Lustro updates itself from GitHub Releases.
+
+> **Gatekeeper warning.** Lustro has an ad-hoc signature, not an Apple Developer ID, so macOS blocks the first start. On macOS 15 and later, open System Settings > Privacy & Security and choose **Open Anyway**. On older versions, right-click Lustro in Applications and choose **Open**. Or run `xattr -dr com.apple.quarantine /Applications/Lustro.app` one time.
+>
+> If macOS says that Lustro "is damaged", the download is broken. Download it again. Do not change the app.
+
+To scan all of your home folder, give Lustro Full Disk Access: System Settings > Privacy & Security > Full Disk Access. After an update, macOS can forget this access, because each version has a new ad-hoc signature. Then give it again.
+
 ## Admin rights
 
 Lustro starts as a normal user. Use **Run as admin** in the title bar to restart it with admin rights. You need them for:
@@ -71,7 +91,7 @@ Lustro starts as a normal user. Use **Run as admin** in the title bar to restart
 
 Everything else works without admin rights.
 
-On Linux, admin rights mean that Lustro runs as root. Lustro cannot restart itself as root, so **Run as admin** is not available. Normally you do not need root: start Lustro as root only to scan or clean folders that your user cannot read.
+On Linux and macOS, admin rights mean that Lustro runs as root. Lustro cannot restart itself as root, so **Run as admin** is not available. Normally you do not need root: start Lustro as root only to scan or clean folders that your user cannot read. On macOS, Full Disk Access is usually enough.
 
 ## Safety
 
@@ -81,10 +101,11 @@ On Linux, admin rights mean that Lustro runs as root. Lustro cannot restart itse
 - Lustro removes junctions and symbolic links as links. It never deletes the files that they point to.
 - The cleaner deletes caches and temp files permanently. Apps make them again.
 - On Linux, the protected paths are `/`, the system folders (`/usr`, `/etc`, `/var`, `/boot`, ...) with their contents, `/home`, `/tmp`, the home folders and their standard folders, and `.ssh`, `.gnupg` and `.pki`. Apps in `/opt` work like apps in `Program Files`.
+- On macOS, the protected paths are `/`, `/System`, `/usr`, `/opt`, `/private` (with `/etc` and `/var`), `/Library` and `/Applications` with their contents, the home folders and their standard folders, `~/Library`, `.ssh`, `.gnupg` and the keychains. The check ignores case, like macOS. The cleaner may delete inside `/Library/Caches`, `/Library/Logs` and the temp folders.
 
 ## Privacy
 
-Lustro has no account, no telemetry and no ads. The only network request is the update check to GitHub, which you can turn off. Scans, history and settings stay in `%LOCALAPPDATA%\com.anonmohak.lustro` (on Linux, `~/.local/share/com.anonmohak.lustro`).
+Lustro has no account, no telemetry and no ads. The only network request is the update check to GitHub, which you can turn off. Scans, history and settings stay in `%LOCALAPPDATA%\com.anonmohak.lustro` (on Linux, `~/.local/share/com.anonmohak.lustro`; on macOS, `~/Library/Application Support/com.anonmohak.lustro`).
 
 ## Build from source
 
@@ -128,13 +149,26 @@ cd src-tauri && cargo test
 
 Tauri adds `src-tauri/tauri.linux.conf.json` to the config on Linux. The themed installer (`setup/`) is for Windows only.
 
+### On macOS
+
+You need [Rust](https://rustup.rs), Node.js 22 or later, and the Xcode command line tools (`xcode-select --install`).
+
+```sh
+npm install
+npm run tauri dev
+npm run tauri build -- --config src-tauri/tauri.ci.conf.json   # Lustro.app and the .dmg in src-tauri/target/release/bundle
+cd src-tauri && cargo test
+```
+
+Tauri adds `src-tauri/tauri.macos.conf.json` and `src-tauri/Info.plist` on macOS. The build signs the app ad hoc (`signingIdentity` is `-`).
+
 ## Screenshots
 
 The README screenshots show a demo folder, not real user data. `scripts/make-demo.ps1 -Root "C:\Users\you\Lustro Demo"` makes that folder from sparse files: about 117 GB in size, but almost no space on the disk. Scan it with "Scan a folder", then delete it.
 
 ## Release
 
-Push a tag like `v1.0.1`. The release workflow builds the Windows installer and the Linux `.deb` and AppImage, signs the update packages, and makes a draft release with `latest.json`. Publish the draft on GitHub; then installed copies update.
+Push a tag like `v1.0.1`. The release workflow builds the Windows installer, the Linux `.deb` and AppImage, and the macOS `.dmg`, signs the update packages, and makes a draft release with `latest.json`. Publish the draft on GitHub; then installed copies update.
 
 ## Logo
 

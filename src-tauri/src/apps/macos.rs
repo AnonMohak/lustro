@@ -198,11 +198,11 @@ pub fn uninstall(app: &App) -> Result<(), String> {
         ));
     }
     let id = read_info(bundle).id;
-    trash::delete(bundle)
+    crate::ops::delete::to_trash(bundle)
         .map_err(|e| format!("macOS did not move {} to the Trash: {e}", app.name))?;
     if let Ok(home) = std::env::var("HOME") {
         for p in leftovers(Path::new(&home), &id) {
-            let _ = trash::delete(p);
+            let _ = crate::ops::delete::to_trash(&p);
         }
     }
     Ok(())

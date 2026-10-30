@@ -48,7 +48,18 @@ fn check(path: &Path, allow_app: bool) -> Result<fs::Metadata, DeleteError> {
 /// Moves one file or folder to the Recycle Bin. `allow_app` lets an app folder pass (see `check`).
 pub fn recycle(path: &Path, allow_app: bool) -> Result<(), DeleteError> {
     check(path, allow_app)?;
-    trash::delete(path).map_err(|e| DeleteError::Trash(e.to_string()))
+    to_trash(path).map_err(|e| DeleteError::Trash(e.to_string()))
+}
+
+/// Moves `path` to the Recycle Bin (the Trash on Linux and macOS), with no checks.
+#[cfg(not(target_os = "macos"))]
+pub fn to_trash(path: &Path) -> Result<(), trash::Error> {
+    trash::delete(path)
+}
+
+#[cfg(target_os = "macos")]
+pub fn to_trash(path: &Path) -> Result<(), trash::Error> {
+    super::trash_mac::to_trash(path)
 }
 
 /// Deletes one file or folder permanently. A junction or symbolic link is removed
