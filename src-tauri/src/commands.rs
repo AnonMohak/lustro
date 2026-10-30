@@ -878,7 +878,7 @@ pub async fn delete_items(
 
 /// Long form of a path as a key (see `paths::key`), so short 8.3 names (`RUNNER~1`) match
 /// long ones. The item itself may be gone, so only its folder is resolved.
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "android")))]
 fn long_lower(p: &str) -> String {
     let path = std::path::Path::new(p);
     if let (Some(parent), Some(name)) = (path.parent(), path.file_name())
@@ -891,7 +891,7 @@ fn long_lower(p: &str) -> String {
 }
 
 /// Marks the restorable entries whose item is gone from the Recycle Bin (the Trash on Linux).
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "android")))]
 fn check_bin(entries: &mut [history::Entry]) {
     let in_bin: std::collections::HashSet<String> = trash::os_limited::list()
         .unwrap_or_default()
@@ -912,7 +912,7 @@ fn check_bin(entries: &mut [history::Entry]) {
 }
 
 /// Puts the item of `entry` back. `Ok(false)` when it is not in the bin.
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "android")))]
 fn restore_from_bin(entry: &history::Entry) -> Result<bool> {
     let items = trash::os_limited::list().map_err(|e| Error::Restore(e.to_string()))?;
     let target = long_lower(&entry.path);
@@ -936,6 +936,19 @@ fn restore_from_bin(entry: &history::Entry) -> Result<bool> {
     crate::ops::trash_mac::restore(&item, &entry.path)
         .map_err(|e| Error::Restore(e.to_string()))?;
     Ok(true)
+}
+
+/// Android has no Trash yet, so nothing can be restored.
+#[cfg(target_os = "android")]
+fn check_bin(entries: &mut [history::Entry]) {
+    for e in entries.iter_mut() {
+        e.restorable = false;
+    }
+}
+
+#[cfg(target_os = "android")]
+fn restore_from_bin(_entry: &history::Entry) -> Result<bool> {
+    Ok(false)
 }
 
 /// The delete log, newest first. Recycle Bin entries that are gone from the bin

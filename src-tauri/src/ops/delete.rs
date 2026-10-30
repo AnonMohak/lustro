@@ -48,18 +48,24 @@ fn check(path: &Path, allow_app: bool) -> Result<fs::Metadata, DeleteError> {
 /// Moves one file or folder to the Recycle Bin. `allow_app` lets an app folder pass (see `check`).
 pub fn recycle(path: &Path, allow_app: bool) -> Result<(), DeleteError> {
     check(path, allow_app)?;
-    to_trash(path).map_err(|e| DeleteError::Trash(e.to_string()))
+    to_trash(path).map_err(DeleteError::Trash)
 }
 
 /// Moves `path` to the Recycle Bin (the Trash on Linux and macOS), with no checks.
-#[cfg(not(target_os = "macos"))]
-pub fn to_trash(path: &Path) -> Result<(), trash::Error> {
-    trash::delete(path)
+#[cfg(not(any(target_os = "macos", target_os = "android")))]
+pub fn to_trash(path: &Path) -> Result<(), String> {
+    trash::delete(path).map_err(|e| e.to_string())
 }
 
 #[cfg(target_os = "macos")]
-pub fn to_trash(path: &Path) -> Result<(), trash::Error> {
-    super::trash_mac::to_trash(path)
+pub fn to_trash(path: &Path) -> Result<(), String> {
+    super::trash_mac::to_trash(path).map_err(|e| e.to_string())
+}
+
+/// Android gets the MediaStore trash in a later phase.
+#[cfg(target_os = "android")]
+pub fn to_trash(_path: &Path) -> Result<(), String> {
+    Err("The Trash is not available on Android yet. Use a permanent delete.".into())
 }
 
 /// Deletes one file or folder permanently. A junction or symbolic link is removed

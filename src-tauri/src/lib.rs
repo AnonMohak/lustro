@@ -23,6 +23,7 @@ mod tools_cmds;
 
 use tauri::Manager;
 
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let args: Vec<String> = std::env::args().collect();
     // After "Run as admin", give the old copy time to exit, so the single-instance check passes.
@@ -31,14 +32,18 @@ pub fn run() {
     }
     let start_hidden = args.iter().any(|a| a == "--tray");
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    // Desktop only: the tray, one running copy, and the updater (Android updates from the APK).
+    #[cfg(desktop)]
+    let builder = builder
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             desktop::on_second_instance(app, args)
         }))
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init());
+    builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_process::init())
         .manage(state::AppState {
             startup_scan: std::sync::Mutex::new(commands::startup_scan_arg(
                 args.clone().into_iter(),
@@ -51,6 +56,7 @@ pub fn run() {
             if let Ok(mut s) = app.state::<state::AppState>().settings.lock() {
                 *s = loaded;
             }
+            #[cfg(desktop)]
             desktop::setup_tray(&handle)?;
             desktop::start_space_monitor(handle.clone());
             if !start_hidden {

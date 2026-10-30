@@ -3,9 +3,13 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
+#[cfg(desktop)]
+use tauri::Emitter;
+#[cfg(desktop)]
 use tauri::menu::{Menu, MenuItem};
+#[cfg(desktop)]
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Emitter, Manager, WindowEvent};
+use tauri::{AppHandle, Manager, WindowEvent};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_notification::NotificationExt;
 
@@ -31,12 +35,14 @@ pub fn current_settings(app: &AppHandle) -> Settings {
 pub fn show_main(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.show();
+        #[cfg(desktop)]
         let _ = w.unminimize();
         let _ = w.set_focus();
     }
 }
 
 /// Builds the tray icon and its menu.
+#[cfg(desktop)]
 pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     let open = MenuItem::with_id(app, "open", "Open Lustro", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
@@ -114,6 +120,7 @@ pub fn start_space_monitor(app: AppHandle) {
 }
 
 /// Handles a second start of Lustro (for example from the Explorer menu).
+#[cfg(desktop)]
 pub fn on_second_instance(app: &AppHandle, args: Vec<String>) {
     show_main(app);
     if let Some(path) = crate::commands::startup_scan_arg(args.into_iter()) {

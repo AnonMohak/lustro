@@ -12,8 +12,6 @@
     "core:window:allow-close",
     "core:window:allow-start-dragging",
     "core:window:allow-is-maximized",
-    "dialog:allow-open",
-    "updater:default",
-    "process:allow-restart"
+    "dialog:allow-open"
   ]
 }
