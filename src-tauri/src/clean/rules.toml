@@ -12,7 +12,7 @@
 #   min_age_h  only delete files older than this many hours (0 = all)
 #   process    skip the rule while one of these programs runs
 #   service    stop this Windows service while cleaning, then start it again
-#   special    built-in action instead of paths: "recycle-bin" | "windows-old" (Linux: "journal" | "snap-old")
+#   special    built-in action instead of paths: "recycle-bin" | "windows-old" (Linux: "journal" | "snap-old"; macOS: "xcode-simulators")
 
 # ---------- System junk ----------
 

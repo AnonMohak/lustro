@@ -1,5 +1,5 @@
 //! System calls that the cleaner needs on Linux and macOS: running programs and the Trash.
-//! Linux has no Windows services, and no folders that need a new owner first.
+//! Unix has no Windows services, and no folders that need a new owner first.
 
 use std::collections::HashSet;
 use std::path::Path;
@@ -25,8 +25,27 @@ pub fn running_processes() -> HashSet<String> {
         .collect()
 }
 
-/// macOS: running programs come in a later phase.
-#[cfg(not(target_os = "linux"))]
+/// Lower-case names of all running programs, for example `google chrome`.
+#[cfg(target_os = "macos")]
+pub fn running_processes() -> HashSet<String> {
+    std::process::Command::new("ps")
+        .args(["-Axco", "comm="])
+        .output()
+        .map(|o| parse_ps(&String::from_utf8_lossy(&o.stdout)))
+        .unwrap_or_default()
+}
+
+/// The output of `ps -c -o comm=`: one program name on each line.
+#[cfg(any(target_os = "macos", test))]
+fn parse_ps(text: &str) -> HashSet<String> {
+    text.lines()
+        .map(|l| l.trim().to_lowercase())
+        .filter(|l| !l.is_empty())
+        .collect()
+}
+
+/// Android: running programs come in a later phase.
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub fn running_processes() -> HashSet<String> {
     HashSet::new()
 }
@@ -62,13 +81,30 @@ pub fn empty_recycle_bin() -> bool {
         .is_ok()
 }
 
-/// macOS: the `trash` crate cannot list the Trash. This comes in a later phase.
-#[cfg(not(target_os = "linux"))]
+/// The size of all Trash folders (it needs Full Disk Access, else it is 0).
+#[cfg(target_os = "macos")]
+pub fn recycle_bin_size() -> Measure {
+    crate::ops::trash_mac::folders()
+        .iter()
+        .map(|f| super::measure_dir(f, None))
+        .fold(Measure::default(), |a, b| Measure {
+            bytes: a.bytes + b.bytes,
+            files: a.files + b.files,
+        })
+}
+
+#[cfg(target_os = "macos")]
+pub fn empty_recycle_bin() -> bool {
+    crate::ops::trash_mac::empty()
+}
+
+/// Android: the Trash comes in a later phase.
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub fn recycle_bin_size() -> Measure {
     Measure::default()
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub fn empty_recycle_bin() -> bool {
     false
 }
@@ -81,18 +117,29 @@ pub fn start_service(_name: &str) {}
 
 pub fn take_ownership(_path: &Path) {}
 
-#[cfg(all(test, target_os = "linux"))]
+#[cfg(test)]
 mod tests {
     use super::*;
 
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     #[test]
     fn sees_this_test_process() {
         let me = std::env::current_exe().unwrap();
         let name = me.file_name().unwrap().to_string_lossy().to_lowercase();
         let comm: String = name.chars().take(15).collect();
-        assert!(running_processes().contains(&comm));
+        assert!(running_processes().iter().any(|p| p.starts_with(&comm)));
     }
 
+    #[test]
+    fn reads_ps_output() {
+        let names = parse_ps("Google Chrome\n  firefox \n\nXcode\n");
+        assert!(names.contains("google chrome"));
+        assert!(names.contains("firefox"));
+        assert!(names.contains("xcode"));
+        assert_eq!(names.len(), 3);
+    }
+
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     #[test]
     fn trash_size_query_works() {
         let _ = recycle_bin_size();

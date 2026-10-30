@@ -878,6 +878,7 @@ pub async fn delete_items(
 
 /// Long form of a path as a key (see `paths::key`), so short 8.3 names (`RUNNER~1`) match
 /// long ones. The item itself may be gone, so only its folder is resolved.
+#[cfg(not(target_os = "macos"))]
 fn long_lower(p: &str) -> String {
     let path = std::path::Path::new(p);
     if let (Some(parent), Some(name)) = (path.parent(), path.file_name())
@@ -889,26 +890,52 @@ fn long_lower(p: &str) -> String {
     paths::key(p)
 }
 
-/// Items in the Recycle Bin (the Trash on Linux).
+/// Marks the restorable entries whose item is gone from the Recycle Bin (the Trash on Linux).
 #[cfg(not(target_os = "macos"))]
-fn bin_items() -> std::result::Result<Vec<trash::TrashItem>, trash::Error> {
-    trash::os_limited::list()
+fn check_bin(entries: &mut [history::Entry]) {
+    let in_bin: std::collections::HashSet<String> = trash::os_limited::list()
+        .unwrap_or_default()
+        .iter()
+        .map(|i| long_lower(&i.original_path().to_string_lossy()))
+        .collect();
+    for e in entries.iter_mut().filter(|e| e.restorable) {
+        e.restorable = in_bin.contains(&long_lower(&e.path));
+    }
 }
 
-/// The `trash` crate cannot list the macOS Trash: restore comes in a later phase.
+/// The `trash` crate cannot list the macOS Trash, so Lustro looks for each item by name.
 #[cfg(target_os = "macos")]
-fn bin_items() -> std::result::Result<Vec<trash::TrashItem>, trash::Error> {
-    Ok(Vec::new())
+fn check_bin(entries: &mut [history::Entry]) {
+    for e in entries.iter_mut().filter(|e| e.restorable) {
+        e.restorable = crate::ops::trash_mac::find(&e.path).is_some();
+    }
 }
 
+/// Puts the item of `entry` back. `Ok(false)` when it is not in the bin.
 #[cfg(not(target_os = "macos"))]
-fn bin_restore(item: trash::TrashItem) -> std::result::Result<(), trash::Error> {
-    trash::os_limited::restore_all([item])
+fn restore_from_bin(entry: &history::Entry) -> Result<bool> {
+    let items = trash::os_limited::list().map_err(|e| Error::Restore(e.to_string()))?;
+    let target = long_lower(&entry.path);
+    let deleted_at = entry.time / 1000;
+    let item = items
+        .into_iter()
+        .filter(|i| long_lower(&i.original_path().to_string_lossy()) == target)
+        .min_by_key(|i| (i.time_deleted - deleted_at).abs());
+    let Some(item) = item else {
+        return Ok(false);
+    };
+    trash::os_limited::restore_all([item]).map_err(|e| Error::Restore(e.to_string()))?;
+    Ok(true)
 }
 
 #[cfg(target_os = "macos")]
-fn bin_restore(_item: trash::TrashItem) -> std::result::Result<(), trash::Error> {
-    Ok(())
+fn restore_from_bin(entry: &history::Entry) -> Result<bool> {
+    let Some(item) = crate::ops::trash_mac::find(&entry.path) else {
+        return Ok(false);
+    };
+    crate::ops::trash_mac::restore(&item, &entry.path)
+        .map_err(|e| Error::Restore(e.to_string()))?;
+    Ok(true)
 }
 
 /// The delete log, newest first. Recycle Bin entries that are gone from the bin
@@ -919,14 +946,7 @@ pub async fn history(app: AppHandle) -> Vec<history::Entry> {
     tauri::async_runtime::spawn_blocking(move || {
         with_history(&app2, |h| {
             if h.entries.iter().any(|e| e.restorable) {
-                let in_bin: std::collections::HashSet<String> = bin_items()
-                    .unwrap_or_default()
-                    .iter()
-                    .map(|i| long_lower(&i.original_path().to_string_lossy()))
-                    .collect();
-                for e in h.entries.iter_mut().filter(|e| e.restorable) {
-                    e.restorable = in_bin.contains(&long_lower(&e.path));
-                }
+                check_bin(&mut h.entries);
             }
             h.newest_first()
         })
@@ -944,22 +964,14 @@ pub async fn restore(app: AppHandle, id: u64) -> Result<()> {
         let entry = with_history(&app2, |h| h.entries.iter().find(|e| e.id == id).cloned())
             .flatten()
             .ok_or(Error::NotInBin)?;
-        let items = bin_items().map_err(|e| Error::Restore(e.to_string()))?;
-        let target = long_lower(&entry.path);
-        let deleted_at = entry.time / 1000;
-        let item = items
-            .into_iter()
-            .filter(|i| long_lower(&i.original_path().to_string_lossy()) == target)
-            .min_by_key(|i| (i.time_deleted - deleted_at).abs());
-        let Some(item) = item else {
+        if !restore_from_bin(&entry)? {
             with_history(&app2, |h| {
                 if let Some(e) = h.entries.iter_mut().find(|e| e.id == id) {
                     e.restorable = false;
                 }
             });
             return Err(Error::NotInBin);
-        };
-        bin_restore(item).map_err(|e| Error::Restore(e.to_string()))?;
+        }
         with_history(&app2, |h| {
             if let Some(e) = h.entries.iter_mut().find(|e| e.id == id) {
                 e.restorable = false;

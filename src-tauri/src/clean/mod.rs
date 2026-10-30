@@ -3,6 +3,8 @@
 pub mod dev;
 #[cfg(target_os = "linux")]
 mod linux;
+#[cfg(target_os = "macos")]
+mod macos;
 #[cfg(windows)]
 pub mod system;
 #[cfg(not(windows))]
@@ -50,29 +52,34 @@ pub struct Rule {
     pub special: Option<String>,
 }
 
-#[cfg(any(windows, target_os = "linux"))]
 #[derive(Deserialize)]
 struct RuleFile {
     rule: Vec<Rule>,
 }
 
-#[cfg(windows)]
-const RULES: &str = include_str!("rules.toml");
-#[cfg(target_os = "linux")]
-const RULES: &str = include_str!("rules-linux.toml");
+/// The rules files of all platforms. Each platform loads its own; the tests check all.
+const WINDOWS_RULES: &str = include_str!("rules.toml");
+const LINUX_RULES: &str = include_str!("rules-linux.toml");
+const MACOS_RULES: &str = include_str!("rules-macos.toml");
 
-/// The built-in rules of this platform.
-#[cfg(any(windows, target_os = "linux"))]
-pub fn rules() -> Vec<Rule> {
-    toml::from_str::<RuleFile>(RULES)
+fn parse_rules(text: &str) -> Vec<Rule> {
+    toml::from_str::<RuleFile>(text)
         .expect("the rules file is valid")
         .rule
 }
 
-/// macOS and Android: their rules come in a later phase.
-#[cfg(not(any(windows, target_os = "linux")))]
+/// The built-in rules of this platform.
 pub fn rules() -> Vec<Rule> {
-    Vec::new()
+    if cfg!(windows) {
+        parse_rules(WINDOWS_RULES)
+    } else if cfg!(target_os = "linux") {
+        parse_rules(LINUX_RULES)
+    } else if cfg!(target_os = "macos") {
+        parse_rules(MACOS_RULES)
+    } else {
+        // Android: its rules come in a later phase.
+        Vec::new()
+    }
 }
 
 /// Expands `%VAR%` and turns the pattern into a glob. Values of variables are escaped,
@@ -347,6 +354,15 @@ pub fn scan_rule(rule: &Rule, ctx: &Ctx) -> Scanned {
                 items: Vec::new(),
             }
         }
+        #[cfg(target_os = "macos")]
+        Some("xcode-simulators") => {
+            let size = macos::simulators_size();
+            Scanned {
+                unavailable: size.is_none().then(|| "Xcode is not installed.".into()),
+                measure: size.unwrap_or_default(),
+                items: Vec::new(),
+            }
+        }
         _ => Scanned {
             measure: measure(rule),
             items: Vec::new(),
@@ -419,6 +435,8 @@ pub fn clean(rule: &Rule) -> CleanOutcome {
         Some("snap-old") => return linux::snap_remove_old(),
         #[cfg(target_os = "linux")]
         Some("journal") => return linux::vacuum_journal(rule),
+        #[cfg(target_os = "macos")]
+        Some("xcode-simulators") => return macos::delete_simulators(),
         _ => {}
     }
     let stopped = rule.service.as_deref().is_some_and(system::stop_service);
@@ -460,14 +478,18 @@ mod tests {
         }
     }
 
-    #[cfg(any(windows, target_os = "linux"))]
     #[test]
-    fn rules_file_is_valid() {
-        let r = rules();
+    fn rules_files_are_valid() {
+        for text in [WINDOWS_RULES, LINUX_RULES, MACOS_RULES] {
+            check_rules(&parse_rules(text));
+        }
+    }
+
+    fn check_rules(r: &[Rule]) {
         assert!(r.len() >= 10);
         let ids: HashSet<&str> = r.iter().map(|x| x.id.as_str()).collect();
         assert_eq!(ids.len(), r.len(), "rule ids are unique");
-        for rule in &r {
+        for rule in r {
             assert!(
                 ["sys", "web", "dev", "docker", "ide"].contains(&rule.group.as_str()),
                 "{}",

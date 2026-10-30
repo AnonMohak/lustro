@@ -342,7 +342,13 @@ fn jetbrains_base() -> Option<std::path::PathBuf> {
     Some(Path::new(&local).join("JetBrains"))
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "macos")]
+fn jetbrains_base() -> Option<std::path::PathBuf> {
+    let home = std::env::var("HOME").ok()?;
+    Some(Path::new(&home).join("Library/Caches/JetBrains"))
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
 fn jetbrains_base() -> Option<std::path::PathBuf> {
     let cache = std::env::var("XDG_CACHE_HOME")
         .ok()
