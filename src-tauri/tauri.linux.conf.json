@@ -21,7 +21,6 @@
   },
   "bundle": {
     "targets": ["deb", "appimage"],
-    "shortDescription": "Storage manager",
     "linux": {
       "deb": {
         "depends": ["libayatana-appindicator3-1"]

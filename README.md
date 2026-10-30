@@ -2,7 +2,7 @@
 
 # Lustro
 
-Lustro is a free and open source storage manager for Windows 11. It scans your drives, shows what uses the space, and helps you remove what you do not need.
+Lustro is a free and open source storage manager for Windows 11 and Linux. It scans your drives, shows what uses the space, and helps you remove what you do not need.
 
 <p align="center">
   <img src="docs/demo.gif" width="800" alt="Lustro: fast scan, Explore, large files, duplicates, clean up, search and safe delete">

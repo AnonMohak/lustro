@@ -35,6 +35,6 @@
     "vite": "^8.0.16",
     "vitest": "^5.0.5"
   },
-  "description": "Storage manager for Windows 11",
+  "description": "Storage manager",
   "license": "MIT"
 }

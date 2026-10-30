@@ -104,7 +104,7 @@ A Developer ID certificate and notarization stay optional for later. They remove
   - Done (Linux): "Run as admin" and the File Explorer menu setting are hidden on other platforms. Other buttons that ask for admin rights say how to start Lustro as root. Drive names show the mount point ("Local Disk (/)").
   - To do: macOS and Android texts, and the mobile layout (Phase 5).
 - **Release:** Change `release.yml` to a matrix. `latest.json` must list all platforms. The `setup/` installer stays Windows only.
-- **Branding:** Change "Storage manager for Windows 11" in `Cargo.toml`, `tauri.conf.json`, the README and the app text.
+- **Branding:** Done: `package.json`, `Cargo.toml` and `tauri.conf.json` say "Storage manager", and the README names Windows 11 and Linux. The app text had no platform name. The `setup/` installer keeps "for Windows 11", because it is Windows only.
 
 ## Phase 5: Android
 
