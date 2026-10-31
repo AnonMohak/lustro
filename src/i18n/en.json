@@ -424,7 +424,18 @@
     "pickKeep": "Keep the copies in this folder",
     "keepThisFolder": "Keep the copies in this folder, in all groups",
     "keptIn_one": "Kept the copies in {{folder}} in 1 group.",
-    "keptIn_other": "Kept the copies in {{folder}} in {{count}} groups."
+    "keptIn_other": "Kept the copies in {{folder}} in {{count}} groups.",
+    "viewFiles": "Files",
+    "viewPairs": "Folder pairs",
+    "pairCopies_one": "1 shared copy",
+    "pairCopies_other": "{{count}} shared copies",
+    "pairTitle": "Two folders with the same files",
+    "pairShared_one": "They share 1 copy ({{size}}).",
+    "pairShared_other": "They share {{count}} copies ({{size}}).",
+    "deleteHere": "Delete the copies here",
+    "pairNote": "Lustro selects the shared copies in that folder and keeps the ones in the other folder. Then use the button on the right to move them to the Recycle Bin.",
+    "sideSelected_one": "Selected 1 copy in {{folder}}.",
+    "sideSelected_other": "Selected {{count}} copies in {{folder}}."
   },
   "apps": {
     "title": "Installed apps",

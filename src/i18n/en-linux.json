@@ -67,7 +67,8 @@
   "dupes": {
     "recycleBtn": "Move {{n}} copies to Trash",
     "note": "Files with the same size and the same content hash are duplicates. The copies go to the Trash, so you can restore them.",
-    "openFolder": "Show in file manager"
+    "openFolder": "Show in file manager",
+    "pairNote": "Lustro selects the shared copies in that folder and keeps the ones in the other folder. Then use the button on the right to move them to the Trash."
   },
   "apps": {
     "desktop": "Packages",

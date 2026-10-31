@@ -1,6 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../components/Icon";
 import { Select } from "../components/Select";
@@ -69,6 +69,32 @@ function FolderList({
   );
 }
 
+interface FolderPair {
+  a: string;
+  b: string;
+  copies: number;
+  bytes: number;
+}
+
+/** Two folders that hold copies of the same files, most shared space first. */
+function folderPairs(groups: DupeGroup[]): FolderPair[] {
+  const map = new Map<string, FolderPair>();
+  for (const g of groups) {
+    if (g.kind !== "exact") continue;
+    // A copy in very many folders would give too many pairs; the first 20 folders are enough.
+    const dirs = [...new Set(g.files.map((f) => dirName(f.path)))].sort().slice(0, 20);
+    for (let i = 0; i < dirs.length; i++)
+      for (let j = i + 1; j < dirs.length; j++) {
+        const k = `${dirs[i]}\n${dirs[j]}`;
+        const p = map.get(k) ?? { a: dirs[i], b: dirs[j], copies: 0, bytes: 0 };
+        p.copies++;
+        p.bytes += g.size;
+        map.set(k, p);
+      }
+  }
+  return [...map.values()].sort((x, y) => y.bytes - x.bytes);
+}
+
 /** Index of the copy to keep in a group for a keep rule. */
 function keepIndex(g: DupeGroup, rule: "oldest" | "newest" | "shortest"): number {
   let best = 0;
@@ -97,6 +123,9 @@ export function Dupes() {
   const [kinds, setKinds] = useState<Set<DupeKind>>(new Set());
   const [onlyIn, setOnlyIn] = useState<string[]>([]);
   const [notIn, setNotIn] = useState<string[]>([]);
+  /** The list on the left: duplicate groups, or pairs of folders that share copies. */
+  const [view, setView] = useState<"files" | "pairs">("files");
+  const [selPair, setSelPair] = useState(0);
   const [groups, setGroups] = useState<DupeGroup[] | null>(null);
   const [progress, setProgress] = useState<DupeProgress | null>(null);
   const [running, setRunning] = useState(false);
@@ -104,6 +133,7 @@ export function Dupes() {
   /** Per group: indexes of the copies to delete. */
   const [del, setDel] = useState<Set<number>[]>([]);
   const hasScans = Object.keys(scans).length > 0;
+  const pairs = useMemo(() => folderPairs(groups ?? []), [groups]);
 
   const apply = (list: DupeGroup[], rule: "oldest" | "newest" | "shortest" = "oldest") => {
     setGroups(list);
@@ -123,6 +153,7 @@ export function Dupes() {
       ),
     );
     setSel(0);
+    setSelPair(0);
   };
 
   useEffect(() => {
@@ -311,6 +342,26 @@ export function Dupes() {
     if (typeof dir === "string") keepIn(dir);
   };
 
+  /** Selects the copies in one folder of a pair (and keeps the ones in the other folder). */
+  const deleteSide = (pair: FolderPair, side: "a" | "b") => {
+    const [here, there] = side === "a" ? [pair.a, pair.b] : [pair.b, pair.a];
+    let n = 0;
+    const next = groups.map((grp, i) => {
+      const dirs = grp.files.map((f) => dirName(f.path));
+      if (grp.kind !== "exact" || !dirs.includes(here) || !dirs.includes(there)) return del[i] ?? new Set<number>();
+      const s = new Set(del[i]);
+      dirs.forEach((d, k) => {
+        if (d === here) {
+          s.add(k);
+          n++;
+        } else if (d === there) s.delete(k);
+      });
+      return s;
+    });
+    setDel(next);
+    showToast(t("dupes.sideSelected", { count: n, folder: here }));
+  };
+
   const runDelete = () => {
     const items = groups.flatMap((grp, i) =>
       [...(del[i] ?? [])].map((k) => ({
@@ -343,23 +394,53 @@ export function Dupes() {
             {t("dupes.again")}
           </button>
         </div>
+        {pairs.length > 0 && (
+          <div style={{ padding: "0 12px 8px" }}>
+            <div className="seg">
+              <button className={view === "files" ? "on" : ""} onClick={() => setView("files")}>
+                {t("dupes.viewFiles")}
+              </button>
+              <button className={view === "pairs" ? "on" : ""} onClick={() => setView("pairs")}>
+                {t("dupes.viewPairs")}
+              </button>
+            </div>
+          </div>
+        )}
         <div className="lscroll">
-          {groups.slice(0, 500).map((grp, i) => (
-            <button key={grp.hash + i} className={`grow-row ${i === sel ? "sel" : ""}`} onClick={() => setSel(i)}>
-              <span className="t1">
-                <b>{fileName(grp.files[0].path)}</b>
-                <span className="num muted">{formatBytes(pickedBytes(grp, del[i]))}</span>
-              </span>
-              <span className="t2">
-                <span>
-                  {grp.kind === "name"
-                    ? t("dupes.nameFiles", { n: grp.files.length, size: formatBytes(grp.size) })
-                    : t("dupes.copies", { n: grp.files.length, size: formatBytes(grp.size) })}
+          {view === "pairs" &&
+            pairs.slice(0, 300).map((p, i) => (
+              <button
+                key={`${p.a}|${p.b}`}
+                className={`grow-row ${i === selPair ? "sel" : ""}`}
+                onClick={() => setSelPair(i)}
+              >
+                <span className="t1">
+                  <b title={p.a}>{baseName(p.a) || p.a}</b>
+                  <span className="num muted">{formatBytes(p.bytes)}</span>
                 </span>
-                <span>{t("dupes.toDelete", { n: del[i]?.size ?? 0 })}</span>
-              </span>
-            </button>
-          ))}
+                <span className="t2">
+                  <span title={p.b}>⇄ {baseName(p.b) || p.b}</span>
+                  <span>{t("dupes.pairCopies", { count: p.copies })}</span>
+                </span>
+              </button>
+            ))}
+          {view === "files" &&
+            groups.slice(0, 500).map((grp, i) => (
+              <button key={grp.hash + i} className={`grow-row ${i === sel ? "sel" : ""}`} onClick={() => setSel(i)}>
+                <span className="t1">
+                  <b>{fileName(grp.files[0].path)}</b>
+                  <span className="num muted">{formatBytes(pickedBytes(grp, del[i]))}</span>
+                </span>
+                <span className="t2">
+                  <span>
+                    {grp.kind === "name"
+                      ? t("dupes.nameFiles", { n: grp.files.length, size: formatBytes(grp.size) })
+                      : t("dupes.copies", { n: grp.files.length, size: formatBytes(grp.size) })}
+                  </span>
+                  <span>{t("dupes.toDelete", { n: del[i]?.size ?? 0 })}</span>
+                </span>
+              </button>
+            ))}
           {groups.length > 500 && (
             <div className="faint" style={{ padding: 10 }}>
               {t("dupes.more", { n: formatCount(groups.length - 500) })}
@@ -368,105 +449,145 @@ export function Dupes() {
         </div>
       </section>
       <main className="main">
-        <div className="page">
-          <div className="phead">
-            <div style={{ minWidth: 0 }}>
-              <h2 style={{ fontSize: 18, overflowWrap: "anywhere" }}>{fileName(g.files[0].path)}</h2>
-              <p>
-                {g.kind === "name"
-                  ? t("dupes.nameFiles", { n: g.files.length, size: formatBytes(g.size) })
-                  : t("dupes.copies", { n: g.files.length, size: formatBytes(g.size) })}
-              </p>
-            </div>
-            <div className="row">
-              <span className="faint">{t("dupes.keep")}</span>
-              <div className="seg">
-                <button onClick={() => setKeep("oldest")}>{t("dupes.keepOldest")}</button>
-                <button onClick={() => setKeep("newest")}>{t("dupes.keepNewest")}</button>
-                <button onClick={() => setKeep("shortest")}>{t("dupes.keepShortest")}</button>
-                <button onClick={pickKeepFolder}>{t("dupes.keepInFolder")}</button>
+        {view === "pairs" && pairs[selPair] ? (
+          <div className="page">
+            <div className="phead">
+              <div style={{ minWidth: 0 }}>
+                <h2 style={{ fontSize: 18 }}>{t("dupes.pairTitle")}</h2>
+                <p>
+                  {t("dupes.pairShared", { count: pairs[selPair].copies, size: formatBytes(pairs[selPair].bytes) })}
+                </p>
               </div>
             </div>
-          </div>
-          <div className="card">
-            {g.files.map((f, k) => (
-              <div key={f.path} className="dfile">
-                <input
-                  type="checkbox"
-                  id={`dupe-${sel}-${k}`}
-                  checked={gDel.has(k)}
-                  aria-label={f.path}
-                  onChange={() =>
-                    setDel((d) =>
-                      d.map((s, i) => {
-                        if (i !== sel) return s;
-                        const n = new Set(s);
-                        if (n.has(k)) n.delete(k);
-                        else n.add(k);
-                        return n;
-                      }),
-                    )
-                  }
-                />
-                <div style={{ minWidth: 0 }}>
-                  <div className="mono selectable" style={{ overflowWrap: "anywhere" }}>
-                    {folderOf(f.path)}
-                  </div>
-                  <div className="faint" style={{ fontSize: 12 }}>
-                    {g.kind === "name" && `${fileName(f.path)} · ${formatBytes(f.size)} · `}
-                    {t("dupes.modified", {
-                      date: f.modified
-                        ? new Date(f.modified).toLocaleDateString("en-GB", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })
-                        : "—",
-                    })}
-                    {g.kind === "name" && (
-                      <>
-                        {" "}
-                        <span className={`pill ${f.same ? "acc" : ""}`}>
-                          {f.same ? t("dupes.sameContent", { n: f.same }) : t("dupes.otherContent")}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                {gDel.has(k) ? (
-                  <span className="pill bad">{t("dupes.delete")}</span>
-                ) : (
-                  <span className="pill good">{t("dupes.kept")}</span>
-                )}
-                <span className="row" style={{ gap: 2 }}>
-                  {g.kind === "exact" && (
+            <div className="card">
+              {(["a", "b"] as const).map((side) => {
+                const folder = pairs[selPair][side];
+                return (
+                  <div key={side} className="dfile">
+                    <Icon name="folder" />
+                    <div className="mono selectable" style={{ minWidth: 0, overflowWrap: "anywhere" }}>
+                      {folder}
+                    </div>
+                    <button className="btn sm" onClick={() => deleteSide(pairs[selPair], side)}>
+                      {t("dupes.deleteHere")}
+                    </button>
                     <button
                       className="btn ghost sm"
-                      aria-label={t("dupes.keepThisFolder")}
-                      title={t("dupes.keepThisFolder")}
-                      onClick={() => keepIn(folderOf(f.path))}
+                      aria-label={t("dupes.openFolder")}
+                      onClick={() => api.revealPath(folder).catch((e) => showToast(String(e), true))}
                     >
-                      <Icon name="star" />
+                      <Icon name="open" />
                     </button>
-                  )}
-                  <button
-                    className="btn ghost sm"
-                    aria-label={t("dupes.openFolder")}
-                    onClick={() => api.revealPath(f.path).catch((e) => showToast(String(e), true))}
-                  >
-                    <Icon name="open" />
-                  </button>
-                </span>
-              </div>
-            ))}
-          </div>
-          {g.kind === "exact" && gDel.size >= g.files.length && (
-            <div className="note lock">
-              <Icon name="warn" />
-              <span>{t("dupes.keepOne")}</span>
+                  </div>
+                );
+              })}
             </div>
-          )}
-        </div>
+            <div className="note">
+              <Icon name="info" />
+              <span>{t("dupes.pairNote")}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="page">
+            <div className="phead">
+              <div style={{ minWidth: 0 }}>
+                <h2 style={{ fontSize: 18, overflowWrap: "anywhere" }}>{fileName(g.files[0].path)}</h2>
+                <p>
+                  {g.kind === "name"
+                    ? t("dupes.nameFiles", { n: g.files.length, size: formatBytes(g.size) })
+                    : t("dupes.copies", { n: g.files.length, size: formatBytes(g.size) })}
+                </p>
+              </div>
+              <div className="row">
+                <span className="faint">{t("dupes.keep")}</span>
+                <div className="seg">
+                  <button onClick={() => setKeep("oldest")}>{t("dupes.keepOldest")}</button>
+                  <button onClick={() => setKeep("newest")}>{t("dupes.keepNewest")}</button>
+                  <button onClick={() => setKeep("shortest")}>{t("dupes.keepShortest")}</button>
+                  <button onClick={pickKeepFolder}>{t("dupes.keepInFolder")}</button>
+                </div>
+              </div>
+            </div>
+            <div className="card">
+              {g.files.map((f, k) => (
+                <div key={f.path} className="dfile">
+                  <input
+                    type="checkbox"
+                    id={`dupe-${sel}-${k}`}
+                    checked={gDel.has(k)}
+                    aria-label={f.path}
+                    onChange={() =>
+                      setDel((d) =>
+                        d.map((s, i) => {
+                          if (i !== sel) return s;
+                          const n = new Set(s);
+                          if (n.has(k)) n.delete(k);
+                          else n.add(k);
+                          return n;
+                        }),
+                      )
+                    }
+                  />
+                  <div style={{ minWidth: 0 }}>
+                    <div className="mono selectable" style={{ overflowWrap: "anywhere" }}>
+                      {folderOf(f.path)}
+                    </div>
+                    <div className="faint" style={{ fontSize: 12 }}>
+                      {g.kind === "name" && `${fileName(f.path)} · ${formatBytes(f.size)} · `}
+                      {t("dupes.modified", {
+                        date: f.modified
+                          ? new Date(f.modified).toLocaleDateString("en-GB", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })
+                          : "—",
+                      })}
+                      {g.kind === "name" && (
+                        <>
+                          {" "}
+                          <span className={`pill ${f.same ? "acc" : ""}`}>
+                            {f.same ? t("dupes.sameContent", { n: f.same }) : t("dupes.otherContent")}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {gDel.has(k) ? (
+                    <span className="pill bad">{t("dupes.delete")}</span>
+                  ) : (
+                    <span className="pill good">{t("dupes.kept")}</span>
+                  )}
+                  <span className="row" style={{ gap: 2 }}>
+                    {g.kind === "exact" && (
+                      <button
+                        className="btn ghost sm"
+                        aria-label={t("dupes.keepThisFolder")}
+                        title={t("dupes.keepThisFolder")}
+                        onClick={() => keepIn(folderOf(f.path))}
+                      >
+                        <Icon name="star" />
+                      </button>
+                    )}
+                    <button
+                      className="btn ghost sm"
+                      aria-label={t("dupes.openFolder")}
+                      onClick={() => api.revealPath(f.path).catch((e) => showToast(String(e), true))}
+                    >
+                      <Icon name="open" />
+                    </button>
+                  </span>
+                </div>
+              ))}
+            </div>
+            {g.kind === "exact" && gDel.size >= g.files.length && (
+              <div className="note lock">
+                <Icon name="warn" />
+                <span>{t("dupes.keepOne")}</span>
+              </div>
+            )}
+          </div>
+        )}
       </main>
       <aside className="detail">
         <div className="dt">
