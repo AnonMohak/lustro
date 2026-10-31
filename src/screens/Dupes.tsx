@@ -312,8 +312,8 @@ export function Dupes() {
 
   const savings = groups.reduce((a, g, i) => a + pickedBytes(g, del[i]), 0);
   const nDel = del.reduce((a, s) => a + s.size, 0);
-  // Exact copies keep at least one. Name groups can hold different files, so all may go.
-  const allGone = del.some((s, i) => groups[i].kind === "exact" && s.size >= groups[i].files.length);
+  // Exact copies and folders keep at least one. Name groups can hold different files, so all may go.
+  const allGone = del.some((s, i) => groups[i].kind !== "name" && s.size >= groups[i].files.length);
   const g = groups[sel];
   const gDel = del[sel] ?? new Set<number>();
 
@@ -328,7 +328,7 @@ export function Dupes() {
   const keepIn = (folder: string) => {
     let changed = 0;
     const next = groups.map((grp, i) => {
-      const k = grp.kind === "exact" ? grp.files.findIndex((f) => isInside(f.path, folder)) : -1;
+      const k = grp.kind !== "name" ? grp.files.findIndex((f) => isInside(f.path, folder)) : -1;
       if (k < 0) return del[i] ?? new Set<number>();
       changed++;
       return new Set(grp.files.map((_, j) => j).filter((j) => j !== k));
@@ -360,6 +360,15 @@ export function Dupes() {
     });
     setDel(next);
     showToast(t("dupes.sideSelected", { count: n, folder: here }));
+  };
+
+  /** One line about a group: how many copies or files, and how big. */
+  const summary = (grp: DupeGroup) => {
+    const n = grp.files.length;
+    const size = formatBytes(grp.size);
+    if (grp.kind === "name") return t("dupes.nameFiles", { n, size });
+    if (grp.kind === "folder") return t("dupes.folderCopies", { n, size, files: formatCount(grp.items) });
+    return t("dupes.copies", { n, size });
   };
 
   const runDelete = () => {
@@ -428,15 +437,14 @@ export function Dupes() {
             groups.slice(0, 500).map((grp, i) => (
               <button key={grp.hash + i} className={`grow-row ${i === sel ? "sel" : ""}`} onClick={() => setSel(i)}>
                 <span className="t1">
-                  <b>{fileName(grp.files[0].path)}</b>
+                  <b>
+                    {grp.kind === "folder" && <Icon name="folder" />}
+                    {fileName(grp.files[0].path)}
+                  </b>
                   <span className="num muted">{formatBytes(pickedBytes(grp, del[i]))}</span>
                 </span>
                 <span className="t2">
-                  <span>
-                    {grp.kind === "name"
-                      ? t("dupes.nameFiles", { n: grp.files.length, size: formatBytes(grp.size) })
-                      : t("dupes.copies", { n: grp.files.length, size: formatBytes(grp.size) })}
-                  </span>
+                  <span>{summary(grp)}</span>
                   <span>{t("dupes.toDelete", { n: del[i]?.size ?? 0 })}</span>
                 </span>
               </button>
@@ -492,11 +500,7 @@ export function Dupes() {
             <div className="phead">
               <div style={{ minWidth: 0 }}>
                 <h2 style={{ fontSize: 18, overflowWrap: "anywhere" }}>{fileName(g.files[0].path)}</h2>
-                <p>
-                  {g.kind === "name"
-                    ? t("dupes.nameFiles", { n: g.files.length, size: formatBytes(g.size) })
-                    : t("dupes.copies", { n: g.files.length, size: formatBytes(g.size) })}
-                </p>
+                <p>{summary(g)}</p>
               </div>
               <div className="row">
                 <span className="faint">{t("dupes.keep")}</span>
@@ -530,7 +534,7 @@ export function Dupes() {
                   />
                   <div style={{ minWidth: 0 }}>
                     <div className="mono selectable" style={{ overflowWrap: "anywhere" }}>
-                      {folderOf(f.path)}
+                      {g.kind === "folder" ? f.path : folderOf(f.path)}
                     </div>
                     <div className="faint" style={{ fontSize: 12 }}>
                       {g.kind === "name" && `${fileName(f.path)} · ${formatBytes(f.size)} · `}
@@ -580,7 +584,13 @@ export function Dupes() {
                 </div>
               ))}
             </div>
-            {g.kind === "exact" && gDel.size >= g.files.length && (
+            {g.kind === "folder" && (
+              <div className="note">
+                <Icon name="folder" />
+                <span>{t("dupes.folderNote")}</span>
+              </div>
+            )}
+            {g.kind !== "name" && gDel.size >= g.files.length && (
               <div className="note lock">
                 <Icon name="warn" />
                 <span>{t("dupes.keepOne")}</span>

@@ -214,7 +214,10 @@ export interface DupeGroup {
   size: number;
   /** Exact groups: the content hash. Name groups: the shared name. */
   hash: string;
-  kind: "exact" | "name";
+  /** "folder": `files` are the copies of a folder. */
+  kind: "exact" | "name" | "folder";
+  /** The number of files in each copy (1, or the files of a duplicate folder). */
+  items: number;
   files: DupeFile[];
 }
 

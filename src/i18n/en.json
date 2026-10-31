@@ -435,7 +435,9 @@
     "deleteHere": "Delete the copies here",
     "pairNote": "Lustro selects the shared copies in that folder and keeps the ones in the other folder. Then use the button on the right to move them to the Recycle Bin.",
     "sideSelected_one": "Selected 1 copy in {{folder}}.",
-    "sideSelected_other": "Selected {{count}} copies in {{folder}}."
+    "sideSelected_other": "Selected {{count}} copies in {{folder}}.",
+    "folderCopies": "{{n}} copies of a folder · {{size}} · {{files}} files each",
+    "folderNote": "These folders have the same files, names and subfolders. Delete a whole copy at once. Their files are not in the file groups."
   },
   "apps": {
     "title": "Installed apps",

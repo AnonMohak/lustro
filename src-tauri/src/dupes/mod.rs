@@ -2,6 +2,7 @@
 //! The hash cache (`cache.rs`) keeps the hashes between searches.
 
 pub mod cache;
+mod folders;
 
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
@@ -88,8 +89,10 @@ pub struct DupeGroup {
     pub size: u64,
     /// Exact groups: the content hash. Name groups: the shared name.
     pub hash: String,
-    /// "exact" or "name".
+    /// "exact", "name" or "folder" (`files` are then the copies of the folder).
     pub kind: &'static str,
+    /// The number of files in each copy: 1, or the files in a duplicate folder.
+    pub items: u32,
     pub files: Vec<DupeFile>,
 }
 
@@ -319,9 +322,36 @@ pub fn find(
 ) -> Vec<DupeGroup> {
     let list = candidates(trees, o);
     match o.mode {
-        Mode::Exact => exact(list, p, cache),
+        Mode::Exact => {
+            let mut groups = exact(list, p, cache);
+            // Folders hold files of all types, so the type filter turns them off.
+            if o.kinds.is_empty() && !p.is_cancelled() {
+                let dirs = folders::find_folders(trees, o, &groups, p, cache);
+                with_folders(&mut groups, dirs);
+            }
+            groups
+        }
         Mode::Name => by_name(list, p, cache),
     }
+}
+
+/// Adds the duplicate folders to the file groups. Files inside a duplicate folder leave
+/// the file groups, so that one copy cannot go through its folder and the other one on
+/// its own.
+fn with_folders(groups: &mut Vec<DupeGroup>, dirs: Vec<DupeGroup>) {
+    let inside: Vec<String> = dirs
+        .iter()
+        .flat_map(|d| d.files.iter().map(|f| key(&f.path)))
+        .collect();
+    for g in groups.iter_mut() {
+        g.files.retain(|f| {
+            let k = key(&f.path);
+            !inside.iter().any(|d| in_folder(&k, d))
+        });
+    }
+    groups.retain(|g| g.files.len() > 1);
+    groups.extend(dirs);
+    groups.sort_by_key(|g| std::cmp::Reverse(g.size * (g.files.len() as u64 - 1)));
 }
 
 /// Groups of identical files: same size, then same partial hash, then same full hash.
@@ -380,6 +410,7 @@ fn exact(list: Vec<Candidate>, p: &DupeProgress, cache: &Mutex<HashCache>) -> Ve
                         size,
                         hash: h.iter().map(|b| format!("{b:02x}")).collect(),
                         kind: "exact",
+                        items: 1,
                         files: v.into_iter().map(|c| c.into_file(0)).collect(),
                     }
                 })
@@ -526,6 +557,7 @@ fn by_name(list: Vec<Candidate>, p: &DupeProgress, cache: &Mutex<HashCache>) -> 
                 size: files.iter().map(|f| f.size).max().unwrap_or(0),
                 hash: name,
                 kind: "name",
+                items: 1,
                 files,
             })
         })
@@ -712,6 +744,35 @@ mod tests {
                 .is_empty()
             );
         }
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn finds_duplicate_folders() {
+        let root = std::env::temp_dir().join(format!("lustro-dupes-dirs-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        let big: Vec<u8> = (0..1_100_000u32).map(|i| (i % 253) as u8).collect();
+        for d in ["proj", "backup/proj", "other"] {
+            fs::create_dir_all(root.join(d).join("src")).unwrap();
+            fs::write(root.join(d).join("data.bin"), &big).unwrap();
+            fs::write(root.join(d).join("src/main.rs"), b"fn main() {}").unwrap();
+        }
+        // Same shape, one small file differs: not a duplicate folder.
+        fs::write(root.join("other/src/main.rs"), b"fn main() {;").unwrap();
+        let tree =
+            Arc::new(walk(root.to_str().unwrap(), &crate::scan::Progress::default()).unwrap());
+        let groups = find(&[tree], &all(), &DupeProgress::default(), &Mutex::default());
+        let dirs: Vec<&DupeGroup> = groups.iter().filter(|g| g.kind == "folder").collect();
+        assert_eq!(dirs.len(), 1, "{groups:#?}");
+        assert_eq!(dirs[0].items, 2);
+        let mut paths: Vec<String> = dirs[0].files.iter().map(|f| f.path.clone()).collect();
+        paths.sort();
+        let sep = crate::paths::SEP;
+        assert!(paths[0].ends_with(&format!("backup{sep}proj")), "{paths:?}");
+        assert!(paths[1].ends_with(&format!("{sep}proj")));
+        // data.bin of "other" still has copies in the two folders, but those copies now
+        // belong to the folder group, so no file group is left with two files.
+        assert!(groups.iter().all(|g| g.kind == "folder"), "{groups:#?}");
         fs::remove_dir_all(root).unwrap();
     }
 
