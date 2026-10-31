@@ -34,6 +34,7 @@ export function FreeSpace() {
   const [installers, setInstallers] = useState<CleanItem[]>([]);
   const [dupes, setDupes] = useState<DupeGroup[] | null>(null);
   const [old, setOld] = useState<FileHit[]>([]);
+  const [cloud, setCloud] = useState<{ provider: string; files: { size: number }[] }[]>([]);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
@@ -43,8 +44,10 @@ export function FreeSpace() {
       api.installersScan().catch(() => [] as CleanItem[]),
       api.dupesResult().catch(() => null),
       api.findFiles({ sort: "size", minSize: BIG_OLD, olderThan: Date.now() - YEAR_MS, limit: 50 }).catch(() => []),
+      api.cloudCandidates().catch(() => []),
     ])
-      .then(([c, i, d, o]) => {
+      .then(([c, i, d, o, cl]) => {
+        setCloud(cl);
         setClean(c);
         setInstallers(i);
         setDupes(d);
@@ -99,7 +102,40 @@ export function FreeSpace() {
   const dupeBytes = exact.reduce((a, g) => a + g.size * (g.files.length - 1), 0);
   const sum = (rs: CleanRule[]) => rs.reduce((a, r) => a + ruleBytes(r), 0);
 
+  const cloudFiles = cloud.flatMap((c) => c.files);
+  const cloudBytes = cloudFiles.reduce((a, f) => a + f.size, 0);
+  const provider = cloud.map((c) => c.provider).join(", ");
+
   const wins: Win[] = [
+    {
+      id: "cloud",
+      icon: "globe",
+      title: t("free.cloud", { provider }),
+      desc: t("free.cloudDesc", { count: cloudFiles.length }),
+      bytes: cloudBytes,
+      action: {
+        label: t("free.online"),
+        run: () =>
+          openDialog({
+            title: t("free.cloudConfirm", { count: cloudFiles.length, provider }),
+            body: [t("free.cloudBody", { provider })],
+            confirm: t("free.online"),
+            onConfirm: async () => {
+              setBusy(true);
+              try {
+                const out = await api.cloudFree();
+                if (out.errors > 0)
+                  showToast(t("free.cloudErrors", { count: out.errors, why: out.firstError ?? "" }), true);
+                else showToast(t("free.cloudDone", { count: out.files, size: formatBytes(out.freedBytes) }));
+              } catch (e) {
+                showToast(String(e), true);
+              }
+              setBusy(false);
+              load();
+            },
+          }),
+      },
+    },
     {
       id: "junk",
       icon: "clean",

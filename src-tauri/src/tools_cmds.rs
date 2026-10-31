@@ -115,6 +115,58 @@ pub fn dupes_cancel(state: State<'_, AppState>) {
     }
 }
 
+/// Big old files in OneDrive or iCloud Drive that can become online-only.
+#[tauri::command]
+pub async fn cloud_candidates(app: AppHandle) -> Vec<crate::cloud::CloudFolder> {
+    let trees = all_trees(&app);
+    let ignore = crate::desktop::current_settings(&app).ignore;
+    tauri::async_runtime::spawn_blocking(move || crate::cloud::candidates(&trees, &ignore))
+        .await
+        .unwrap_or_default()
+}
+
+#[derive(Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CloudOutcome {
+    files: u64,
+    freed_bytes: u64,
+    errors: u64,
+    first_error: Option<String>,
+}
+
+/// Makes all current candidates online-only. The UI sends no paths: the backend finds the
+/// files again. Each file goes to History.
+#[tauri::command]
+pub async fn cloud_free(app: AppHandle) -> Result<CloudOutcome> {
+    let trees = all_trees(&app);
+    let ignore = crate::desktop::current_settings(&app).ignore;
+    let app2 = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut out = CloudOutcome::default();
+        for folder in crate::cloud::candidates(&trees, &ignore) {
+            for f in folder.files {
+                let r = crate::cloud::free(&f.path);
+                crate::commands::with_history(&app2, |h| {
+                    h.add(Action::Cloud, &f.path, f.size, r.clone())
+                });
+                match r {
+                    Ok(()) => {
+                        out.files += 1;
+                        out.freed_bytes += f.size;
+                    }
+                    Err(e) => {
+                        out.errors += 1;
+                        out.first_error.get_or_insert(e);
+                    }
+                }
+            }
+        }
+        out
+    })
+    .await
+    .map_err(|e| Error::Io(std::io::Error::other(e.to_string())))
+}
+
 /// Copies to replace with links to the kept file.
 #[derive(serde::Deserialize)]
 pub struct LinkSet {

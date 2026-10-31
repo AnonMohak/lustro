@@ -18,6 +18,8 @@ pub enum Action {
     Linked,
     /// A folder moved to another drive, with a link in its old place.
     Moved,
+    /// A synced file became online-only (OneDrive, iCloud Drive).
+    Cloud,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

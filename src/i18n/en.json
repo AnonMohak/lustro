@@ -285,7 +285,8 @@
       "cleaner": "Cleaner",
       "blocked": "Blocked",
       "linked": "Linked",
-      "moved": "Moved"
+      "moved": "Moved",
+      "cloud": "Online only"
     }
   },
   "clean": {
@@ -613,7 +614,18 @@
     "oldDesc_other": "{{count}} files of 100 MB or more that nobody changed for a year.",
     "cleanBody": "These items are deleted permanently. Apps make caches and temp files again when they need them.",
     "freed": "Freed {{size}}.",
-    "note": "Junk files, app caches and the Recycle Bin are deleted permanently. Old installers go to the Recycle Bin. For duplicates and large files, you choose on their screens."
+    "note": "Junk files, app caches and the Recycle Bin are deleted permanently. Old installers go to the Recycle Bin. For duplicates and large files, you choose on their screens.",
+    "cloud": "Files in {{provider}}",
+    "cloudDesc_one": "1 big file with no change for 90 days. It stays in the cloud and downloads again when you open it.",
+    "cloudDesc_other": "{{count}} big files with no change for 90 days. They stay in the cloud and download again when you open them.",
+    "online": "Make online-only",
+    "cloudConfirm_one": "Make 1 file in {{provider}} online-only?",
+    "cloudConfirm_other": "Make {{count}} files in {{provider}} online-only?",
+    "cloudBody": "{{provider}} removes the local copies; the files stay in the cloud. Without an internet connection, you cannot open them. The space frees after {{provider}} has done its part.",
+    "cloudDone_one": "1 file is now online-only ({{size}}).",
+    "cloudDone_other": "{{count}} files are now online-only ({{size}}).",
+    "cloudErrors_one": "1 file could not be changed: {{why}}",
+    "cloudErrors_other": "{{count}} files could not be changed: {{why}}"
   },
   "move": {
     "button": "Move to another drive…",

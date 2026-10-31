@@ -15,6 +15,7 @@ const PILL: Record<HistoryEntry["action"], string> = {
   blocked: "warn",
   linked: "good",
   moved: "acc",
+  cloud: "good",
 };
 
 function when(ms: number): string {

@@ -1,6 +1,7 @@
 mod apps;
 mod clean;
 mod clean_cmds;
+mod cloud;
 mod commands;
 mod custom_cmds;
 mod desktop;
@@ -104,6 +105,8 @@ pub fn run() {
             tools_cmds::dupes_result,
             tools_cmds::photo_thumbnail,
             tools_cmds::dupes_link,
+            tools_cmds::cloud_candidates,
+            tools_cmds::cloud_free,
             tools_cmds::apps_list,
             tools_cmds::app_uninstall,
             desktop::get_settings,

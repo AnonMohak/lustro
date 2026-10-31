@@ -129,7 +129,7 @@ export interface DeleteResult {
   summaries: ScanSummary[];
 }
 
-export type HistoryAction = "recycle" | "permanent" | "cleaner" | "blocked" | "linked" | "moved";
+export type HistoryAction = "recycle" | "permanent" | "cleaner" | "blocked" | "linked" | "moved" | "cloud";
 
 export interface HistoryEntry {
   id: number;
@@ -397,6 +397,11 @@ export const api = {
     invoke<CleanOutcome[]>("clean_run", { ids, items, devAgeDays }),
   customRules: () => invoke<CustomRule[]>("custom_rules"),
   growthReports: () => invoke<GrowthReport[]>("growth_reports"),
+  /** Big old files in OneDrive or iCloud Drive that can become online-only. */
+  cloudCandidates: () =>
+    invoke<{ provider: string; root: string; files: { path: string; size: number }[] }[]>("cloud_candidates"),
+  cloudFree: () =>
+    invoke<{ files: number; freedBytes: number; errors: number; firstError: string | null }>("cloud_free"),
   /** Moves a scanned folder into `dest` and leaves a link in its old place. Events: move-progress. */
   moveFolder: (root: string, id: number, dest: string, appFolders = false) =>
     invoke<{ files: number; bytes: number; note: string | null; summary: ScanSummary | null }>("move_folder", {
