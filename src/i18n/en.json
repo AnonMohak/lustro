@@ -419,7 +419,12 @@
     "nameFiles": "{{n}} files with this name · up to {{size}}",
     "sameContent": "Same content ({{n}})",
     "otherContent": "Other content",
-    "noneName": "No files with the same name found."
+    "noneName": "No files with the same name found.",
+    "keepInFolder": "In a folder…",
+    "pickKeep": "Keep the copies in this folder",
+    "keepThisFolder": "Keep the copies in this folder, in all groups",
+    "keptIn_one": "Kept the copies in {{folder}} in 1 group.",
+    "keptIn_other": "Kept the copies in {{folder}} in {{count}} groups."
   },
   "apps": {
     "title": "Installed apps",

@@ -44,3 +44,12 @@ export function isDriveRoot(root: string, driveRoots: string[] = [], p: Platform
   if (p === "windows" && /^[A-Za-z]:\\$/.test(root)) return true;
   return root === "/" || driveRoots.includes(root);
 }
+
+/** True when `path` is `folder` or lies inside it. Windows and macOS ignore case. */
+export function isInside(path: string, folder: string, p: Platform = PLATFORM): boolean {
+  const sep = sepOf(p);
+  const fold = (s: string) => (p === "windows" || p === "macos" ? s.toLowerCase() : s);
+  const f = fold(folder.endsWith(sep) ? folder.slice(0, -1) : folder);
+  const x = fold(path);
+  return x === f || x.startsWith(f + sep);
+}

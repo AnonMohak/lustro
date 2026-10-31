@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { baseName, detectPlatform, dirName, isDriveRoot, pathParts } from "./platform";
+import { baseName, detectPlatform, dirName, isDriveRoot, isInside, pathParts } from "./platform";
 
 describe("detectPlatform", () => {
   it("reads the WebView user agent", () => {
@@ -34,5 +34,16 @@ describe("path helpers", () => {
     expect(isDriveRoot("/", [], "linux")).toBe(true);
     expect(isDriveRoot("/home/", ["/", "/home/"], "linux")).toBe(true);
     expect(isDriveRoot("/home/me/", ["/", "/home/"], "linux")).toBe(false);
+  });
+});
+
+describe("isInside", () => {
+  it("needs a whole folder name", () => {
+    expect(isInside("D:\\Photos\\a.jpg", "D:\\Photos", "windows")).toBe(true);
+    expect(isInside("d:\\photos\\a.jpg", "D:\\Photos\\", "windows")).toBe(true);
+    expect(isInside("D:\\Photos2\\a.jpg", "D:\\Photos", "windows")).toBe(false);
+    expect(isInside("/home/me/Pics/a.jpg", "/home/me/Pics", "linux")).toBe(true);
+    expect(isInside("/home/me/pics/a.jpg", "/home/me/Pics", "linux")).toBe(false);
+    expect(isInside("/Users/me/pics/a.jpg", "/Users/me/Pics", "macos")).toBe(true);
   });
 });

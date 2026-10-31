@@ -7,7 +7,7 @@ import { Select } from "../components/Select";
 import { api, type DupeGroup, type DupeKind, type DupeProgress } from "../lib/api";
 import { confirmDelete } from "../lib/deleteFlow";
 import { formatBytes, formatCount, percent } from "../lib/format";
-import { baseName, dirName } from "../lib/platform";
+import { baseName, dirName, isInside } from "../lib/platform";
 import { useStore } from "../store";
 
 const SIZES = [
@@ -293,6 +293,24 @@ export function Dupes() {
       ),
     );
 
+  /** In every exact group with a copy in `folder`, keep that copy and select the others. */
+  const keepIn = (folder: string) => {
+    let changed = 0;
+    const next = groups.map((grp, i) => {
+      const k = grp.kind === "exact" ? grp.files.findIndex((f) => isInside(f.path, folder)) : -1;
+      if (k < 0) return del[i] ?? new Set<number>();
+      changed++;
+      return new Set(grp.files.map((_, j) => j).filter((j) => j !== k));
+    });
+    setDel(next);
+    showToast(t("dupes.keptIn", { count: changed, folder }));
+  };
+
+  const pickKeepFolder = async () => {
+    const dir = await open({ directory: true, title: t("dupes.pickKeep") });
+    if (typeof dir === "string") keepIn(dir);
+  };
+
   const runDelete = () => {
     const items = groups.flatMap((grp, i) =>
       [...(del[i] ?? [])].map((k) => ({
@@ -366,6 +384,7 @@ export function Dupes() {
                 <button onClick={() => setKeep("oldest")}>{t("dupes.keepOldest")}</button>
                 <button onClick={() => setKeep("newest")}>{t("dupes.keepNewest")}</button>
                 <button onClick={() => setKeep("shortest")}>{t("dupes.keepShortest")}</button>
+                <button onClick={pickKeepFolder}>{t("dupes.keepInFolder")}</button>
               </div>
             </div>
           </div>
@@ -419,13 +438,25 @@ export function Dupes() {
                 ) : (
                   <span className="pill good">{t("dupes.kept")}</span>
                 )}
-                <button
-                  className="btn ghost sm"
-                  aria-label={t("dupes.openFolder")}
-                  onClick={() => api.revealPath(f.path).catch((e) => showToast(String(e), true))}
-                >
-                  <Icon name="open" />
-                </button>
+                <span className="row" style={{ gap: 2 }}>
+                  {g.kind === "exact" && (
+                    <button
+                      className="btn ghost sm"
+                      aria-label={t("dupes.keepThisFolder")}
+                      title={t("dupes.keepThisFolder")}
+                      onClick={() => keepIn(folderOf(f.path))}
+                    >
+                      <Icon name="star" />
+                    </button>
+                  )}
+                  <button
+                    className="btn ghost sm"
+                    aria-label={t("dupes.openFolder")}
+                    onClick={() => api.revealPath(f.path).catch((e) => showToast(String(e), true))}
+                  >
+                    <Icon name="open" />
+                  </button>
+                </span>
               </div>
             ))}
           </div>
