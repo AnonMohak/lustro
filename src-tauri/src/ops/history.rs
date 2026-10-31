@@ -14,6 +14,8 @@ pub enum Action {
     Permanent,
     Cleaner,
     Blocked,
+    /// A duplicate became a link to the kept copy ("link instead of delete").
+    Linked,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

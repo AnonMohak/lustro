@@ -3,6 +3,7 @@
 
 pub mod cache;
 mod folders;
+pub mod link;
 pub mod photos;
 
 use std::collections::{HashMap, HashSet};

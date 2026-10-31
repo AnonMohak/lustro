@@ -261,7 +261,8 @@
       "recycle": "Recycle Bin",
       "permanent": "Permanent",
       "cleaner": "Cleaner",
-      "blocked": "Blocked"
+      "blocked": "Blocked",
+      "linked": "Linked"
     }
   },
   "clean": {
@@ -441,7 +442,19 @@
     "modeSimilar": "Similar photos",
     "similarIntro": "Similar photos finds the same photo resized, re-saved or in another format (JPEG, PNG, GIF, BMP, WebP, TIFF). HEIC and RAW files are not compared. The photos are not identical, so Lustro selects nothing for you.",
     "similarFiles": "{{n}} similar photos · up to {{size}}",
-    "keepLargest": "Largest"
+    "keepLargest": "Largest",
+    "linkBtn": "Replace {{n}} copies with links",
+    "linkTitle_one": "Replace 1 copy with a link?",
+    "linkTitle_other": "Replace {{count}} copies with links?",
+    "linkBody": "Each copy becomes a hard link to the copy that stays: the path stays, but the data is stored once. Only exact copies on the same disk can be linked.",
+    "linkBodyMac": "Each copy becomes a clone of the copy that stays: the path stays, and the files share their data until one of them changes. Only exact copies on the same APFS disk can be linked.",
+    "linkSafe": "Lustro checks again that each pair has the same content before it links them. History lists every link.",
+    "linkWarn": "With hard links, all paths show one file. A change through one path changes all of them. You cannot undo this from History.",
+    "linkConfirm": "Replace with links",
+    "linkDone_one": "Linked 1 copy. {{size}} free.",
+    "linkDone_other": "Linked {{count}} copies. {{size}} free.",
+    "linkErrors_one": "Linked 1 copy. {{errors}} could not be linked: {{why}}",
+    "linkErrors_other": "Linked {{count}} copies. {{errors}} could not be linked: {{why}}"
   },
   "apps": {
     "title": "Installed apps",

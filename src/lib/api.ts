@@ -129,7 +129,7 @@ export interface DeleteResult {
   summaries: ScanSummary[];
 }
 
-export type HistoryAction = "recycle" | "permanent" | "cleaner" | "blocked";
+export type HistoryAction = "recycle" | "permanent" | "cleaner" | "blocked" | "linked";
 
 export interface HistoryEntry {
   id: number;
@@ -347,6 +347,9 @@ export const api = {
   dupesStart: (options: DupeOptions) => invoke<void>("dupes_start", { options }),
   dupesCancel: () => invoke<void>("dupes_cancel"),
   dupesResult: () => invoke<DupeGroup[] | null>("dupes_result"),
+  /** Replaces copies with links to the kept file (exact groups of the last result only). */
+  dupesLink: (sets: { keep: string; copies: string[] }[]) =>
+    invoke<{ linked: number; freedBytes: number; errors: number; firstError: string | null }>("dupes_link", { sets }),
   /** A small preview of a photo in the last duplicate result, as a data: URL. */
   photoThumbnail: (path: string) => invoke<string | null>("photo_thumbnail", { path }),
   appsList: () => invoke<InstalledApp[]>("apps_list"),

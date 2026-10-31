@@ -147,6 +147,11 @@ impl HashCache {
         self.dirty = true;
     }
 
+    /// Forgets `path` (for example after Lustro replaced the file with a link).
+    pub fn forget(&mut self, path: &str) {
+        self.dirty |= self.map.remove(path).is_some();
+    }
+
     /// Writes the cache when something changed. Over the limit, unused entries go first.
     pub fn save(&mut self) -> std::io::Result<()> {
         let Some(file) = self.file.clone() else {

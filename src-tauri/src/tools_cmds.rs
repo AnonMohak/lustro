@@ -10,6 +10,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use crate::apps;
 use crate::dupes::{self, DupeGroup, DupeProgress};
 use crate::error::{Error, Result};
+use crate::ops::history::Action;
 use crate::state::AppState;
 
 fn all_trees(app: &AppHandle) -> Vec<Arc<crate::scan::model::Tree>> {
@@ -108,6 +109,92 @@ pub fn dupes_cancel(state: State<'_, AppState>) {
     {
         p.cancel();
     }
+}
+
+/// Copies to replace with links to the kept file.
+#[derive(serde::Deserialize)]
+pub struct LinkSet {
+    keep: String,
+    copies: Vec<String>,
+}
+
+#[derive(Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LinkOutcome {
+    linked: u64,
+    freed_bytes: u64,
+    errors: u64,
+    first_error: Option<String>,
+}
+
+/// Replaces duplicate copies with links to the kept file. Only files of one exact group of
+/// the last result pass, so the UI cannot link other files. Each link goes to History.
+#[tauri::command]
+pub async fn dupes_link(app: AppHandle, sets: Vec<LinkSet>) -> Result<LinkOutcome> {
+    let groups = app
+        .state::<AppState>()
+        .dupes
+        .lock()
+        .ok()
+        .and_then(|d| d.clone())
+        .unwrap_or_default();
+    let app2 = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut out = LinkOutcome::default();
+        let mut linked = std::collections::HashSet::new();
+        for set in sets {
+            let Some(g) = groups
+                .iter()
+                .find(|g| g.kind == "exact" && g.files.iter().any(|f| f.path == set.keep))
+            else {
+                continue;
+            };
+            for copy in set.copies {
+                if copy == set.keep || !g.files.iter().any(|f| f.path == copy) {
+                    continue;
+                }
+                let r = dupes::link::link_copy(
+                    std::path::Path::new(&set.keep),
+                    std::path::Path::new(&copy),
+                );
+                crate::commands::with_history(&app2, |h| {
+                    h.add(Action::Linked, &copy, g.size, r.clone())
+                });
+                match r {
+                    Ok(()) => {
+                        out.linked += 1;
+                        out.freed_bytes += g.size;
+                        linked.insert(copy);
+                    }
+                    Err(e) => {
+                        out.errors += 1;
+                        out.first_error.get_or_insert(e);
+                    }
+                }
+            }
+        }
+        // The linked paths now share one file: forget their old hashes and drop them
+        // from the saved result.
+        let dir = crate::desktop::data_dir(&app2);
+        let mut cache = dupes::cache::HashCache::load(&dir);
+        for p in &linked {
+            cache.forget(p);
+        }
+        if let Err(e) = cache.save() {
+            log::warn!("Could not save the hash cache: {e}");
+        }
+        if let Ok(mut d) = app2.state::<AppState>().dupes.lock()
+            && let Some(list) = d.as_mut()
+        {
+            for g in list.iter_mut() {
+                g.files.retain(|f| !linked.contains(&f.path));
+            }
+            list.retain(|g| g.files.len() > 1);
+        }
+        out
+    })
+    .await
+    .map_err(|e| Error::Io(std::io::Error::other(e.to_string())))
 }
 
 /// A small preview of a photo in the last duplicate result, as a `data:` URL.

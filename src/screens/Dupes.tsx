@@ -7,7 +7,7 @@ import { Select } from "../components/Select";
 import { api, type DupeGroup, type DupeKind, type DupeProgress } from "../lib/api";
 import { confirmDelete } from "../lib/deleteFlow";
 import { formatBytes, formatCount, percent } from "../lib/format";
-import { baseName, dirName, isInside } from "../lib/platform";
+import { IS_MACOS, baseName, dirName, isInside } from "../lib/platform";
 import { useStore } from "../store";
 
 const SIZES = [
@@ -134,6 +134,7 @@ export function Dupes() {
   const { t } = useTranslation();
   const scans = useStore((s) => s.scans);
   const showToast = useStore((s) => s.showToast);
+  const openDialog = useStore((s) => s.openDialog);
   const [minSize, setMinSize] = useState<number>(1024 * 1024);
   const [appData, setAppData] = useState(false);
   const [mode, setMode] = useState<"exact" | "name" | "similar">("exact");
@@ -393,6 +394,43 @@ export function Dupes() {
     return t("dupes.copies", { n, size });
   };
 
+  /** The picked copies of exact groups, each with the copy that stays (the first one not picked). */
+  const linkSets = groups.flatMap((grp, i) => {
+    const picked = del[i] ?? new Set<number>();
+    const keep = grp.files.find((_, k) => !picked.has(k));
+    if (grp.kind !== "exact" || picked.size === 0 || !keep) return [];
+    return [{ keep: keep.path, copies: [...picked].map((k) => grp.files[k].path) }];
+  });
+  const nLink = linkSets.reduce((a, s) => a + s.copies.length, 0);
+
+  const runLink = () =>
+    openDialog({
+      title: t("dupes.linkTitle", { count: nLink }),
+      body: [IS_MACOS ? t("dupes.linkBodyMac") : t("dupes.linkBody"), t("dupes.linkSafe")],
+      warn: IS_MACOS ? undefined : t("dupes.linkWarn"),
+      confirm: t("dupes.linkConfirm"),
+      onConfirm: async () => {
+        try {
+          const out = await api.dupesLink(linkSets);
+          if (out.errors > 0)
+            showToast(
+              t("dupes.linkErrors", { count: out.linked, errors: out.errors, why: out.firstError ?? "" }),
+              true,
+            );
+          else showToast(t("dupes.linkDone", { count: out.linked, size: formatBytes(out.freedBytes) }));
+          const done = new Set(linkSets.flatMap((s) => s.copies));
+          // Without the error list, a failed copy also leaves the list; a new search shows it again.
+          apply(
+            groups
+              .map((grp) => ({ ...grp, files: grp.files.filter((f) => grp.kind !== "exact" || !done.has(f.path)) }))
+              .filter((grp) => grp.files.length > 1),
+          );
+        } catch (e) {
+          showToast(String(e), true);
+        }
+      },
+    });
+
   const runDelete = () => {
     const items = groups.flatMap((grp, i) =>
       [...(del[i] ?? [])].map((k) => ({
@@ -645,6 +683,12 @@ export function Dupes() {
             <Icon name="trash" />
             {t("dupes.recycleBtn", { n: formatCount(nDel) })}
           </button>
+          {nLink > 0 && (
+            <button className="btn block" disabled={allGone} onClick={runLink}>
+              <Icon name="copy" />
+              {t("dupes.linkBtn", { n: formatCount(nLink) })}
+            </button>
+          )}
         </div>
       </aside>
     </>

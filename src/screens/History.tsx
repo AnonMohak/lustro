@@ -13,6 +13,7 @@ const PILL: Record<HistoryEntry["action"], string> = {
   cleaner: "good",
   permanent: "bad",
   blocked: "warn",
+  linked: "good",
 };
 
 function when(ms: number): string {
@@ -63,7 +64,14 @@ export function History() {
               "Lustro history.csv",
               toCsv(
                 ["Time", "Action", "Path", "Size (bytes)", "Size", "Result"],
-                list.map((h) => [new Date(h.time).toISOString(), h.action, h.path, h.size, formatBytes(h.size), h.ok ? "OK" : (h.error ?? "Failed")]),
+                list.map((h) => [
+                  new Date(h.time).toISOString(),
+                  h.action,
+                  h.path,
+                  h.size,
+                  formatBytes(h.size),
+                  h.ok ? "OK" : (h.error ?? "Failed"),
+                ]),
               ),
             )
           }
