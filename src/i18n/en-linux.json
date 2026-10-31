@@ -89,5 +89,14 @@
     "runBody_other": "Lustro moves the folders named {{names}} to the Trash when their project had no change for {{count}} days. You can restore them from History.",
     "done_one": "Moved 1 folder to the Trash ({{size}}).",
     "done_other": "Moved {{count}} folders to the Trash ({{size}})."
+  },
+  "free": {
+    "move": "Move to Trash",
+    "bin": "Trash",
+    "binConfirm": "Empty the Trash ({{size}})?",
+    "installersConfirm_one": "Move 1 old installer to the Trash?",
+    "installersConfirm_other": "Move {{count}} old installers to the Trash?",
+    "installersBody": "The apps that you installed with them stay. History can restore the files.",
+    "note": "Junk files, app caches and the Trash are deleted permanently. Old installers go to the Trash. For duplicates and large files, you choose on their screens."
   }
 }

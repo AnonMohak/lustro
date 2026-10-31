@@ -397,6 +397,9 @@ export const api = {
     invoke<CleanOutcome[]>("clean_run", { ids, items, devAgeDays }),
   customRules: () => invoke<CustomRule[]>("custom_rules"),
   growthReports: () => invoke<GrowthReport[]>("growth_reports"),
+  /** Installers and disk images in Downloads; the old ones are selected. */
+  installersScan: () => invoke<CleanItem[]>("installers_scan"),
+  installersClean: () => invoke<CustomOutcome>("installers_clean"),
   spaceHistory: () => invoke<DriveHistory[]>("space_history"),
   cleanRulesList: () => invoke<CleanRuleInfo[]>("clean_rules_list"),
   /** Saves the whole list and returns it with the ids of new rules. */

@@ -10,6 +10,7 @@ import { Icon, type IconName } from "./Icon";
 
 const NAV: [Screen, IconName][] = [
   ["home", "home"],
+  ["free", "star"],
   ["explore", "map"],
   ["files", "bigfile"],
   ["dupes", "dupe"],
@@ -60,7 +61,9 @@ function JobBlock() {
       </div>
       <div className="jm">
         <span>{t("job.items", { done: formatCount(job.done), total: formatCount(job.total) })}</span>
-        {job.totalBytes > 0 && <span>{t("job.bytes", { done: formatBytes(job.doneBytes), total: formatBytes(job.totalBytes) })}</span>}
+        {job.totalBytes > 0 && (
+          <span>{t("job.bytes", { done: formatBytes(job.doneBytes), total: formatBytes(job.totalBytes) })}</span>
+        )}
       </div>
       {job.current && (
         <div className="jc mono" title={job.current}>

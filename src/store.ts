@@ -1,8 +1,17 @@
 import { create } from "zustand";
-import { api, type AppInfo, type DeleteProgress, type DriveInfo, type Favorite, type ScanProgress, type ScanSummary } from "./lib/api";
+import {
+  api,
+  type AppInfo,
+  type DeleteProgress,
+  type DriveInfo,
+  type Favorite,
+  type ScanProgress,
+  type ScanSummary,
+} from "./lib/api";
 import { normalizeRoot } from "./lib/scanText";
 
-export type Screen = "home" | "explore" | "files" | "dupes" | "clean" | "apps" | "history" | "search" | "settings";
+export type Screen =
+  "home" | "free" | "explore" | "files" | "dupes" | "clean" | "apps" | "history" | "search" | "settings";
 
 export interface DialogSpec {
   title: string;
@@ -174,7 +183,16 @@ export const useStore = create<State>((set, get) => ({
       if (!v || v.finished) {
         jobBase = { done: 0, bytes: 0 };
         jobResult = { freed: 0, recycled: 0, errors: 0 };
-        v = { kind: job.kind, done: 0, total: 0, doneBytes: 0, totalBytes: 0, current: "", stopping: false, finished: null };
+        v = {
+          kind: job.kind,
+          done: 0,
+          total: 0,
+          doneBytes: 0,
+          totalBytes: 0,
+          current: "",
+          stopping: false,
+          finished: null,
+        };
       }
       set({ job: { ...v, total: v.total + job.items, totalBytes: v.totalBytes + job.bytes } });
       jobQueue.push({ job, resolve });

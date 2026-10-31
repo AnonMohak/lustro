@@ -96,6 +96,8 @@ pub fn run() {
             custom_cmds::set_custom_rules,
             custom_cmds::custom_rule_scan,
             custom_cmds::custom_rule_run,
+            custom_cmds::installers_scan,
+            custom_cmds::installers_clean,
             tools_cmds::dupes_start,
             tools_cmds::dupes_cancel,
             tools_cmds::dupes_result,

@@ -142,6 +142,59 @@ pub async fn custom_rule_run(app: AppHandle, id: String) -> Result<CustomOutcome
         .map_err(|e| Error::Rule(e.to_string()))
 }
 
+/// Installer and disk image types of each platform.
+const INSTALLERS: &[&str] = if cfg!(windows) {
+    &["*.exe", "*.msi", "*.msix", "*.iso"]
+} else if cfg!(target_os = "macos") {
+    &["*.dmg", "*.pkg", "*.iso"]
+} else if cfg!(target_os = "android") {
+    &["*.apk", "*.apks", "*.xapk"]
+} else {
+    &["*.deb", "*.rpm", "*.AppImage", "*.iso"]
+};
+
+/// The "Old installers in Downloads" rule of the Free space page. It is not saved, and the
+/// UI sends no paths: the backend builds it from the Downloads folder.
+fn installers_rule(app: &AppHandle) -> Result<CustomRule> {
+    let root = app
+        .path()
+        .download_dir()
+        .map_err(|_| Error::Rule("There is no Downloads folder.".into()))?;
+    Ok(CustomRule {
+        id: "free-space-installers".into(),
+        name: "Old installers in Downloads".into(),
+        root: root.to_string_lossy().into_owned(),
+        kind: custom::Target::Files,
+        targets: INSTALLERS.iter().map(|s| s.to_string()).collect(),
+        age_days: 14,
+        schedule: custom::Schedule::Off,
+        last_run: 0,
+    })
+}
+
+/// Installers and disk images in Downloads with no change for 14 days.
+#[tauri::command]
+pub async fn installers_scan(app: AppHandle) -> Result<Vec<RuleItem>> {
+    let rule = installers_rule(&app)?;
+    let ignore = crate::desktop::current_settings(&app).ignore;
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut items = custom::scan(&rule, now_ms());
+        items.retain(|i| !crate::paths::ignored(&ignore, &i.path));
+        items
+    })
+    .await
+    .map_err(|e| Error::Rule(e.to_string()))
+}
+
+/// Moves the selected old installers to the Recycle Bin (with History entries).
+#[tauri::command]
+pub async fn installers_clean(app: AppHandle) -> Result<CustomOutcome> {
+    let rule = installers_rule(&app)?;
+    tauri::async_runtime::spawn_blocking(move || run_rule(&app, &rule))
+        .await
+        .map_err(|e| Error::Rule(e.to_string()))
+}
+
 /// Runs the rules with a schedule when they are due, also while Lustro is in the tray,
 /// and sends one notification for each rule that freed space.
 pub fn start_timer(app: AppHandle) {
