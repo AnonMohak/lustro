@@ -204,12 +204,31 @@ export interface DupeFile {
   id: number;
   path: string;
   modified: number;
+  size: number;
+  /** Name groups: files with the same number have the same content; 0 when no other file has it. */
+  same: number;
 }
 
 export interface DupeGroup {
+  /** Exact groups: the size of each copy. Name groups: the biggest file. */
   size: number;
+  /** Exact groups: the content hash. Name groups: the shared name. */
   hash: string;
+  kind: "exact" | "name";
   files: DupeFile[];
+}
+
+export type DupeKind = "image" | "video" | "doc" | "archive" | "other";
+
+export interface DupeOptions {
+  minSize: number;
+  includeAppData: boolean;
+  mode: "exact" | "name";
+  /** Empty: all types. */
+  kinds: DupeKind[];
+  /** Empty: all scans. */
+  onlyIn: string[];
+  notIn: string[];
 }
 
 export interface DupeProgress {
@@ -322,7 +341,7 @@ export const api = {
   cancelDelete: () => invoke<void>("cancel_delete"),
   history: () => invoke<HistoryEntry[]>("history"),
   restore: (id: number) => invoke<void>("restore", { id }),
-  dupesStart: (minSize: number, includeAppData: boolean) => invoke<void>("dupes_start", { minSize, includeAppData }),
+  dupesStart: (options: DupeOptions) => invoke<void>("dupes_start", { options }),
   dupesCancel: () => invoke<void>("dupes_cancel"),
   dupesResult: () => invoke<DupeGroup[] | null>("dupes_result"),
   appsList: () => invoke<InstalledApp[]>("apps_list"),

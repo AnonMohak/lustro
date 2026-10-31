@@ -396,7 +396,30 @@
     "openFolder": "Show in Explorer",
     "more": "+ {{n}} smaller groups",
     "includeAppData": "Include app data folders (AppData, ProgramData). Lustro does not select copies there for you.",
-    "autoNote": "Lustro selects extra copies only of photos, videos, music, documents and archives outside program and tool folders. Choose the other groups yourself."
+    "autoNote": "Lustro selects extra copies only of photos, videos, music, documents and archives outside program and tool folders. Choose the other groups yourself.",
+    "modeExact": "Exact copies",
+    "modeName": "Same name",
+    "nameIntro": "Same name finds files with the same name in different folders, also copy names like “photo (1).jpg” or “report - Copy.docx”. The content can differ, so Lustro selects nothing for you.",
+    "types": "Types",
+    "kinds": {
+      "image": "Photos",
+      "video": "Videos and music",
+      "doc": "Documents",
+      "archive": "Archives",
+      "other": "Other"
+    },
+    "onlyIn": "Only in",
+    "notIn": "Skip",
+    "addFolder": "Add folder",
+    "anywhere": "All scans",
+    "nothingSkipped": "No folder",
+    "removeFolder": "Remove {{path}}",
+    "pickOnlyIn": "Search only in this folder",
+    "pickNotIn": "Skip this folder",
+    "nameFiles": "{{n}} files with this name · up to {{size}}",
+    "sameContent": "Same content ({{n}})",
+    "otherContent": "Other content",
+    "noneName": "No files with the same name found."
   },
   "apps": {
     "title": "Installed apps",

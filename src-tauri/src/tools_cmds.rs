@@ -34,8 +34,7 @@ struct DupeProgressEvent {
 pub fn dupes_start(
     app: AppHandle,
     state: State<'_, AppState>,
-    min_size: u64,
-    include_app_data: Option<bool>,
+    options: dupes::Options,
 ) -> Result<()> {
     let progress = Arc::new(DupeProgress::default());
     {
@@ -80,13 +79,7 @@ pub fn dupes_start(
     std::thread::spawn(move || {
         let dir = crate::desktop::data_dir(&app);
         let cache = std::sync::Mutex::new(dupes::cache::HashCache::load(&dir));
-        let groups = dupes::find(
-            &trees,
-            min_size,
-            include_app_data.unwrap_or(false),
-            &progress,
-            &cache,
-        );
+        let groups = dupes::find(&trees, &options, &progress, &cache);
         if let Ok(mut c) = cache.lock()
             && let Err(e) = c.save()
         {
