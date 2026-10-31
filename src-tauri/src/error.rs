@@ -20,6 +20,9 @@ pub enum Error {
     Restore(String),
     #[error("{0}")]
     Uninstall(String),
+    /// A clean rule of the user that cannot be saved or run.
+    #[error("{0}")]
+    Rule(String),
     #[cfg(not(windows))]
     #[error("{0} is not available on this system yet.")]
     Unsupported(&'static str),

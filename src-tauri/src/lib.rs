@@ -2,6 +2,7 @@ mod apps;
 mod clean;
 mod clean_cmds;
 mod commands;
+mod custom_cmds;
 mod desktop;
 mod dupes;
 mod error;
@@ -59,6 +60,7 @@ pub fn run() {
             #[cfg(desktop)]
             desktop::setup_tray(&handle)?;
             desktop::start_space_monitor(handle.clone());
+            custom_cmds::start_timer(handle.clone());
             if !start_hidden {
                 desktop::show_main(&handle);
             }
@@ -86,6 +88,10 @@ pub fn run() {
             commands::restore,
             clean_cmds::clean_scan,
             clean_cmds::clean_run,
+            custom_cmds::custom_rules,
+            custom_cmds::set_custom_rules,
+            custom_cmds::custom_rule_scan,
+            custom_cmds::custom_rule_run,
             tools_cmds::dupes_start,
             tools_cmds::dupes_cancel,
             tools_cmds::dupes_result,

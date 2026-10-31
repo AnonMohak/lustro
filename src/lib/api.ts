@@ -169,6 +169,25 @@ export interface CleanItem {
   selected: boolean;
 }
 
+/** A clean rule of the user: delete folders with these names in untouched projects under `root`. */
+export interface CustomRule {
+  /** Empty for a new rule; the backend gives it an id. */
+  id: string;
+  name: string;
+  root: string;
+  targets: string[];
+  ageDays: number;
+  schedule: "off" | "start" | "daily" | "weekly";
+  /** Unix ms of the last run, or 0. */
+  lastRun: number;
+}
+
+export interface CustomOutcome {
+  freedBytes: number;
+  folders: number;
+  errors: number;
+}
+
 export interface CleanOutcome {
   id: string;
   name: string;
@@ -282,8 +301,7 @@ export const api = {
   cancelScan: () => invoke<void>("cancel_scan"),
   forgetScan: (root: string) => invoke<void>("forget_scan", { root }),
   loadCachedScans: () => invoke<ScanSummary[]>("load_cached_scans"),
-  listChildren: (root: string, id: number, limit?: number) =>
-    invoke<NodeDto[]>("list_children", { root, id, limit }),
+  listChildren: (root: string, id: number, limit?: number) => invoke<NodeDto[]>("list_children", { root, id, limit }),
   nodeDetail: (root: string, id: number) => invoke<NodeDetail>("node_detail", { root, id }),
   treemap: (root: string, id: number, maxNodes?: number) => invoke<TreemapNode>("treemap", { root, id, maxNodes }),
   findFiles: (query: FindFilesQuery) => invoke<FileHit[]>("find_files", { query }),
@@ -310,4 +328,9 @@ export const api = {
   cleanScan: (devAgeDays: number) => invoke<CleanRule[]>("clean_scan", { devAgeDays }),
   cleanRun: (ids: string[], items: Record<string, string[]>, devAgeDays: number) =>
     invoke<CleanOutcome[]>("clean_run", { ids, items, devAgeDays }),
+  customRules: () => invoke<CustomRule[]>("custom_rules"),
+  /** Saves the whole list and returns it with the ids of new rules. */
+  setCustomRules: (rules: CustomRule[]) => invoke<CustomRule[]>("set_custom_rules", { rules }),
+  customRuleScan: (id: string) => invoke<CleanItem[]>("custom_rule_scan", { id }),
+  customRuleRun: (id: string) => invoke<CustomOutcome>("custom_rule_run", { id }),
 };

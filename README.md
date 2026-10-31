@@ -19,6 +19,7 @@ Lustro is a free and open source storage manager for Windows 11, with previews f
 - **Large and old files.** The biggest files and the files that nobody changed for more than a year, over all scans.
 - **Duplicates.** Files with the same size and the same BLAKE3 hash. Hard links count once. Lustro selects extra copies only of photos, videos, music, documents and archives outside program folders.
 - **Clean up.** Temp files, Windows Update cache, crash dumps, browser caches, the Recycle Bin, and dev junk: old `node_modules` and `target` folders, npm/pip/Cargo/NuGet caches, Docker images, WSL disks, IDE caches. You review every item first.
+- **Your own clean rules.** For example: in your projects folder, move `node_modules` to the Recycle Bin when nothing else in the project changed for 30 days. Run a rule by hand, or let Lustro run it at start, daily or weekly (also from the tray). History can restore what it moved.
 - **Installed apps.** Size, install date and last use of desktop and Store apps. Uninstall runs the app's own uninstaller.
 - **Search.** Names in all scans, with `*` and `?` wildcards. 2 million names in less than 0.1 seconds.
 - **Live updates.** As administrator, the NTFS change journal keeps fast scans current without a rescan.

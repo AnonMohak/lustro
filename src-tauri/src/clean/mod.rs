@@ -1,5 +1,6 @@
 //! The junk cleaner: rules from `rules.toml`, sizes of what they match, and the clean itself.
 
+pub mod custom;
 pub mod dev;
 #[cfg(target_os = "linux")]
 mod linux;
