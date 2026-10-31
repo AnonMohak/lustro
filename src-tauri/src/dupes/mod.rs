@@ -1,15 +1,19 @@
 //! Duplicate finder: same size, then same partial hash, then same full hash (BLAKE3).
+//! The hash cache (`cache.rs`) keeps the hashes between searches.
+
+pub mod cache;
 
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 
 use rayon::prelude::*;
 use serde::Serialize;
 
 use crate::scan::model::{NONE, Tree, flags};
+use cache::HashCache;
 
 const EDGE: u64 = 64 * 1024;
 
@@ -123,6 +127,63 @@ fn full_hash(path: &str, p: &DupeProgress) -> Option<[u8; 32]> {
     Some(*h.finalize().as_bytes())
 }
 
+/// The partial hash and the file identity, from the cache or from the file.
+fn cached_partial(
+    c: &Candidate,
+    size: u64,
+    p: &DupeProgress,
+    cache: &Mutex<HashCache>,
+) -> Option<([u8; 32], (u64, u64))> {
+    let hit = cache
+        .lock()
+        .ok()
+        .and_then(|mut k| k.get(&c.path, size, c.modified));
+    if let Some(cache::Entry {
+        partial: Some(h),
+        identity: Some(id),
+        ..
+    }) = hit
+    {
+        p.hashed_bytes
+            .fetch_add(size.min(EDGE * 2), Ordering::Relaxed);
+        return Some((h, id));
+    }
+    let (h, id) = partial_hash(&c.path, size, p)?;
+    if let Ok(mut k) = cache.lock() {
+        k.update(&c.path, size, c.modified, |e| {
+            e.partial = Some(h);
+            e.identity = Some(id);
+        });
+    }
+    Some((h, id))
+}
+
+/// The hash of the whole file, from the cache or from the file. A small file's partial
+/// hash already covers all of it.
+fn cached_full(
+    c: &Candidate,
+    size: u64,
+    p: &DupeProgress,
+    cache: &Mutex<HashCache>,
+) -> Option<[u8; 32]> {
+    if size <= EDGE * 2 {
+        return cached_partial(c, size, p, cache).map(|(h, _)| h);
+    }
+    let hit = cache
+        .lock()
+        .ok()
+        .and_then(|mut k| k.get(&c.path, size, c.modified));
+    if let Some(h) = hit.and_then(|e| e.full) {
+        p.hashed_bytes.fetch_add(size, Ordering::Relaxed);
+        return Some(h);
+    }
+    let h = full_hash(&c.path, p)?;
+    if let Ok(mut k) = cache.lock() {
+        k.update(&c.path, size, c.modified, |e| e.full = Some(h));
+    }
+    Some(h)
+}
+
 /// Finds groups of identical files of at least `min_size` bytes in the scans.
 /// Groups are sorted by the space that deleting the extra copies frees.
 /// Protected paths are skipped; AppData and ProgramData only with `include_app_data`.
@@ -131,6 +192,7 @@ pub fn find(
     min_size: u64,
     include_app_data: bool,
     p: &DupeProgress,
+    cache: &Mutex<HashCache>,
 ) -> Vec<DupeGroup> {
     // 1. Group by size. A path in two scans (a drive and a folder on it) counts once.
     let mut by_size: HashMap<u64, Vec<Candidate>> = HashMap::new();
@@ -175,7 +237,7 @@ pub fn find(
             let mut by_hash: HashMap<[u8; 32], Vec<Candidate>> = HashMap::new();
             let mut ids = std::collections::HashSet::new();
             for c in list {
-                if let Some((h, id)) = partial_hash(&c.path, size, p)
+                if let Some((h, id)) = cached_partial(&c, size, p, cache)
                     && ids.insert(id)
                 {
                     by_hash.entry(h).or_default().push(c);
@@ -198,12 +260,7 @@ pub fn find(
             }
             let mut by_hash: HashMap<[u8; 32], Vec<Candidate>> = HashMap::new();
             for c in list {
-                let h = if size <= EDGE * 2 {
-                    partial_hash(&c.path, size, p).map(|(h, _)| h)
-                } else {
-                    full_hash(&c.path, p)
-                };
-                if let Some(h) = h {
+                if let Some(h) = cached_full(&c, size, p, cache) {
                     by_hash.entry(h).or_default().push(c);
                 }
             }
@@ -261,7 +318,13 @@ mod tests {
 
         let tree =
             Arc::new(walk(root.to_str().unwrap(), &crate::scan::Progress::default()).unwrap());
-        let groups = find(&[tree.clone(), tree], 1, true, &DupeProgress::default());
+        let groups = find(
+            &[tree.clone(), tree],
+            1,
+            true,
+            &DupeProgress::default(),
+            &Mutex::default(),
+        );
         assert_eq!(groups.len(), 2, "{groups:#?}");
         let big_group = &groups[0];
         assert_eq!(big_group.size, 300_000);
@@ -286,8 +349,47 @@ mod tests {
             .to_lowercase()
             .contains("\\appdata\\")
         {
-            assert!(find(&[tree], 1, false, &DupeProgress::default()).is_empty());
+            assert!(
+                find(
+                    &[tree],
+                    1,
+                    false,
+                    &DupeProgress::default(),
+                    &Mutex::default()
+                )
+                .is_empty()
+            );
         }
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn same_result_with_the_cache() {
+        let root = std::env::temp_dir().join(format!("lustro-dupes-cache-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+        let big: Vec<u8> = (0..300_000u32).map(|i| (i % 249) as u8).collect();
+        fs::write(root.join("x.bin"), &big).unwrap();
+        fs::write(root.join("y.bin"), &big).unwrap();
+        let dir = root.join("data");
+        let tree =
+            Arc::new(walk(root.to_str().unwrap(), &crate::scan::Progress::default()).unwrap());
+
+        let cache = Mutex::new(HashCache::load(&dir));
+        let p1 = DupeProgress::default();
+        let first = find(std::slice::from_ref(&tree), 1, true, &p1, &cache);
+        cache.lock().unwrap().save().unwrap();
+        let cache = Mutex::new(HashCache::load(&dir));
+        let p = DupeProgress::default();
+        let second = find(&[tree], 1, true, &p, &cache);
+        assert_eq!(first.len(), 1);
+        assert_eq!(second.len(), 1);
+        assert_eq!(first[0].hash, second[0].hash);
+        // Cached files count as read, so the progress bar moves the same way.
+        assert_eq!(
+            p.hashed_bytes.load(Ordering::Relaxed),
+            p1.hashed_bytes.load(Ordering::Relaxed)
+        );
         fs::remove_dir_all(root).unwrap();
     }
 }

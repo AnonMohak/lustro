@@ -78,12 +78,20 @@ pub fn dupes_start(
         });
     }
     std::thread::spawn(move || {
+        let dir = crate::desktop::data_dir(&app);
+        let cache = std::sync::Mutex::new(dupes::cache::HashCache::load(&dir));
         let groups = dupes::find(
             &trees,
             min_size,
             include_app_data.unwrap_or(false),
             &progress,
+            &cache,
         );
+        if let Ok(mut c) = cache.lock()
+            && let Err(e) = c.save()
+        {
+            log::warn!("Could not save the hash cache: {e}");
+        }
         let state = app.state::<AppState>();
         if let Ok(mut a) = state.dupes_active.lock() {
             *a = None;
