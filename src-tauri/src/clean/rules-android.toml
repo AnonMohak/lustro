@@ -69,3 +69,14 @@ name = "Telegram downloads"
 desc = "Files that Telegram downloaded. It downloads them again from the chat when you open them."
 paths = ['/storage/emulated/0/Android/media/org.telegram.messenger/Telegram/*', '/storage/emulated/0/Telegram/*']
 warn = true
+
+# ---------- App caches ----------
+# One item for each cache folder that no other rule covers. The cleaner empties each folder.
+
+[[rule]]
+id = "app-caches"
+group = "cache"
+name = "Caches of each app"
+desc = "The caches of other apps."
+special = "app-caches"
+safe = true

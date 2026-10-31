@@ -271,6 +271,7 @@
     "measuringHint": "Lustro looks at temp folders, caches and logs. Nothing is deleted yet.",
     "groups": {
       "sys": "System junk",
+      "cache": "App caches",
       "web": "Browsers",
       "dev": "Dev junk",
       "docker": "Docker and WSL",

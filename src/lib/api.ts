@@ -147,7 +147,7 @@ export interface HistoryEntry {
 
 export interface CleanRule {
   id: string;
-  group: "sys" | "web" | "dev" | "docker" | "ide";
+  group: "sys" | "cache" | "web" | "dev" | "docker" | "ide";
   name: string;
   desc: string;
   bytes: number;
@@ -163,6 +163,8 @@ export interface CleanRule {
 
 export interface CleanItem {
   path: string;
+  /** A short name for the row (for example the app of a cache folder). */
+  label?: string;
   bytes: number;
   files: number;
   ageDays: number | null;

@@ -168,6 +168,7 @@ pub fn scan(rule: &CustomRule, now_ms: i64) -> Vec<RuleItem> {
             let age_days = (changed > 0).then(|| ((now_ms - changed).max(0) / DAY_MS) as u32);
             let m = super::measure_dir(target, None);
             RuleItem {
+                label: None,
                 path: target.to_string_lossy().into_owned(),
                 bytes: m.bytes,
                 files: m.files,

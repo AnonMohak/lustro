@@ -10,6 +10,7 @@ import { CustomRules } from "./CustomRules";
 
 const GROUPS: { id: CleanRule["group"]; icon: IconName }[] = [
   { id: "sys", icon: "windows" },
+  { id: "cache", icon: "archive" },
   { id: "web", icon: "globe" },
   { id: "dev", icon: "code" },
   { id: "docker", icon: "box" },
@@ -313,8 +314,8 @@ export function Clean() {
                               onChange={() => toggleItem(r, i.path)}
                             />
                             <span className="sub-name">
-                              <span className="mono" title={i.path}>
-                                {shortPath(i.path)}
+                              <span className={i.label ? "" : "mono"} title={i.path}>
+                                {i.label ?? shortPath(i.path)}
                               </span>
                               <span className="faint">{ageText(i.ageDays, t)}</span>
                             </span>

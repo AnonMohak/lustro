@@ -258,3 +258,14 @@ name = "JetBrains data of old versions"
 desc = "Caches and logs of IDE versions that a newer version replaced."
 special = "jetbrains-old"
 safe = true
+
+# ---------- App caches ----------
+# One item for each cache folder that no other rule covers. The cleaner empties each folder.
+
+[[rule]]
+id = "app-caches"
+group = "cache"
+name = "Caches of each app"
+desc = "Folders in ~/.cache and the caches of Flatpak apps. Apps make them again, so their next start can be slower. Browsers, thumbnails and dev tools are in their own groups."
+special = "app-caches"
+safe = true

@@ -17,6 +17,9 @@ const DAY_100NS: u64 = 864_000_000_000;
 #[serde(rename_all = "camelCase")]
 pub struct RuleItem {
     pub path: String,
+    /// A short name for the UI (for example the app of a cache folder), or None to show the path.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
     pub bytes: u64,
     pub files: u64,
     /// Days since the project changed (dev projects only).
@@ -177,6 +180,7 @@ pub fn find_projects(trees: &[Arc<Tree>], age_days: u32) -> Vec<RuleItem> {
                 Some((now.saturating_sub(modified) / DAY_100NS) as u32)
             };
             out.push(RuleItem {
+                label: None,
                 path,
                 bytes: n.size,
                 files: n.items as u64,
@@ -285,6 +289,7 @@ pub fn wsl_disks() -> Vec<RuleItem> {
         .filter_map(|p| {
             let len = std::fs::metadata(&p).ok()?.len();
             Some(RuleItem {
+                label: None,
                 path: p.to_string_lossy().into_owned(),
                 bytes: len,
                 files: 1,
@@ -388,6 +393,7 @@ pub fn jetbrains_old() -> Vec<RuleItem> {
             m.bytes += d.bytes;
             m.files += d.files;
             out.push(RuleItem {
+                label: None,
                 path: path.to_string_lossy().into_owned(),
                 bytes: m.bytes,
                 files: m.files,

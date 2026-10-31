@@ -1,5 +1,6 @@
 //! The junk cleaner: rules from `rules.toml`, sizes of what they match, and the clean itself.
 
+mod caches;
 pub mod custom;
 pub mod dev;
 #[cfg(target_os = "linux")]
@@ -326,6 +327,12 @@ pub fn scan_rule(rule: &Rule, ctx: &Ctx) -> Scanned {
             }),
         ),
         Some("wsl-compact") => with_items(dev::wsl_disks(), None),
+        Some("app-caches") => with_items(
+            caches::app_caches(&rules()),
+            cfg!(target_os = "android").then(|| {
+                "Android lets only the system clear the caches of other apps. Open Settings > Apps, pick an app, then Storage > Clear cache.".into()
+            }),
+        ),
         Some("jetbrains-old") => with_items(dev::jetbrains_old(), None),
         Some(kind @ ("docker-images" | "docker-build" | "docker-containers")) => {
             match dev::docker_df() {
@@ -379,7 +386,7 @@ pub fn scan_rule(rule: &Rule, ctx: &Ctx) -> Scanned {
 pub fn clean_rule(rule: &Rule, ctx: &Ctx, picked: Option<&[String]>) -> CleanOutcome {
     let mut out = CleanOutcome::default();
     match rule.special.as_deref() {
-        Some(kind @ ("dev-projects" | "wsl-compact" | "jetbrains-old")) => {
+        Some(kind @ ("dev-projects" | "wsl-compact" | "jetbrains-old" | "app-caches")) => {
             let scanned = scan_rule(rule, ctx);
             let chosen: Vec<RuleItem> = scanned
                 .items
@@ -396,7 +403,14 @@ pub fn clean_rule(rule: &Rule, ctx: &Ctx, picked: Option<&[String]>) -> CleanOut
             }
             for item in chosen {
                 let p = Path::new(&item.path);
-                if let Ok(m) = fs::symlink_metadata(p) {
+                if kind == "app-caches" {
+                    // Empty the cache folder, but keep it: some apps expect it to exist.
+                    for e in fs::read_dir(p).into_iter().flatten().flatten() {
+                        if let Ok(m) = fs::symlink_metadata(e.path()) {
+                            clean_path(&e.path(), &m, None, &mut out);
+                        }
+                    }
+                } else if let Ok(m) = fs::symlink_metadata(p) {
                     clean_path(p, &m, None, &mut out);
                 }
             }
@@ -494,7 +508,7 @@ mod tests {
         assert_eq!(ids.len(), r.len(), "rule ids are unique");
         for rule in r {
             assert!(
-                ["sys", "web", "dev", "docker", "ide"].contains(&rule.group.as_str()),
+                ["sys", "cache", "web", "dev", "docker", "ide"].contains(&rule.group.as_str()),
                 "{}",
                 rule.id
             );
