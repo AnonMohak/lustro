@@ -329,6 +329,113 @@ pub async fn move_folder(
     .map_err(|e| Error::Io(std::io::Error::other(e.to_string())))?
 }
 
+/// Big folders with no change for a year that compress well.
+#[tauri::command]
+pub async fn old_folders(app: AppHandle) -> Vec<crate::ops::compress::OldFolder> {
+    let trees: Vec<Arc<Tree>> = app
+        .state::<AppState>()
+        .trees
+        .read()
+        .map(|t| t.values().cloned().collect())
+        .unwrap_or_default();
+    let ignore = crate::desktop::current_settings(&app).ignore;
+    let now = unix_ms_to_filetime(crate::ops::history::now_ms());
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::ops::compress::old_folders(&trees, &ignore, now)
+    })
+    .await
+    .unwrap_or_default()
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompressResult {
+    freed_bytes: u64,
+    /// macOS and Linux: the archive that holds the folder now.
+    archive: Option<String>,
+    summary: Option<ScanSummary>,
+}
+
+/// The free space of the drive that holds `path`.
+#[cfg(windows)]
+fn free_space_of(path: &str) -> u64 {
+    drives::list_drives()
+        .into_iter()
+        .filter(|d| paths::inside(path, &d.root))
+        .max_by_key(|d| d.root.len())
+        .map_or(0, |d| d.free_bytes)
+}
+
+/// Compresses a scanned folder (Windows: NTFS compression; macOS and Linux: an archive,
+/// then the folder goes to the Trash). Protected folders are refused.
+#[tauri::command]
+pub async fn compress_folder(app: AppHandle, root: String, id: u32) -> Result<CompressResult> {
+    let root = normalize_root(&root);
+    let (path, size) = {
+        let state = app.state::<AppState>();
+        let trees = state.trees.read().map_err(|_| Error::NoScan)?;
+        let t = trees.get(&root).ok_or(Error::NoScan)?;
+        if id == Tree::ROOT || !t.node(id).is_dir() {
+            return Err(Error::Move(
+                "Lustro compresses folders inside a scan.".into(),
+            ));
+        }
+        (t.path(id), t.node(id).size)
+    };
+    delete::check(std::path::Path::new(&path), false).map_err(|e| Error::Move(e.to_string()))?;
+    let app2 = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let p = std::path::Path::new(&path);
+        #[cfg(windows)]
+        let (r, archive) = {
+            let before = free_space_of(&path);
+            let r = crate::ops::compress::compress(p);
+            let _ = size;
+            (
+                r.map(|()| free_space_of(&path).saturating_sub(before)),
+                None::<String>,
+            )
+        };
+        #[cfg(unix)]
+        let (r, archive) = match crate::ops::compress::compress(p) {
+            Ok(a) => {
+                let packed = std::fs::metadata(&a).map(|m| m.len()).unwrap_or(0);
+                (
+                    Ok(size.saturating_sub(packed)),
+                    Some(a.to_string_lossy().into_owned()),
+                )
+            }
+            Err(e) => (Err(e), None),
+        };
+        let freed = r.as_ref().copied().unwrap_or(0);
+        with_history(&app2, |h| {
+            h.add(
+                Action::Compressed,
+                &path,
+                freed,
+                r.as_ref().map(|_| ()).map_err(|e| e.clone()),
+            )
+        });
+        let freed = r.map_err(Error::Move)?;
+        // macOS and Linux: the folder is in the Trash now.
+        let mut summary_after = None;
+        if archive.is_some()
+            && let Ok(mut trees) = app2.state::<AppState>().trees.write()
+            && let Some(tree) = trees.get_mut(&root)
+        {
+            Arc::make_mut(tree).remove(id);
+            summary_after = Some(summary(tree));
+        }
+        Ok(CompressResult {
+            freed_bytes: freed,
+            archive,
+            summary: summary_after,
+        })
+    })
+    .await
+    .map_err(|e| Error::Io(std::io::Error::other(e.to_string())))?
+}
+
 /// The "what grew" report of each root (the change between its last two scans).
 #[tauri::command]
 pub fn growth_reports(app: AppHandle) -> Vec<crate::growth::Report> {

@@ -129,7 +129,8 @@ export interface DeleteResult {
   summaries: ScanSummary[];
 }
 
-export type HistoryAction = "recycle" | "permanent" | "cleaner" | "blocked" | "linked" | "moved" | "cloud";
+export type HistoryAction =
+  "recycle" | "permanent" | "cleaner" | "blocked" | "linked" | "moved" | "cloud" | "compressed";
 
 export interface HistoryEntry {
   id: number;
@@ -397,6 +398,14 @@ export const api = {
     invoke<CleanOutcome[]>("clean_run", { ids, items, devAgeDays }),
   customRules: () => invoke<CustomRule[]>("custom_rules"),
   growthReports: () => invoke<GrowthReport[]>("growth_reports"),
+  /** Big folders with no change for a year that compress well. */
+  oldFolders: () => invoke<{ root: string; id: number; path: string; size: number; newest: number }[]>("old_folders"),
+  /** Windows: NTFS compression in place. macOS and Linux: a .tar.gz archive, then the folder goes to the Trash. */
+  compressFolder: (root: string, id: number) =>
+    invoke<{ freedBytes: number; archive: string | null; summary: ScanSummary | null }>("compress_folder", {
+      root,
+      id,
+    }),
   /** Big old files in OneDrive or iCloud Drive that can become online-only. */
   cloudCandidates: () =>
     invoke<{ provider: string; root: string; files: { path: string; size: number }[] }[]>("cloud_candidates"),

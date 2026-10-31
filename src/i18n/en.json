@@ -286,7 +286,8 @@
       "blocked": "Blocked",
       "linked": "Linked",
       "moved": "Moved",
-      "cloud": "Online only"
+      "cloud": "Online only",
+      "compressed": "Compressed"
     }
   },
   "clean": {
@@ -625,7 +626,14 @@
     "cloudDone_one": "1 file is now online-only ({{size}}).",
     "cloudDone_other": "{{count}} files are now online-only ({{size}}).",
     "cloudErrors_one": "1 file could not be changed: {{why}}",
-    "cloudErrors_other": "{{count}} files could not be changed: {{why}}"
+    "cloudErrors_other": "{{count}} files could not be changed: {{why}}",
+    "compress": "Old folders to compress",
+    "compressDesc_one": "1 big folder with no change for a year. NTFS compression keeps the files in place; they open as usual.",
+    "compressDesc_other": "{{count}} big folders with no change for a year. NTFS compression keeps the files in place; they open as usual.",
+    "compressAll": "Compress all",
+    "compressConfirm_one": "Compress 1 folder ({{size}})?",
+    "compressConfirm_other": "Compress {{count}} folders ({{size}})?",
+    "compressBody": "Windows compresses the files in place. They open as usual, a little slower. Text and documents often shrink by a third to a half. This can take some minutes."
   },
   "move": {
     "button": "Move to another drive…",
@@ -637,5 +645,18 @@
     "confirm": "Move",
     "moving": "Moving… {{pct}}%",
     "done": "Moved {{size}} to {{dest}}. The old path links there now."
+  },
+  "compress": {
+    "buttonWin": "Compress folder",
+    "buttonUnix": "Archive to .tar.gz",
+    "working": "Compressing…",
+    "titleWin": "Compress “{{name}}”?",
+    "titleUnix": "Archive “{{name}}”?",
+    "bodyWin": "Windows compresses the files ({{size}}) in place with NTFS compression. They open as usual. To undo it, run compact /U on the folder.",
+    "bodyUnix": "Lustro packs the folder ({{size}}) into a .tar.gz archive next to it, checks the archive, and moves the folder to the Trash. To use the files again, open the archive.",
+    "confirmWin": "Compress",
+    "confirmUnix": "Archive",
+    "doneWin": "Compressed. {{size}} free.",
+    "doneUnix": "Archived to {{archive}}. {{size}} free after you empty the Trash."
   }
 }

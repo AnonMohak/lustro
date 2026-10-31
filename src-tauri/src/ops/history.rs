@@ -20,6 +20,8 @@ pub enum Action {
     Moved,
     /// A synced file became online-only (OneDrive, iCloud Drive).
     Cloud,
+    /// A folder was compressed (Windows) or packed into an archive (macOS, Linux).
+    Compressed,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -1,3 +1,4 @@
+pub mod compress;
 pub mod delete;
 pub mod history;
 pub mod protect;

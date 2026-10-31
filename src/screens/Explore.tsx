@@ -11,7 +11,7 @@ import { saveExport, scanReportHtml } from "../lib/exporters";
 import { driveIcon, driveName } from "../lib/drives";
 import { formatBytes, formatCount, percent } from "../lib/format";
 import { KIND_ICON, kindColor, sortedBreakdown } from "../lib/kinds";
-import { isDriveRoot } from "../lib/platform";
+import { IS_WINDOWS, isDriveRoot } from "../lib/platform";
 import { rootLabel, scanSummaryText } from "../lib/scanText";
 import { useAppsUnlocked, useStore } from "../store";
 
@@ -246,6 +246,44 @@ function TypesView({ detail }: { detail: NodeDetail }) {
   );
 }
 
+/** Windows: NTFS compression in place. macOS and Linux: a .tar.gz archive, then the folder goes to the Trash. */
+function CompressButton({ root, detail }: { root: string; detail: NodeDetail }) {
+  const { t } = useTranslation();
+  const { openDialog, showToast, afterDelete } = useStore.getState();
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      className="btn ghost block sm"
+      disabled={busy}
+      onClick={() =>
+        openDialog({
+          title: t(IS_WINDOWS ? "compress.titleWin" : "compress.titleUnix", { name: detail.node.name }),
+          body: [t(IS_WINDOWS ? "compress.bodyWin" : "compress.bodyUnix", { size: formatBytes(detail.node.size) })],
+          confirm: t(IS_WINDOWS ? "compress.confirmWin" : "compress.confirmUnix"),
+          onConfirm: async () => {
+            setBusy(true);
+            try {
+              const r = await api.compressFolder(root, detail.node.id);
+              if (r.summary) afterDelete([r.summary]);
+              showToast(
+                r.archive
+                  ? t("compress.doneUnix", { size: formatBytes(r.freedBytes), archive: r.archive })
+                  : t("compress.doneWin", { size: formatBytes(r.freedBytes) }),
+              );
+            } catch (e) {
+              showToast(String(e), true);
+            }
+            setBusy(false);
+          },
+        })
+      }
+    >
+      <Icon name="archive" />
+      {busy ? t("compress.working") : t(IS_WINDOWS ? "compress.buttonWin" : "compress.buttonUnix")}
+    </button>
+  );
+}
+
 /** "Move to another drive": copy the folder, check it, and leave a link in the old place. */
 function MoveButton({ root, detail }: { root: string; detail: NodeDetail }) {
   const { t } = useTranslation();
@@ -453,6 +491,7 @@ function DetailPane({
                 {t("del.permanent")}
               </button>
               {detail.node.isDir && <MoveButton root={root} detail={detail} />}
+              {detail.node.isDir && !detail.appFolder && <CompressButton root={root} detail={detail} />}
             </>
           )}
         </div>

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Icon, type IconName } from "../components/Icon";
 import { api, type CleanItem, type CleanRule, type DupeGroup, type FileHit } from "../lib/api";
 import { formatBytes, formatCount } from "../lib/format";
+import { IS_WINDOWS } from "../lib/platform";
 import { type Screen, useStore } from "../store";
 
 const YEAR_MS = 365 * 86_400_000;
@@ -35,6 +36,7 @@ export function FreeSpace() {
   const [dupes, setDupes] = useState<DupeGroup[] | null>(null);
   const [old, setOld] = useState<FileHit[]>([]);
   const [cloud, setCloud] = useState<{ provider: string; files: { size: number }[] }[]>([]);
+  const [folders, setFolders] = useState<{ root: string; id: number; size: number }[]>([]);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
@@ -45,9 +47,11 @@ export function FreeSpace() {
       api.dupesResult().catch(() => null),
       api.findFiles({ sort: "size", minSize: BIG_OLD, olderThan: Date.now() - YEAR_MS, limit: 50 }).catch(() => []),
       api.cloudCandidates().catch(() => []),
+      IS_WINDOWS ? api.oldFolders().catch(() => []) : Promise.resolve([]),
     ])
-      .then(([c, i, d, o, cl]) => {
+      .then(([c, i, d, o, cl, f]) => {
         setCloud(cl);
+        setFolders(f);
         setClean(c);
         setInstallers(i);
         setDupes(d);
@@ -106,7 +110,40 @@ export function FreeSpace() {
   const cloudBytes = cloudFiles.reduce((a, f) => a + f.size, 0);
   const provider = cloud.map((c) => c.provider).join(", ");
 
+  const folderBytes = folders.reduce((a, f) => a + f.size, 0);
+
   const wins: Win[] = [
+    {
+      id: "compress",
+      icon: "archive",
+      title: t("free.compress"),
+      desc: t("free.compressDesc", { count: folders.length }),
+      // The size of the folders; NTFS compression saves a part of it.
+      bytes: folderBytes,
+      action: {
+        label: t("free.compressAll"),
+        run: () =>
+          openDialog({
+            title: t("free.compressConfirm", { count: folders.length, size: formatBytes(folderBytes) }),
+            body: [t("free.compressBody")],
+            confirm: t("free.compressAll"),
+            onConfirm: async () => {
+              setBusy(true);
+              let freed = 0;
+              for (const f of folders) {
+                try {
+                  freed += (await api.compressFolder(f.root, f.id)).freedBytes;
+                } catch (e) {
+                  showToast(String(e), true);
+                }
+              }
+              showToast(t("free.freed", { size: formatBytes(freed) }));
+              setBusy(false);
+              load();
+            },
+          }),
+      },
+    },
     {
       id: "cloud",
       icon: "globe",

@@ -16,6 +16,7 @@ const PILL: Record<HistoryEntry["action"], string> = {
   linked: "good",
   moved: "acc",
   cloud: "good",
+  compressed: "good",
 };
 
 function when(ms: number): string {
