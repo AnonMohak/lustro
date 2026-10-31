@@ -110,6 +110,27 @@ pub fn dupes_cancel(state: State<'_, AppState>) {
     }
 }
 
+/// A small preview of a photo in the last duplicate result, as a `data:` URL.
+/// Other paths are refused, so the UI cannot read any file with it.
+#[tauri::command]
+pub async fn photo_thumbnail(state: State<'_, AppState>, path: String) -> Result<Option<String>> {
+    let known = state
+        .dupes
+        .lock()
+        .ok()
+        .and_then(|d| {
+            d.as_ref()
+                .map(|groups| groups.iter().flat_map(|g| &g.files).any(|f| f.path == path))
+        })
+        .unwrap_or(false);
+    if !known {
+        return Ok(None);
+    }
+    tauri::async_runtime::spawn_blocking(move || dupes::photos::thumbnail(&path))
+        .await
+        .map_err(|e| Error::Io(std::io::Error::other(e.to_string())))
+}
+
 /// The last result, if any (for when the screen opens again).
 #[tauri::command]
 pub fn dupes_result(state: State<'_, AppState>) -> Option<Vec<DupeGroup>> {

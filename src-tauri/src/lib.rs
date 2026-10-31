@@ -95,6 +95,7 @@ pub fn run() {
             tools_cmds::dupes_start,
             tools_cmds::dupes_cancel,
             tools_cmds::dupes_result,
+            tools_cmds::photo_thumbnail,
             tools_cmds::apps_list,
             tools_cmds::app_uninstall,
             desktop::get_settings,

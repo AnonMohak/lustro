@@ -215,7 +215,7 @@ export interface DupeGroup {
   /** Exact groups: the content hash. Name groups: the shared name. */
   hash: string;
   /** "folder": `files` are the copies of a folder. */
-  kind: "exact" | "name" | "folder";
+  kind: "exact" | "name" | "similar" | "folder";
   /** The number of files in each copy (1, or the files of a duplicate folder). */
   items: number;
   files: DupeFile[];
@@ -226,7 +226,7 @@ export type DupeKind = "image" | "video" | "doc" | "archive" | "other";
 export interface DupeOptions {
   minSize: number;
   includeAppData: boolean;
-  mode: "exact" | "name";
+  mode: "exact" | "name" | "similar";
   /** Empty: all types. */
   kinds: DupeKind[];
   /** Empty: all scans. */
@@ -347,6 +347,8 @@ export const api = {
   dupesStart: (options: DupeOptions) => invoke<void>("dupes_start", { options }),
   dupesCancel: () => invoke<void>("dupes_cancel"),
   dupesResult: () => invoke<DupeGroup[] | null>("dupes_result"),
+  /** A small preview of a photo in the last duplicate result, as a data: URL. */
+  photoThumbnail: (path: string) => invoke<string | null>("photo_thumbnail", { path }),
   appsList: () => invoke<InstalledApp[]>("apps_list"),
   appUninstall: (id: string) => invoke<void>("app_uninstall", { id }),
   cleanScan: (devAgeDays: number) => invoke<CleanRule[]>("clean_scan", { devAgeDays }),

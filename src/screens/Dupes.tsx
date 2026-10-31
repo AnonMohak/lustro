@@ -95,21 +95,39 @@ function folderPairs(groups: DupeGroup[]): FolderPair[] {
   return [...map.values()].sort((x, y) => y.bytes - x.bytes);
 }
 
+type KeepRule = "oldest" | "newest" | "shortest" | "largest";
+
 /** Index of the copy to keep in a group for a keep rule. */
-function keepIndex(g: DupeGroup, rule: "oldest" | "newest" | "shortest"): number {
+function keepIndex(g: DupeGroup, rule: KeepRule): number {
   let best = 0;
   g.files.forEach((f, i) => {
     const b = g.files[best];
-    if (
-      rule === "oldest"
-        ? f.modified < b.modified
-        : rule === "newest"
-          ? f.modified > b.modified
-          : f.path.length < b.path.length
-    )
-      best = i;
+    const better = {
+      oldest: f.modified < b.modified,
+      newest: f.modified > b.modified,
+      shortest: f.path.length < b.path.length,
+      largest: f.size > b.size,
+    }[rule];
+    if (better) best = i;
   });
   return best;
+}
+
+/** A small preview of a photo; the backend makes it on demand. */
+function Thumb({ path }: { path: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    api
+      .photoThumbnail(path)
+      .then((s) => live && setSrc(s))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [path]);
+  const box = { width: 64, height: 64, flex: "none", borderRadius: 4, background: "var(--hover)" } as const;
+  return src ? <img src={src} alt="" style={{ ...box, objectFit: "cover" }} /> : <span style={box} />;
 }
 
 export function Dupes() {
@@ -118,7 +136,7 @@ export function Dupes() {
   const showToast = useStore((s) => s.showToast);
   const [minSize, setMinSize] = useState<number>(1024 * 1024);
   const [appData, setAppData] = useState(false);
-  const [mode, setMode] = useState<"exact" | "name">("exact");
+  const [mode, setMode] = useState<"exact" | "name" | "similar">("exact");
   /** Empty: all types. */
   const [kinds, setKinds] = useState<Set<DupeKind>>(new Set());
   const [onlyIn, setOnlyIn] = useState<string[]>([]);
@@ -135,7 +153,7 @@ export function Dupes() {
   const hasScans = Object.keys(scans).length > 0;
   const pairs = useMemo(() => folderPairs(groups ?? []), [groups]);
 
-  const apply = (list: DupeGroup[], rule: "oldest" | "newest" | "shortest" = "oldest") => {
+  const apply = (list: DupeGroup[], rule: KeepRule = "oldest") => {
     setGroups(list);
     // Lustro selects extra copies only of plain user files (media, documents, archives) outside
     // tool folders. Programs, libraries and app data stay unselected: something may need each copy.
@@ -228,8 +246,11 @@ export function Dupes() {
                 <button className={mode === "name" ? "on" : ""} onClick={() => setMode("name")}>
                   {t("dupes.modeName")}
                 </button>
+                <button className={mode === "similar" ? "on" : ""} onClick={() => setMode("similar")}>
+                  {t("dupes.modeSimilar")}
+                </button>
               </div>
-              <p>{mode === "exact" ? t("dupes.intro") : t("dupes.nameIntro")}</p>
+              <p>{t({ exact: "dupes.intro", name: "dupes.nameIntro", similar: "dupes.similarIntro" }[mode])}</p>
               <div className="row" style={{ justifyContent: "center", flexWrap: "wrap" }}>
                 <span className="muted">{t("dupes.types")}</span>
                 {KINDS.map((k) => (
@@ -317,7 +338,7 @@ export function Dupes() {
   const g = groups[sel];
   const gDel = del[sel] ?? new Set<number>();
 
-  const setKeep = (rule: "oldest" | "newest" | "shortest") =>
+  const setKeep = (rule: KeepRule) =>
     setDel((d) =>
       d.map((s, i) =>
         i === sel ? new Set(groups[i].files.map((_, k) => k).filter((k) => k !== keepIndex(groups[i], rule))) : s,
@@ -368,6 +389,7 @@ export function Dupes() {
     const size = formatBytes(grp.size);
     if (grp.kind === "name") return t("dupes.nameFiles", { n, size });
     if (grp.kind === "folder") return t("dupes.folderCopies", { n, size, files: formatCount(grp.items) });
+    if (grp.kind === "similar") return t("dupes.similarFiles", { n, size });
     return t("dupes.copies", { n, size });
   };
 
@@ -508,6 +530,7 @@ export function Dupes() {
                   <button onClick={() => setKeep("oldest")}>{t("dupes.keepOldest")}</button>
                   <button onClick={() => setKeep("newest")}>{t("dupes.keepNewest")}</button>
                   <button onClick={() => setKeep("shortest")}>{t("dupes.keepShortest")}</button>
+                  <button onClick={() => setKeep("largest")}>{t("dupes.keepLargest")}</button>
                   <button onClick={pickKeepFolder}>{t("dupes.keepInFolder")}</button>
                 </div>
               </div>
@@ -532,29 +555,33 @@ export function Dupes() {
                       )
                     }
                   />
-                  <div style={{ minWidth: 0 }}>
-                    <div className="mono selectable" style={{ overflowWrap: "anywhere" }}>
-                      {g.kind === "folder" ? f.path : folderOf(f.path)}
-                    </div>
-                    <div className="faint" style={{ fontSize: 12 }}>
-                      {g.kind === "name" && `${fileName(f.path)} · ${formatBytes(f.size)} · `}
-                      {t("dupes.modified", {
-                        date: f.modified
-                          ? new Date(f.modified).toLocaleDateString("en-GB", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })
-                          : "—",
-                      })}
-                      {g.kind === "name" && (
-                        <>
-                          {" "}
-                          <span className={`pill ${f.same ? "acc" : ""}`}>
-                            {f.same ? t("dupes.sameContent", { n: f.same }) : t("dupes.otherContent")}
-                          </span>
-                        </>
-                      )}
+                  <div style={{ minWidth: 0, display: "flex", gap: 10, alignItems: "center" }}>
+                    {g.kind === "similar" && <Thumb path={f.path} />}
+                    <div style={{ minWidth: 0 }}>
+                      <div className="mono selectable" style={{ overflowWrap: "anywhere" }}>
+                        {g.kind === "folder" ? f.path : folderOf(f.path)}
+                      </div>
+                      <div className="faint" style={{ fontSize: 12 }}>
+                        {(g.kind === "name" || g.kind === "similar") &&
+                          `${fileName(f.path)} · ${formatBytes(f.size)} · `}
+                        {t("dupes.modified", {
+                          date: f.modified
+                            ? new Date(f.modified).toLocaleDateString("en-GB", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })
+                            : "—",
+                        })}
+                        {g.kind === "name" && (
+                          <>
+                            {" "}
+                            <span className={`pill ${f.same ? "acc" : ""}`}>
+                              {f.same ? t("dupes.sameContent", { n: f.same }) : t("dupes.otherContent")}
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                   {gDel.has(k) ? (

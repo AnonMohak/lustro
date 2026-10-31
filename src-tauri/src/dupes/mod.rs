@@ -3,6 +3,7 @@
 
 pub mod cache;
 mod folders;
+pub mod photos;
 
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
@@ -46,6 +47,8 @@ pub enum Mode {
     Exact,
     /// Files with the same name, also copy names like `photo (1).jpg`. The content may differ.
     Name,
+    /// Photos that look the same (resized, re-saved, another format).
+    Similar,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -89,7 +92,7 @@ pub struct DupeGroup {
     pub size: u64,
     /// Exact groups: the content hash. Name groups: the shared name.
     pub hash: String,
-    /// "exact", "name" or "folder" (`files` are then the copies of the folder).
+    /// "exact", "name", "similar" or "folder" (`files` are then the copies of the folder).
     pub kind: &'static str,
     /// The number of files in each copy: 1, or the files in a duplicate folder.
     pub items: u32,
@@ -332,6 +335,7 @@ pub fn find(
             groups
         }
         Mode::Name => by_name(list, p, cache),
+        Mode::Similar => photos::similar(list, p, cache),
     }
 }
 
