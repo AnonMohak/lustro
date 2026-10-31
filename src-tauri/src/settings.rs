@@ -29,6 +29,8 @@ pub struct Settings {
     pub low_space_rules: Vec<String>,
     /// Ids of built-in clean rules that run when the drive of the home folder is low.
     pub low_space_clean: Vec<String>,
+    /// Rescan each scanned drive and folder when its scan is this many days old (0: never).
+    pub rescan_days: u32,
 }
 
 impl Default for Settings {
@@ -44,6 +46,7 @@ impl Default for Settings {
             ignore: Vec::new(),
             low_space_rules: Vec::new(),
             low_space_clean: Vec::new(),
+            rescan_days: 0,
         }
     }
 }

@@ -58,7 +58,12 @@
     "noDrives": "Lustro found no fixed or USB drives.",
     "typesTitle": "Space by type",
     "scanFolder": "Scan a folder",
-    "pickFolder": "Pick a folder to scan"
+    "pickFolder": "Pick a folder to scan",
+    "notGrowing": "Not growing",
+    "fullIn_one": "Full in about 1 day",
+    "fullIn_other": "Full in about {{count}} days",
+    "grewTitle": "Since the last scan",
+    "grewSince": "Compared with the scan {{ago}}"
   },
   "admin": {
     "dialogTitle": "Restart Lustro as administrator?",
@@ -113,7 +118,15 @@
     "ignoreRemove": "Remove {{path}}",
     "lowSpaceActions": "When a drive is low, also run",
     "lowSpaceActionsHint": "Once a day for a low drive, Lustro runs what you check here, then tells you what it freed. A rule runs when its folder is on that drive; clean-up items run when the drive holds your home folder. Lustro skips items whose program is open.",
-    "yourRule": "Your rule"
+    "yourRule": "Your rule",
+    "rescan": "Rescan automatically",
+    "rescanHint": "Lustro scans your drives and folders again, also from the tray, and tells you what grew since the last scan.",
+    "rescanEvery": {
+      "0": "Never",
+      "1": "Every day",
+      "7": "Every week",
+      "30": "Every month"
+    }
   },
   "common": {
     "cancel": "Cancel",

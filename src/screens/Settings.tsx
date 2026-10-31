@@ -247,6 +247,19 @@ export function Settings() {
           )}
           <div className="srow">
             <div>
+              <div>{t("settings.rescan")}</div>
+              <div className="sd">{t("settings.rescanHint")}</div>
+            </div>
+            <Select
+              id="setRescan"
+              ariaLabel={t("settings.rescan")}
+              value={backend.rescanDays}
+              options={[0, 1, 7, 30].map((n) => ({ value: n, label: t(`settings.rescanEvery.${n}`) }))}
+              onChange={(n) => update({ rescanDays: n })}
+            />
+          </div>
+          <div className="srow">
+            <div>
               <div>{t("settings.startWithWindows")}</div>
               <div className="sd">{t("settings.startWithWindowsHint")}</div>
             </div>

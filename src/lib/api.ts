@@ -298,6 +298,26 @@ export interface BackendSettings {
   lowSpaceRules: string[];
   /** Ids of built-in clean rules that run when the home drive is low on space. */
   lowSpaceClean: string[];
+  /** Rescan each scan when it is this many days old (0: never). */
+  rescanDays: number;
+}
+
+/** The change between the last two scans of a drive or folder. */
+export interface GrowthReport {
+  root: string;
+  /** Unix seconds of the two scans. */
+  from: number;
+  to: number;
+  before: number;
+  after: number;
+  changes: { path: string; before: number; after: number }[];
+}
+
+export interface DriveHistory {
+  root: string;
+  points: { day: number; used: number; total: number }[];
+  /** Days until full at the recent growth, or null when the drive does not grow. */
+  daysLeft: number | null;
 }
 
 /** A built-in clean rule without its size. */
@@ -376,6 +396,8 @@ export const api = {
   cleanRun: (ids: string[], items: Record<string, string[]>, devAgeDays: number) =>
     invoke<CleanOutcome[]>("clean_run", { ids, items, devAgeDays }),
   customRules: () => invoke<CustomRule[]>("custom_rules"),
+  growthReports: () => invoke<GrowthReport[]>("growth_reports"),
+  spaceHistory: () => invoke<DriveHistory[]>("space_history"),
   cleanRulesList: () => invoke<CleanRuleInfo[]>("clean_rules_list"),
   /** Saves the whole list and returns it with the ids of new rules. */
   setCustomRules: (rules: CustomRule[]) => invoke<CustomRule[]>("set_custom_rules", { rules }),

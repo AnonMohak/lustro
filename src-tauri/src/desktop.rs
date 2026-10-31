@@ -1,4 +1,5 @@
-//! Windows integration: tray icon, low space alerts, close-to-tray, export files.
+//! Desktop integration: tray icon, low space alerts and actions, space history, automatic
+//! rescans, close-to-tray, export files.
 
 use std::collections::HashMap;
 use std::time::Duration;
@@ -111,6 +112,51 @@ fn low_space_actions(app: &AppHandle, s: &Settings, d: &drives::DriveInfo) -> u6
     freed
 }
 
+/// Records today's used space of each drive (the space history on Home).
+fn record_space(app: &AppHandle) {
+    let dir = data_dir(app);
+    let mut log = crate::growth::SpaceLog::load(&dir);
+    let day = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| (d.as_secs() / 86_400) as u32)
+        .unwrap_or(0);
+    for d in drives::list_drives() {
+        if d.total_bytes > 0 {
+            log.record(
+                &d.root,
+                crate::growth::Point {
+                    day,
+                    used: d.total_bytes - d.free_bytes,
+                    total: d.total_bytes,
+                },
+            );
+        }
+    }
+    if let Err(e) = log.save(&dir) {
+        log::warn!("Could not save the space history: {e}");
+    }
+}
+
+/// Starts an automatic rescan of the oldest scan that is `days` days old or more. One at a
+/// time: the next check starts the next one.
+fn rescan_old(app: &AppHandle, days: u32) {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let oldest = app.state::<AppState>().trees.read().ok().and_then(|trees| {
+        trees
+            .iter()
+            .filter(|(_, t)| now.saturating_sub(t.scanned_at) >= days as u64 * 86_400)
+            .min_by_key(|(_, t)| t.scanned_at)
+            .map(|(root, _)| root.clone())
+    });
+    if let Some(root) = oldest {
+        // Busy when the user scans; the next check tries again.
+        let _ = crate::commands::begin_scan(app, &root, true);
+    }
+}
+
 /// Checks free space every 15 minutes and sends one notification per drive per day.
 pub fn start_space_monitor(app: AppHandle) {
     std::thread::spawn(move || {
@@ -118,6 +164,10 @@ pub fn start_space_monitor(app: AppHandle) {
         std::thread::sleep(FIRST_CHECK);
         loop {
             let s = current_settings(&app);
+            record_space(&app);
+            if s.rescan_days > 0 {
+                rescan_old(&app, s.rescan_days);
+            }
             if s.low_space_alert {
                 let today = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)

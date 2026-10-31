@@ -7,6 +7,7 @@ mod desktop;
 mod dupes;
 mod error;
 mod favorites;
+mod growth;
 #[cfg(windows)]
 mod live;
 #[cfg(not(windows))]
@@ -85,6 +86,8 @@ pub fn run() {
             commands::take_startup_scan,
             commands::delete_items,
             commands::history,
+            commands::growth_reports,
+            commands::space_history,
             commands::restore,
             clean_cmds::clean_scan,
             clean_cmds::clean_run,

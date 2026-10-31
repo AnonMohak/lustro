@@ -122,8 +122,16 @@ fn cache_dir(app: &AppHandle) -> Option<std::path::PathBuf> {
 
 /// Starts a scan in the background. Events: `scan-progress`, `scan-done`, `scan-error`.
 #[tauri::command]
-pub fn start_scan(app: AppHandle, state: State<'_, AppState>, root: String) -> Result<()> {
-    let root = normalize_root(&root);
+pub fn start_scan(app: AppHandle, root: String) -> Result<()> {
+    begin_scan(&app, &root, false)
+}
+
+/// Starts a scan of `root`. When an older scan of it exists, the change goes to the "what
+/// grew" reports; `scheduled` (an automatic rescan) also sends it as a notification.
+pub fn begin_scan(app: &AppHandle, root: &str, scheduled: bool) -> Result<()> {
+    let app = app.clone();
+    let state = app.state::<AppState>();
+    let root = normalize_root(root);
     let progress = Arc::new(Progress::default());
     {
         let mut active = state.active.lock().map_err(|_| Error::Busy)?;
@@ -175,8 +183,13 @@ pub fn start_scan(app: AppHandle, state: State<'_, AppState>, root: String) -> R
             Ok(tree) => {
                 let tree = Arc::new(tree);
                 let s = summary(&tree);
-                if let Ok(mut trees) = state.trees.write() {
-                    trees.insert(root.clone(), tree.clone());
+                let old = state
+                    .trees
+                    .write()
+                    .ok()
+                    .and_then(|mut trees| trees.insert(root.clone(), tree.clone()));
+                if let Some(old) = old {
+                    report_growth(&app, &old, &tree, scheduled);
                 }
                 let _ = app.emit("scan-done", s);
                 crate::live::watch(&app, &root);
@@ -200,6 +213,59 @@ pub fn start_scan(app: AppHandle, state: State<'_, AppState>, root: String) -> R
         }
     });
     Ok(())
+}
+
+/// Saves what changed between two scans, and tells the user after an automatic rescan.
+fn report_growth(app: &AppHandle, old: &Tree, new: &Tree, scheduled: bool) {
+    let report = crate::growth::compare(old, new);
+    if let Some(dir) = data_dir(app)
+        && let Err(e) = crate::growth::save_report(&dir, &report)
+    {
+        log::warn!("Could not save the growth report: {e}");
+    }
+    if scheduled {
+        use tauri_plugin_notification::NotificationExt;
+        let _ = app
+            .notification()
+            .builder()
+            .title(format!("Lustro rescanned {}", new.root_path))
+            .body(crate::growth::summary_line(&report))
+            .show();
+    }
+}
+
+/// The "what grew" report of each root (the change between its last two scans).
+#[tauri::command]
+pub fn growth_reports(app: AppHandle) -> Vec<crate::growth::Report> {
+    data_dir(&app)
+        .map(|d| crate::growth::load_reports(&d).into_values().collect())
+        .unwrap_or_default()
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DriveHistory {
+    root: String,
+    points: Vec<crate::growth::Point>,
+    /// Days until the drive is full at its recent growth, if it grows.
+    days_left: Option<u32>,
+}
+
+/// The used space of each drive over time.
+#[tauri::command]
+pub fn space_history(app: AppHandle) -> Vec<DriveHistory> {
+    let Some(dir) = data_dir(&app) else {
+        return Vec::new();
+    };
+    crate::growth::SpaceLog::load(&dir)
+        .drives
+        .into_iter()
+        .map(|(root, points)| DriveHistory {
+            days_left: crate::growth::days_left(&points),
+            root,
+            points,
+        })
+        .collect()
 }
 
 #[tauri::command]
