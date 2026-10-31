@@ -14,6 +14,11 @@ use winreg::enums::{
 
 use crate::scan::model::Tree;
 
+#[cfg(target_os = "linux")]
+mod linux;
+#[cfg(target_os = "macos")]
+mod macos;
+
 #[cfg(windows)]
 const UNINSTALL: &str = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
 
@@ -33,16 +38,23 @@ pub struct App {
     pub size_from: &'static str,
     /// Unix time in milliseconds, or 0 when unknown.
     pub installed: i64,
-    /// Unix time in milliseconds of the last start (from Prefetch, needs admin), or 0.
+    /// Unix time in milliseconds of the last start (Windows: from Prefetch, needs admin; macOS: from Spotlight), or 0.
     pub last_used: i64,
     pub location: String,
+    /// What starts the uninstall (on Linux, the command that the user runs).
+    #[cfg_attr(
+        not(any(windows, target_os = "linux", target_os = "macos")),
+        allow(dead_code)
+    )]
     #[serde(skip)]
     pub uninstall: String,
+    /// The program file name, for the last start time from Prefetch.
+    #[cfg_attr(not(windows), allow(dead_code))]
     #[serde(skip)]
     pub exe_name: Option<String>,
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "macos"))]
 fn ymd_to_ms(s: &str) -> i64 {
     // InstallDate is "YYYYMMDD".
     if s.len() != 8 || !s.bytes().all(|b| b.is_ascii_digit()) {
@@ -271,8 +283,18 @@ fn installed() -> Vec<App> {
     apps
 }
 
-/// App lists on Linux and macOS come in a later phase.
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
+fn installed() -> Vec<App> {
+    linux::installed()
+}
+
+#[cfg(target_os = "macos")]
+fn installed() -> Vec<App> {
+    macos::installed()
+}
+
+/// The app list on Android comes in a later phase.
+#[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
 fn installed() -> Vec<App> {
     Vec::new()
 }
@@ -345,7 +367,21 @@ pub fn uninstall(app: &App) -> Result<(), String> {
     }
 }
 
-#[cfg(not(windows))]
+/// Lustro does not remove Linux packages itself yet: the user runs the command.
+#[cfg(target_os = "linux")]
+pub fn uninstall(app: &App) -> Result<(), String> {
+    Err(format!(
+        "Lustro cannot remove apps on Linux yet. To remove {}, run: {}",
+        app.name, app.uninstall
+    ))
+}
+
+#[cfg(target_os = "macos")]
+pub fn uninstall(app: &App) -> Result<(), String> {
+    macos::uninstall(app)
+}
+
+#[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
 pub fn uninstall(_app: &App) -> Result<(), String> {
     Err("Uninstall is not available on this system yet.".into())
 }
@@ -354,7 +390,7 @@ pub fn uninstall(_app: &App) -> Result<(), String> {
 mod tests {
     use super::*;
 
-    #[cfg(windows)]
+    #[cfg(any(windows, target_os = "macos"))]
     #[test]
     fn install_dates() {
         assert_eq!(ymd_to_ms("20000101"), 946_684_800_000);

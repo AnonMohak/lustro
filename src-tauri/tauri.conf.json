@@ -42,7 +42,7 @@
       "nsis"
     ],
     "publisher": "Lustro contributors",
-    "shortDescription": "Storage manager for Windows 11",
+    "shortDescription": "Storage manager",
     "longDescription": "Lustro scans your drives, shows what uses the space, and helps you remove what you do not need.",
     "copyright": "Copyright (c) 2026 Mohak. MIT License.",
     "category": "Utility",

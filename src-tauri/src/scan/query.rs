@@ -101,6 +101,19 @@ pub struct FileFilter {
     /// Allowed kinds; empty = all.
     pub kinds: Vec<Kind>,
     pub limit: usize,
+    /// Folders of this tree whose files never show (the ignore list of Settings).
+    pub skip_dirs: Vec<u32>,
+}
+
+/// True when `id` lies inside one of `dirs`.
+fn under(t: &Tree, mut id: u32, dirs: &[u32]) -> bool {
+    while id != super::model::NONE {
+        if dirs.contains(&id) {
+            return true;
+        }
+        id = t.node(id).parent;
+    }
+    false
 }
 
 /// Ids of the files that match, in sort order.
@@ -116,6 +129,9 @@ pub fn find_files(t: &Tree, f: &FileFilter) -> Vec<u32> {
             continue;
         }
         if !f.kinds.is_empty() && !f.kinds.contains(&Kind::from_u8(n.kind)) {
+            continue;
+        }
+        if !f.skip_dirs.is_empty() && under(t, i as u32, &f.skip_dirs) {
             continue;
         }
         match f.sort {
@@ -306,7 +322,7 @@ mod tests {
             );
             b.link(id, dirs[1 + (i as usize % 2000)]);
         }
-        let t = b.finish("C:\\".into(), ScanMethod::Walk, 0, 0);
+        let t = b.finish(crate::paths::os("C:\\"), ScanMethod::Walk, 0, 0);
         for text in ["*.iso", "REPORT", "file-12345*", "nothing-here"] {
             let q = SearchQuery {
                 text: text.into(),
@@ -396,12 +412,32 @@ mod tests {
             older_than: 0,
             kinds: vec![],
             limit: 2,
+            skip_dirs: vec![],
         };
         let names: Vec<&str> = find_files(&t, &f)
             .into_iter()
             .map(|id| t.name(id))
             .collect();
         assert_eq!(names, ["a.mp4", "x.unknownext"]);
+    }
+
+    #[test]
+    fn skips_ignored_folders() {
+        let t = sample();
+        let mut f = FileFilter {
+            sort: FileSort::Size,
+            min_size: 0,
+            older_than: 0,
+            kinds: vec![],
+            limit: 100,
+            skip_dirs: vec![],
+        };
+        let all = find_files(&t, &f);
+        let mp4 = *all.iter().find(|&&id| t.name(id) == "a.mp4").unwrap();
+        f.skip_dirs = vec![t.node(mp4).parent];
+        let left = find_files(&t, &f);
+        assert!(!left.contains(&mp4));
+        assert!(left.len() < all.len());
     }
 
     #[test]
@@ -413,6 +449,7 @@ mod tests {
             older_than: 0,
             kinds: vec![Kind::System],
             limit: 10,
+            skip_dirs: vec![],
         };
         let names: Vec<&str> = find_files(&t, &f)
             .into_iter()

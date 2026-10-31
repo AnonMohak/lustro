@@ -2,7 +2,7 @@
 #
 # Fields:
 #   id         stable id (used in history and settings)
-#   group      "sys" | "web" | "dev" | "docker" | "ide"
+#   group      "sys" | "cache" | "web" | "dev" | "docker" | "ide"
 #   name, desc text for the UI (English; translations come later)
 #   paths      glob patterns. %VAR% is an environment variable. Each match is deleted
 #              (a folder is deleted with everything inside it).
@@ -12,7 +12,7 @@
 #   min_age_h  only delete files older than this many hours (0 = all)
 #   process    skip the rule while one of these programs runs
 #   service    stop this Windows service while cleaning, then start it again
-#   special    built-in action instead of paths: "recycle-bin" | "windows-old"
+#   special    built-in action instead of paths: "recycle-bin" | "windows-old" | "app-caches" (Linux: "journal" | "snap-old"; macOS: "xcode-simulators")
 
 # ---------- System junk ----------
 
@@ -290,3 +290,14 @@ desc = "Visual Studio builds it again at the next start."
 paths = ['%LOCALAPPDATA%\Microsoft\VisualStudio\*\ComponentModelCache']
 safe = true
 process = ["devenv.exe"]
+
+# ---------- App caches ----------
+# One item for each cache folder that no other rule covers. The cleaner empties each folder.
+
+[[rule]]
+id = "app-caches"
+group = "cache"
+name = "Caches of each app"
+desc = "Files that apps keep to start and work faster: the temp and web caches of Store apps, and the Cache folders of apps like Teams, Discord and Slack. Apps make them again, so their next start can be slower. Browsers and dev tools are in their own groups."
+special = "app-caches"
+safe = true

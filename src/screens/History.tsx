@@ -5,6 +5,7 @@ import i18n from "../i18n";
 import { api, type HistoryEntry } from "../lib/api";
 import { saveExport, toCsv } from "../lib/exporters";
 import { formatBytes } from "../lib/format";
+import { baseName, dirName } from "../lib/platform";
 import { useStore } from "../store";
 
 const PILL: Record<HistoryEntry["action"], string> = {
@@ -12,6 +13,10 @@ const PILL: Record<HistoryEntry["action"], string> = {
   cleaner: "good",
   permanent: "bad",
   blocked: "warn",
+  linked: "good",
+  moved: "acc",
+  cloud: "good",
+  compressed: "good",
 };
 
 function when(ms: number): string {
@@ -25,14 +30,8 @@ function when(ms: number): string {
   return `${d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}, ${time}`;
 }
 
-function baseName(path: string): string {
-  const parts = path.replace(/\\+$/, "").split("\\");
-  return parts[parts.length - 1] || path;
-}
-
 function parent(path: string): string {
-  const i = path.replace(/\\+$/, "").lastIndexOf("\\");
-  return i > 0 ? path.slice(0, i) : path;
+  return dirName(path) || path;
 }
 
 export function History() {
@@ -68,7 +67,14 @@ export function History() {
               "Lustro history.csv",
               toCsv(
                 ["Time", "Action", "Path", "Size (bytes)", "Size", "Result"],
-                list.map((h) => [new Date(h.time).toISOString(), h.action, h.path, h.size, formatBytes(h.size), h.ok ? "OK" : (h.error ?? "Failed")]),
+                list.map((h) => [
+                  new Date(h.time).toISOString(),
+                  h.action,
+                  h.path,
+                  h.size,
+                  formatBytes(h.size),
+                  h.ok ? "OK" : (h.error ?? "Failed"),
+                ]),
               ),
             )
           }

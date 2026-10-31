@@ -40,10 +40,10 @@ pub fn is_elevated() -> bool {
     }
 }
 
-/// Linux and macOS: root and Full Disk Access come in a later phase.
-#[cfg(not(windows))]
+/// True when the process runs as root. macOS Full Disk Access comes in a later phase.
+#[cfg(unix)]
 pub fn is_elevated() -> bool {
-    false
+    unsafe { libc::geteuid() == 0 }
 }
 
 /// Quotes one command-line argument so that `CommandLineToArgvW` reads it back unchanged.

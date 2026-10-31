@@ -26,7 +26,7 @@ pub enum DeleteError {
 
 /// `allow_app`: the user confirmed the warning for app folders, runs as admin and turned on
 /// the setting. Only then an app folder in Program Files passes.
-fn check(path: &Path, allow_app: bool) -> Result<fs::Metadata, DeleteError> {
+pub(crate) fn check(path: &Path, allow_app: bool) -> Result<fs::Metadata, DeleteError> {
     let s = path.to_string_lossy();
     if is_protected(&s) {
         if !is_app_folder(&s) {
@@ -48,7 +48,25 @@ fn check(path: &Path, allow_app: bool) -> Result<fs::Metadata, DeleteError> {
 /// Moves one file or folder to the Recycle Bin. `allow_app` lets an app folder pass (see `check`).
 pub fn recycle(path: &Path, allow_app: bool) -> Result<(), DeleteError> {
     check(path, allow_app)?;
-    trash::delete(path).map_err(|e| DeleteError::Trash(e.to_string()))
+    to_trash(path).map_err(DeleteError::Trash)
+}
+
+/// Moves `path` to the Recycle Bin (the Trash on Linux and macOS), with no checks.
+#[cfg(not(any(target_os = "macos", target_os = "android", target_os = "ios")))]
+pub fn to_trash(path: &Path) -> Result<(), String> {
+    trash::delete(path).map_err(|e| e.to_string())
+}
+
+#[cfg(target_os = "macos")]
+pub fn to_trash(path: &Path) -> Result<(), String> {
+    super::trash_mac::to_trash(path).map_err(|e| e.to_string())
+}
+
+/// Android gets the MediaStore trash in a later phase. iOS deletes photos to "Recently
+/// Deleted" through PhotoKit (later); other files have no Trash.
+#[cfg(any(target_os = "android", target_os = "ios"))]
+pub fn to_trash(_path: &Path) -> Result<(), String> {
+    Err("The Trash is not available on this system yet. Use a permanent delete.".into())
 }
 
 /// Deletes one file or folder permanently. A junction or symbolic link is removed
@@ -97,7 +115,8 @@ fn clear_readonly(path: &Path, attrs: u32) {
     }
 }
 
-#[cfg(test)]
+// macOS: needs its protected paths (until then every macOS path is protected).
+#[cfg(all(test, any(windows, target_os = "linux")))]
 mod tests {
     use super::*;
 
@@ -193,6 +212,44 @@ mod tests {
             delete_permanent(&missing, false),
             Err(DeleteError::Missing(_))
         ));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn refuses_protected_and_missing_paths() {
+        for p in ["/usr", "/etc/passwd", "/", "/opt/app"] {
+            assert!(
+                delete_permanent(Path::new(p), false).is_err(),
+                "{p} must not be deleted"
+            );
+        }
+        let missing = std::env::temp_dir().join("lustro-surely-missing-9f8e7d");
+        assert!(matches!(
+            delete_permanent(&missing, false),
+            Err(DeleteError::Missing(_))
+        ));
+    }
+
+    /// The file is in the home folder, so it goes to the Trash of the home folder.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn trashes_and_restores_a_file() {
+        let home = std::env::var("HOME").unwrap();
+        let dir = Path::new(&home).join(format!("lustro-trash-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let f = dir.join("trash-me.txt");
+        fs::write(&f, b"trash me").unwrap();
+        recycle(&f, false).unwrap();
+        assert!(!f.exists());
+        let item = trash::os_limited::list()
+            .unwrap()
+            .into_iter()
+            .find(|i| i.original_path() == f)
+            .expect("the item is in the Trash");
+        trash::os_limited::restore_all([item]).unwrap();
+        assert_eq!(fs::read(&f).unwrap(), b"trash me");
+        fs::remove_dir_all(dir).unwrap();
     }
 
     /// Needs a desktop session with a Recycle Bin. GitHub's Windows runners run as a

@@ -16,3 +16,13 @@ describe("rootLabel", () => {
     expect(rootLabel("C:\\Users\\me\\projects\\")).toBe("projects");
   });
 });
+
+describe("Unix roots", () => {
+  it("keep one trailing slash and show the folder name", () => {
+    expect(normalizeRoot("/", "linux")).toBe("/");
+    expect(normalizeRoot("/home/me/", "linux")).toBe("/home/me/");
+    expect(normalizeRoot("/home/me", "linux")).toBe("/home/me/");
+    expect(rootLabel("/", "linux")).toBe("/");
+    expect(rootLabel("/home/me/code/", "linux")).toBe("code");
+  });
+});

@@ -3,6 +3,7 @@ use serde::{Serialize, Serializer};
 /// Errors that a command can return to the UI.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[cfg(windows)]
     #[error("The user cancelled the admin prompt.")]
     ElevationCancelled,
     #[error("Another scan is running. Wait for it to finish, or cancel it.")]
@@ -14,9 +15,17 @@ pub enum Error {
     #[error("This item is no longer in the Recycle Bin.")]
     NotInBin,
     #[error("Lustro could not restore the item: {0}")]
+    // Android and iOS have no Trash yet, so they never restore.
+    #[cfg_attr(any(target_os = "android", target_os = "ios"), allow(dead_code))]
     Restore(String),
     #[error("{0}")]
     Uninstall(String),
+    /// A clean rule of the user that cannot be saved or run.
+    #[error("{0}")]
+    Rule(String),
+    /// A folder that could not move to another drive.
+    #[error("{0}")]
+    Move(String),
     #[cfg(not(windows))]
     #[error("{0} is not available on this system yet.")]
     Unsupported(&'static str),

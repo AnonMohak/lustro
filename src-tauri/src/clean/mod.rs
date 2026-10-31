@@ -1,36 +1,17 @@
 //! The junk cleaner: rules from `rules.toml`, sizes of what they match, and the clean itself.
 
+mod caches;
+pub mod custom;
 pub mod dev;
+#[cfg(target_os = "linux")]
+mod linux;
+#[cfg(target_os = "macos")]
+mod macos;
 #[cfg(windows)]
 pub mod system;
 #[cfg(not(windows))]
-pub mod system {
-    //! The cleaner's system calls on Linux and macOS come in a later phase.
-    use std::collections::HashSet;
-    use std::path::Path;
-
-    use super::Measure;
-
-    pub fn running_processes() -> HashSet<String> {
-        HashSet::new()
-    }
-
-    pub fn recycle_bin_size() -> Measure {
-        Measure::default()
-    }
-
-    pub fn empty_recycle_bin() -> bool {
-        false
-    }
-
-    pub fn stop_service(_name: &str) -> bool {
-        false
-    }
-
-    pub fn start_service(_name: &str) {}
-
-    pub fn take_ownership(_path: &Path) {}
-}
+#[path = "system_unix.rs"]
+pub mod system;
 
 use std::sync::Arc;
 
@@ -78,11 +59,31 @@ struct RuleFile {
     rule: Vec<Rule>,
 }
 
-/// The built-in rules.
-pub fn rules() -> Vec<Rule> {
-    toml::from_str::<RuleFile>(include_str!("rules.toml"))
-        .expect("rules.toml is valid")
+/// The rules files of all platforms. Each platform loads its own; the tests check all.
+const WINDOWS_RULES: &str = include_str!("rules.toml");
+const LINUX_RULES: &str = include_str!("rules-linux.toml");
+const MACOS_RULES: &str = include_str!("rules-macos.toml");
+const ANDROID_RULES: &str = include_str!("rules-android.toml");
+
+fn parse_rules(text: &str) -> Vec<Rule> {
+    toml::from_str::<RuleFile>(text)
+        .expect("the rules file is valid")
         .rule
+}
+
+/// The built-in rules of this platform.
+pub fn rules() -> Vec<Rule> {
+    if cfg!(windows) {
+        parse_rules(WINDOWS_RULES)
+    } else if cfg!(target_os = "linux") {
+        parse_rules(LINUX_RULES)
+    } else if cfg!(target_os = "macos") {
+        parse_rules(MACOS_RULES)
+    } else if cfg!(target_os = "android") {
+        parse_rules(ANDROID_RULES)
+    } else {
+        Vec::new()
+    }
 }
 
 /// Expands `%VAR%` and turns the pattern into a glob. Values of variables are escaped,
@@ -109,7 +110,7 @@ fn env_var(name: &str) -> Option<String> {
 /// All existing paths that a rule matches.
 pub fn matches(rule: &Rule) -> Vec<PathBuf> {
     let opts = glob::MatchOptions {
-        case_sensitive: false,
+        case_sensitive: !crate::paths::IGNORE_CASE,
         require_literal_separator: true,
         require_literal_leading_dot: false,
     };
@@ -123,7 +124,7 @@ pub fn matches(rule: &Rule) -> Vec<PathBuf> {
             continue;
         };
         for path in paths.flatten() {
-            if seen.insert(path.to_string_lossy().to_lowercase()) {
+            if seen.insert(crate::paths::key(&path.to_string_lossy())) {
                 out.push(path);
             }
         }
@@ -294,6 +295,8 @@ fn clean_path(path: &Path, meta: &fs::Metadata, age: Option<Duration>, out: &mut
 pub struct Ctx {
     pub trees: Vec<Arc<Tree>>,
     pub dev_age_days: u32,
+    /// The ignore list of Settings: items in these folders never show.
+    pub ignore: Vec<String>,
 }
 
 pub struct Scanned {
@@ -313,10 +316,16 @@ fn sum(items: &[RuleItem]) -> Measure {
 
 /// Measures a rule, including the special rules.
 pub fn scan_rule(rule: &Rule, ctx: &Ctx) -> Scanned {
-    let with_items = |items: Vec<RuleItem>, unavailable: Option<String>| Scanned {
-        measure: sum(&items),
-        items,
-        unavailable,
+    let with_items = |items: Vec<RuleItem>, unavailable: Option<String>| {
+        let items: Vec<RuleItem> = items
+            .into_iter()
+            .filter(|i| !crate::paths::ignored(&ctx.ignore, &i.path))
+            .collect();
+        Scanned {
+            measure: sum(&items),
+            items,
+            unavailable,
+        }
     };
     match rule.special.as_deref() {
         Some("dev-projects") => with_items(
@@ -326,6 +335,12 @@ pub fn scan_rule(rule: &Rule, ctx: &Ctx) -> Scanned {
             }),
         ),
         Some("wsl-compact") => with_items(dev::wsl_disks(), None),
+        Some("app-caches") => with_items(
+            caches::app_caches(&rules()),
+            cfg!(target_os = "android").then(|| {
+                "Android lets only the system clear the caches of other apps. Open Settings > Apps, pick an app, then Storage > Clear cache.".into()
+            }),
+        ),
         Some("jetbrains-old") => with_items(dev::jetbrains_old(), None),
         Some(kind @ ("docker-images" | "docker-build" | "docker-containers")) => {
             match dev::docker_df() {
@@ -348,6 +363,24 @@ pub fn scan_rule(rule: &Rule, ctx: &Ctx) -> Scanned {
                 },
             }
         }
+        #[cfg(target_os = "linux")]
+        Some("snap-old") => {
+            let size = linux::snap_old_size();
+            Scanned {
+                unavailable: size.is_none().then(|| "Snap is not installed.".into()),
+                measure: size.unwrap_or_default(),
+                items: Vec::new(),
+            }
+        }
+        #[cfg(target_os = "macos")]
+        Some("xcode-simulators") => {
+            let size = macos::simulators_size();
+            Scanned {
+                unavailable: size.is_none().then(|| "Xcode is not installed.".into()),
+                measure: size.unwrap_or_default(),
+                items: Vec::new(),
+            }
+        }
         _ => Scanned {
             measure: measure(rule),
             items: Vec::new(),
@@ -361,13 +394,13 @@ pub fn scan_rule(rule: &Rule, ctx: &Ctx) -> Scanned {
 pub fn clean_rule(rule: &Rule, ctx: &Ctx, picked: Option<&[String]>) -> CleanOutcome {
     let mut out = CleanOutcome::default();
     match rule.special.as_deref() {
-        Some(kind @ ("dev-projects" | "wsl-compact" | "jetbrains-old")) => {
+        Some(kind @ ("dev-projects" | "wsl-compact" | "jetbrains-old" | "app-caches")) => {
             let scanned = scan_rule(rule, ctx);
             let chosen: Vec<RuleItem> = scanned
                 .items
                 .into_iter()
                 .filter(|i| match picked {
-                    Some(p) => p.iter().any(|x| x.eq_ignore_ascii_case(&i.path)),
+                    Some(p) => p.iter().any(|x| crate::paths::same(x, &i.path)),
                     None => i.selected,
                 })
                 .collect();
@@ -378,7 +411,14 @@ pub fn clean_rule(rule: &Rule, ctx: &Ctx, picked: Option<&[String]>) -> CleanOut
             }
             for item in chosen {
                 let p = Path::new(&item.path);
-                if let Ok(m) = fs::symlink_metadata(p) {
+                if kind == "app-caches" {
+                    // Empty the cache folder, but keep it: some apps expect it to exist.
+                    for e in fs::read_dir(p).into_iter().flatten().flatten() {
+                        if let Ok(m) = fs::symlink_metadata(e.path()) {
+                            clean_path(&e.path(), &m, None, &mut out);
+                        }
+                    }
+                } else if let Ok(m) = fs::symlink_metadata(p) {
                     clean_path(p, &m, None, &mut out);
                 }
             }
@@ -416,6 +456,12 @@ pub fn clean(rule: &Rule) -> CleanOutcome {
             }
             return out;
         }
+        #[cfg(target_os = "linux")]
+        Some("snap-old") => return linux::snap_remove_old(),
+        #[cfg(target_os = "linux")]
+        Some("journal") => return linux::vacuum_journal(rule),
+        #[cfg(target_os = "macos")]
+        Some("xcode-simulators") => return macos::delete_simulators(),
         _ => {}
     }
     let stopped = rule.service.as_deref().is_some_and(system::stop_service);
@@ -431,6 +477,7 @@ pub fn clean(rule: &Rule) -> CleanOutcome {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::paths::SEP;
 
     fn temp(name: &str) -> PathBuf {
         let p = std::env::temp_dir().join(format!("lustro-clean-{name}-{}", std::process::id()));
@@ -457,14 +504,19 @@ mod tests {
     }
 
     #[test]
-    fn rules_file_is_valid() {
-        let r = rules();
-        assert!(r.len() >= 10);
+    fn rules_files_are_valid() {
+        for text in [WINDOWS_RULES, LINUX_RULES, MACOS_RULES, ANDROID_RULES] {
+            check_rules(&parse_rules(text));
+        }
+    }
+
+    fn check_rules(r: &[Rule]) {
+        assert!(r.len() >= 5);
         let ids: HashSet<&str> = r.iter().map(|x| x.id.as_str()).collect();
         assert_eq!(ids.len(), r.len(), "rule ids are unique");
-        for rule in &r {
+        for rule in r {
             assert!(
-                ["sys", "web", "dev", "docker", "ide"].contains(&rule.group.as_str()),
+                ["sys", "cache", "web", "dev", "docker", "ide"].contains(&rule.group.as_str()),
                 "{}",
                 rule.id
             );
@@ -495,6 +547,8 @@ mod tests {
         assert_eq!(expand("C:\\plain\\*", &env).unwrap(), "C:\\plain\\*");
     }
 
+    // macOS: needs its protected paths (until then every macOS path is protected).
+    #[cfg(any(windows, target_os = "linux"))]
     #[test]
     fn measures_and_cleans_matching_files_only() {
         let root = temp("rule");
@@ -503,7 +557,7 @@ mod tests {
         fs::write(root.join("cache/sub/b.bin"), vec![0u8; 500]).unwrap();
         fs::write(root.join("keep.txt"), b"keep").unwrap();
         let pattern = format!(
-            "{}\\cache\\*",
+            "{}{SEP}cache{SEP}*",
             glob::Pattern::escape(&root.to_string_lossy())
         );
         let rule = Rule {
@@ -537,7 +591,7 @@ mod tests {
     fn min_age_keeps_new_files() {
         let root = temp("age");
         fs::write(root.join("new.tmp"), b"new").unwrap();
-        let pattern = format!("{}\\*", glob::Pattern::escape(&root.to_string_lossy()));
+        let pattern = format!("{}{SEP}*", glob::Pattern::escape(&root.to_string_lossy()));
         let rule = Rule {
             id: "t".into(),
             group: "sys".into(),

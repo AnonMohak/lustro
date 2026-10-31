@@ -8,6 +8,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use crate::error::{Error, Result};
 use crate::ops::history::{self, Action, History};
 use crate::ops::{delete, protect};
+use crate::paths::{self, SEP};
 use crate::scan::kind::{KIND_COUNT, Kind};
 use crate::scan::model::{Tree, flags};
 use crate::scan::{self, Progress, cache, query};
@@ -121,8 +122,16 @@ fn cache_dir(app: &AppHandle) -> Option<std::path::PathBuf> {
 
 /// Starts a scan in the background. Events: `scan-progress`, `scan-done`, `scan-error`.
 #[tauri::command]
-pub fn start_scan(app: AppHandle, state: State<'_, AppState>, root: String) -> Result<()> {
-    let root = normalize_root(&root);
+pub fn start_scan(app: AppHandle, root: String) -> Result<()> {
+    begin_scan(&app, &root, false)
+}
+
+/// Starts a scan of `root`. When an older scan of it exists, the change goes to the "what
+/// grew" reports; `scheduled` (an automatic rescan) also sends it as a notification.
+pub fn begin_scan(app: &AppHandle, root: &str, scheduled: bool) -> Result<()> {
+    let app = app.clone();
+    let state = app.state::<AppState>();
+    let root = normalize_root(root);
     let progress = Arc::new(Progress::default());
     {
         let mut active = state.active.lock().map_err(|_| Error::Busy)?;
@@ -174,8 +183,13 @@ pub fn start_scan(app: AppHandle, state: State<'_, AppState>, root: String) -> R
             Ok(tree) => {
                 let tree = Arc::new(tree);
                 let s = summary(&tree);
-                if let Ok(mut trees) = state.trees.write() {
-                    trees.insert(root.clone(), tree.clone());
+                let old = state
+                    .trees
+                    .write()
+                    .ok()
+                    .and_then(|mut trees| trees.insert(root.clone(), tree.clone()));
+                if let Some(old) = old {
+                    report_growth(&app, &old, &tree, scheduled);
                 }
                 let _ = app.emit("scan-done", s);
                 crate::live::watch(&app, &root);
@@ -199,6 +213,261 @@ pub fn start_scan(app: AppHandle, state: State<'_, AppState>, root: String) -> R
         }
     });
     Ok(())
+}
+
+/// Saves what changed between two scans, and tells the user after an automatic rescan.
+fn report_growth(app: &AppHandle, old: &Tree, new: &Tree, scheduled: bool) {
+    let report = crate::growth::compare(old, new);
+    if let Some(dir) = data_dir(app)
+        && let Err(e) = crate::growth::save_report(&dir, &report)
+    {
+        log::warn!("Could not save the growth report: {e}");
+    }
+    if scheduled {
+        use tauri_plugin_notification::NotificationExt;
+        let _ = app
+            .notification()
+            .builder()
+            .title(format!("Lustro rescanned {}", new.root_path))
+            .body(crate::growth::summary_line(&report))
+            .show();
+    }
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct MoveProgress {
+    done: u64,
+    total: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MoveResult {
+    files: u64,
+    bytes: u64,
+    /// Set when the old copy could not be removed after the move.
+    note: Option<String>,
+    /// The scan after the move, for the views.
+    summary: Option<ScanSummary>,
+}
+
+/// Moves a scanned folder into `dest` and leaves a link in its old place. The same rules
+/// as for a delete apply: protected folders are refused, and app folders pass only with
+/// `app_folders`, as admin, with the setting on. Events: `move-progress`.
+#[tauri::command]
+pub async fn move_folder(
+    app: AppHandle,
+    root: String,
+    id: u32,
+    dest: String,
+    app_folders: Option<bool>,
+) -> Result<MoveResult> {
+    let allow_app = app_folders == Some(true)
+        && elevation::is_elevated()
+        && crate::desktop::current_settings(&app).allow_app_folders;
+    let root = normalize_root(&root);
+    let path = {
+        let state = app.state::<AppState>();
+        let trees = state.trees.read().map_err(|_| Error::NoScan)?;
+        let t = trees.get(&root).ok_or(Error::NoScan)?;
+        if id == Tree::ROOT {
+            return Err(Error::ScanRoot);
+        }
+        if !t.node(id).is_dir() {
+            return Err(Error::Move(
+                "Only folders can move to another drive.".into(),
+            ));
+        }
+        t.path(id)
+    };
+    delete::check(std::path::Path::new(&path), allow_app)
+        .map_err(|e| Error::Move(e.to_string()))?;
+    if !std::path::Path::new(&dest).is_dir() {
+        return Err(Error::Move(format!("{dest} is not a folder.")));
+    }
+    let app2 = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let last = std::cell::Cell::new(0u64);
+        let progress = |done: u64, total: u64| {
+            // At most one event for each percent.
+            if total == 0 || (done - last.get()) * 100 >= total || done == total {
+                last.set(done);
+                let _ = app2.emit("move-progress", MoveProgress { done, total });
+            }
+        };
+        let r = crate::ops::relocate::relocate(
+            std::path::Path::new(&path),
+            std::path::Path::new(&dest),
+            &progress,
+        );
+        let size = r.as_ref().map(|(t, _)| t.bytes).unwrap_or(0);
+        with_history(&app2, |h| {
+            h.add(
+                Action::Moved,
+                &path,
+                size,
+                r.as_ref().map(|_| ()).map_err(|e| e.clone()),
+            )
+        });
+        let (t, note) = r.map_err(Error::Move)?;
+        let mut summary_after = None;
+        if let Ok(mut trees) = app2.state::<AppState>().trees.write()
+            && let Some(tree) = trees.get_mut(&root)
+        {
+            Arc::make_mut(tree).remove(id);
+            summary_after = Some(summary(tree));
+        }
+        Ok(MoveResult {
+            files: t.files,
+            bytes: t.bytes,
+            note,
+            summary: summary_after,
+        })
+    })
+    .await
+    .map_err(|e| Error::Io(std::io::Error::other(e.to_string())))?
+}
+
+/// Big folders with no change for a year that compress well.
+#[tauri::command]
+pub async fn old_folders(app: AppHandle) -> Vec<crate::ops::compress::OldFolder> {
+    let trees: Vec<Arc<Tree>> = app
+        .state::<AppState>()
+        .trees
+        .read()
+        .map(|t| t.values().cloned().collect())
+        .unwrap_or_default();
+    let ignore = crate::desktop::current_settings(&app).ignore;
+    let now = unix_ms_to_filetime(crate::ops::history::now_ms());
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::ops::compress::old_folders(&trees, &ignore, now)
+    })
+    .await
+    .unwrap_or_default()
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompressResult {
+    freed_bytes: u64,
+    /// macOS and Linux: the archive that holds the folder now.
+    archive: Option<String>,
+    summary: Option<ScanSummary>,
+}
+
+/// The free space of the drive that holds `path`.
+#[cfg(windows)]
+fn free_space_of(path: &str) -> u64 {
+    drives::list_drives()
+        .into_iter()
+        .filter(|d| paths::inside(path, &d.root))
+        .max_by_key(|d| d.root.len())
+        .map_or(0, |d| d.free_bytes)
+}
+
+/// Compresses a scanned folder (Windows: NTFS compression; macOS and Linux: an archive,
+/// then the folder goes to the Trash). Protected folders are refused.
+#[tauri::command]
+pub async fn compress_folder(app: AppHandle, root: String, id: u32) -> Result<CompressResult> {
+    let root = normalize_root(&root);
+    let (path, size) = {
+        let state = app.state::<AppState>();
+        let trees = state.trees.read().map_err(|_| Error::NoScan)?;
+        let t = trees.get(&root).ok_or(Error::NoScan)?;
+        if id == Tree::ROOT || !t.node(id).is_dir() {
+            return Err(Error::Move(
+                "Lustro compresses folders inside a scan.".into(),
+            ));
+        }
+        (t.path(id), t.node(id).size)
+    };
+    delete::check(std::path::Path::new(&path), false).map_err(|e| Error::Move(e.to_string()))?;
+    let app2 = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let p = std::path::Path::new(&path);
+        #[cfg(windows)]
+        let (r, archive) = {
+            let before = free_space_of(&path);
+            let r = crate::ops::compress::compress(p);
+            let _ = size;
+            (
+                r.map(|()| free_space_of(&path).saturating_sub(before)),
+                None::<String>,
+            )
+        };
+        #[cfg(unix)]
+        let (r, archive) = match crate::ops::compress::compress(p) {
+            Ok(a) => {
+                let packed = std::fs::metadata(&a).map(|m| m.len()).unwrap_or(0);
+                (
+                    Ok(size.saturating_sub(packed)),
+                    Some(a.to_string_lossy().into_owned()),
+                )
+            }
+            Err(e) => (Err(e), None),
+        };
+        let freed = r.as_ref().copied().unwrap_or(0);
+        with_history(&app2, |h| {
+            h.add(
+                Action::Compressed,
+                &path,
+                freed,
+                r.as_ref().map(|_| ()).map_err(|e| e.clone()),
+            )
+        });
+        let freed = r.map_err(Error::Move)?;
+        // macOS and Linux: the folder is in the Trash now.
+        let mut summary_after = None;
+        if archive.is_some()
+            && let Ok(mut trees) = app2.state::<AppState>().trees.write()
+            && let Some(tree) = trees.get_mut(&root)
+        {
+            Arc::make_mut(tree).remove(id);
+            summary_after = Some(summary(tree));
+        }
+        Ok(CompressResult {
+            freed_bytes: freed,
+            archive,
+            summary: summary_after,
+        })
+    })
+    .await
+    .map_err(|e| Error::Io(std::io::Error::other(e.to_string())))?
+}
+
+/// The "what grew" report of each root (the change between its last two scans).
+#[tauri::command]
+pub fn growth_reports(app: AppHandle) -> Vec<crate::growth::Report> {
+    data_dir(&app)
+        .map(|d| crate::growth::load_reports(&d).into_values().collect())
+        .unwrap_or_default()
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DriveHistory {
+    root: String,
+    points: Vec<crate::growth::Point>,
+    /// Days until the drive is full at its recent growth, if it grows.
+    days_left: Option<u32>,
+}
+
+/// The used space of each drive over time.
+#[tauri::command]
+pub fn space_history(app: AppHandle) -> Vec<DriveHistory> {
+    let Some(dir) = data_dir(&app) else {
+        return Vec::new();
+    };
+    crate::growth::SpaceLog::load(&dir)
+        .drives
+        .into_iter()
+        .map(|(root, points)| DriveHistory {
+            days_left: crate::growth::days_left(&points),
+            root,
+            points,
+        })
+        .collect()
 }
 
 #[tauri::command]
@@ -471,7 +740,8 @@ pub async fn find_files(app: AppHandle, query: FindFilesQuery) -> Result<Vec<Fil
     };
     tauri::async_runtime::spawn_blocking(move || {
         let limit = query.limit.unwrap_or(200).min(5000);
-        let filter = query::FileFilter {
+        let ignore = crate::desktop::current_settings(&app).ignore;
+        let mut filter = query::FileFilter {
             sort: query.sort,
             min_size: query.min_size.unwrap_or(0),
             older_than: query.older_than.map(unix_ms_to_filetime).unwrap_or(0),
@@ -482,9 +752,15 @@ pub async fn find_files(app: AppHandle, query: FindFilesQuery) -> Result<Vec<Fil
                 .filter_map(|k| kind_from_str(k))
                 .collect(),
             limit,
+            skip_dirs: Vec::new(),
         };
         let mut hits: Vec<FileHit> = Vec::new();
         for t in &trees {
+            // The ignore list of Settings: a whole scan, or folders in it.
+            if crate::paths::ignored(&ignore, &t.root_path) {
+                continue;
+            }
+            filter.skip_dirs = ignore.iter().filter_map(|d| t.find_path(d)).collect();
             for id in query::find_files(t, &filter) {
                 let n = t.node(id);
                 let path = t.path(id);
@@ -768,10 +1044,10 @@ pub async fn delete_items(
     // Skip items inside another selected folder: deleting the folder removes them too.
     let folders: Vec<String> = targets
         .iter()
-        .map(|t| format!("{}\\", t.2.trim_end_matches('\\').to_lowercase()))
+        .map(|t| format!("{}{SEP}", paths::key(t.2.trim_end_matches(SEP))))
         .collect();
     targets.retain(|t| {
-        let p = t.2.to_lowercase();
+        let p = paths::key(&t.2);
         !folders
             .iter()
             .any(|f| p.starts_with(f.as_str()) && p.len() > f.len())
@@ -875,42 +1151,79 @@ pub async fn delete_items(
     .map_err(|e| Error::Io(std::io::Error::other(e.to_string())))
 }
 
-/// Lower-case long form of a path, so short 8.3 names (`RUNNER~1`) match long ones.
-/// The item itself may be gone, so only its folder is resolved.
+/// Long form of a path as a key (see `paths::key`), so short 8.3 names (`RUNNER~1`) match
+/// long ones. The item itself may be gone, so only its folder is resolved.
+#[cfg(not(any(target_os = "macos", target_os = "android", target_os = "ios")))]
 fn long_lower(p: &str) -> String {
     let path = std::path::Path::new(p);
     if let (Some(parent), Some(name)) = (path.parent(), path.file_name())
         && let Ok(full) = std::fs::canonicalize(parent)
     {
         let joined = full.join(name);
-        return joined
-            .to_string_lossy()
-            .trim_start_matches("\\\\?\\")
-            .to_lowercase();
+        return paths::key(joined.to_string_lossy().trim_start_matches("\\\\?\\"));
     }
-    p.to_lowercase()
+    paths::key(p)
 }
 
-/// Items in the Recycle Bin (the Trash on Linux).
-#[cfg(not(target_os = "macos"))]
-fn bin_items() -> std::result::Result<Vec<trash::TrashItem>, trash::Error> {
-    trash::os_limited::list()
+/// Marks the restorable entries whose item is gone from the Recycle Bin (the Trash on Linux).
+#[cfg(not(any(target_os = "macos", target_os = "android", target_os = "ios")))]
+fn check_bin(entries: &mut [history::Entry]) {
+    let in_bin: std::collections::HashSet<String> = trash::os_limited::list()
+        .unwrap_or_default()
+        .iter()
+        .map(|i| long_lower(&i.original_path().to_string_lossy()))
+        .collect();
+    for e in entries.iter_mut().filter(|e| e.restorable) {
+        e.restorable = in_bin.contains(&long_lower(&e.path));
+    }
 }
 
-/// The `trash` crate cannot list the macOS Trash: restore comes in a later phase.
+/// The `trash` crate cannot list the macOS Trash, so Lustro looks for each item by name.
 #[cfg(target_os = "macos")]
-fn bin_items() -> std::result::Result<Vec<trash::TrashItem>, trash::Error> {
-    Ok(Vec::new())
+fn check_bin(entries: &mut [history::Entry]) {
+    for e in entries.iter_mut().filter(|e| e.restorable) {
+        e.restorable = crate::ops::trash_mac::find(&e.path).is_some();
+    }
 }
 
-#[cfg(not(target_os = "macos"))]
-fn bin_restore(item: trash::TrashItem) -> std::result::Result<(), trash::Error> {
-    trash::os_limited::restore_all([item])
+/// Puts the item of `entry` back. `Ok(false)` when it is not in the bin.
+#[cfg(not(any(target_os = "macos", target_os = "android", target_os = "ios")))]
+fn restore_from_bin(entry: &history::Entry) -> Result<bool> {
+    let items = trash::os_limited::list().map_err(|e| Error::Restore(e.to_string()))?;
+    let target = long_lower(&entry.path);
+    let deleted_at = entry.time / 1000;
+    let item = items
+        .into_iter()
+        .filter(|i| long_lower(&i.original_path().to_string_lossy()) == target)
+        .min_by_key(|i| (i.time_deleted - deleted_at).abs());
+    let Some(item) = item else {
+        return Ok(false);
+    };
+    trash::os_limited::restore_all([item]).map_err(|e| Error::Restore(e.to_string()))?;
+    Ok(true)
 }
 
 #[cfg(target_os = "macos")]
-fn bin_restore(_item: trash::TrashItem) -> std::result::Result<(), trash::Error> {
-    Ok(())
+fn restore_from_bin(entry: &history::Entry) -> Result<bool> {
+    let Some(item) = crate::ops::trash_mac::find(&entry.path) else {
+        return Ok(false);
+    };
+    crate::ops::trash_mac::restore(&item, &entry.path)
+        .map_err(|e| Error::Restore(e.to_string()))?;
+    Ok(true)
+}
+
+/// Android and iOS have no Trash yet, so nothing can be restored.
+#[cfg(any(target_os = "android", target_os = "ios"))]
+fn check_bin(entries: &mut [history::Entry]) {
+    for e in entries.iter_mut() {
+        e.restorable = false;
+    }
+}
+
+#[cfg(any(target_os = "android", target_os = "ios"))]
+fn restore_from_bin(_entry: &history::Entry) -> Result<bool> {
+    Ok(false)
 }
 
 /// The delete log, newest first. Recycle Bin entries that are gone from the bin
@@ -921,14 +1234,7 @@ pub async fn history(app: AppHandle) -> Vec<history::Entry> {
     tauri::async_runtime::spawn_blocking(move || {
         with_history(&app2, |h| {
             if h.entries.iter().any(|e| e.restorable) {
-                let in_bin: std::collections::HashSet<String> = bin_items()
-                    .unwrap_or_default()
-                    .iter()
-                    .map(|i| long_lower(&i.original_path().to_string_lossy()))
-                    .collect();
-                for e in h.entries.iter_mut().filter(|e| e.restorable) {
-                    e.restorable = in_bin.contains(&long_lower(&e.path));
-                }
+                check_bin(&mut h.entries);
             }
             h.newest_first()
         })
@@ -946,22 +1252,14 @@ pub async fn restore(app: AppHandle, id: u64) -> Result<()> {
         let entry = with_history(&app2, |h| h.entries.iter().find(|e| e.id == id).cloned())
             .flatten()
             .ok_or(Error::NotInBin)?;
-        let items = bin_items().map_err(|e| Error::Restore(e.to_string()))?;
-        let target = long_lower(&entry.path);
-        let deleted_at = entry.time / 1000;
-        let item = items
-            .into_iter()
-            .filter(|i| long_lower(&i.original_path().to_string_lossy()) == target)
-            .min_by_key(|i| (i.time_deleted - deleted_at).abs());
-        let Some(item) = item else {
+        if !restore_from_bin(&entry)? {
             with_history(&app2, |h| {
                 if let Some(e) = h.entries.iter_mut().find(|e| e.id == id) {
                     e.restorable = false;
                 }
             });
             return Err(Error::NotInBin);
-        };
-        bin_restore(item).map_err(|e| Error::Restore(e.to_string()))?;
+        }
         with_history(&app2, |h| {
             if let Some(e) = h.entries.iter_mut().find(|e| e.id == id) {
                 e.restorable = false;

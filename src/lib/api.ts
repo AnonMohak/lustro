@@ -129,7 +129,8 @@ export interface DeleteResult {
   summaries: ScanSummary[];
 }
 
-export type HistoryAction = "recycle" | "permanent" | "cleaner" | "blocked";
+export type HistoryAction =
+  "recycle" | "permanent" | "cleaner" | "blocked" | "linked" | "moved" | "cloud" | "compressed";
 
 export interface HistoryEntry {
   id: number;
@@ -147,7 +148,7 @@ export interface HistoryEntry {
 
 export interface CleanRule {
   id: string;
-  group: "sys" | "web" | "dev" | "docker" | "ide";
+  group: "sys" | "cache" | "web" | "dev" | "docker" | "ide";
   name: string;
   desc: string;
   bytes: number;
@@ -163,10 +164,33 @@ export interface CleanRule {
 
 export interface CleanItem {
   path: string;
+  /** A short name for the row (for example the app of a cache folder). */
+  label?: string;
   bytes: number;
   files: number;
   ageDays: number | null;
   selected: boolean;
+}
+
+/** A clean rule of the user: delete folders with these names in untouched projects under `root`. */
+export interface CustomRule {
+  /** Empty for a new rule; the backend gives it an id. */
+  id: string;
+  name: string;
+  root: string;
+  /** "folders": targets are folder names; "files": targets are file patterns like *.iso. */
+  kind: "folders" | "files";
+  targets: string[];
+  ageDays: number;
+  schedule: "off" | "start" | "daily" | "weekly";
+  /** Unix ms of the last run, or 0. */
+  lastRun: number;
+}
+
+export interface CustomOutcome {
+  freedBytes: number;
+  folders: number;
+  errors: number;
 }
 
 export interface CleanOutcome {
@@ -183,12 +207,34 @@ export interface DupeFile {
   id: number;
   path: string;
   modified: number;
+  size: number;
+  /** Name groups: files with the same number have the same content; 0 when no other file has it. */
+  same: number;
 }
 
 export interface DupeGroup {
+  /** Exact groups: the size of each copy. Name groups: the biggest file. */
   size: number;
+  /** Exact groups: the content hash. Name groups: the shared name. */
   hash: string;
+  /** "folder": `files` are the copies of a folder. */
+  kind: "exact" | "name" | "similar" | "folder";
+  /** The number of files in each copy (1, or the files of a duplicate folder). */
+  items: number;
   files: DupeFile[];
+}
+
+export type DupeKind = "image" | "video" | "doc" | "archive" | "other";
+
+export interface DupeOptions {
+  minSize: number;
+  includeAppData: boolean;
+  mode: "exact" | "name" | "similar";
+  /** Empty: all types. */
+  kinds: DupeKind[];
+  /** Empty: all scans. */
+  onlyIn: string[];
+  notIn: string[];
 }
 
 export interface DupeProgress {
@@ -247,6 +293,42 @@ export interface BackendSettings {
   startWithWindows: boolean;
   explorerMenu: boolean;
   allowAppFolders: boolean;
+  /** Folders that Lustro never suggests to delete. */
+  ignore: string[];
+  /** Ids of "Your rules" that run when their drive is low on space. */
+  lowSpaceRules: string[];
+  /** Ids of built-in clean rules that run when the home drive is low on space. */
+  lowSpaceClean: string[];
+  /** Rescan each scan when it is this many days old (0: never). */
+  rescanDays: number;
+}
+
+/** The change between the last two scans of a drive or folder. */
+export interface GrowthReport {
+  root: string;
+  /** Unix seconds of the two scans. */
+  from: number;
+  to: number;
+  before: number;
+  after: number;
+  changes: { path: string; before: number; after: number }[];
+}
+
+export interface DriveHistory {
+  root: string;
+  points: { day: number; used: number; total: number }[];
+  /** Days until full at the recent growth, or null when the drive does not grow. */
+  daysLeft: number | null;
+}
+
+/** A built-in clean rule without its size. */
+export interface CleanRuleInfo {
+  id: string;
+  group: CleanRule["group"];
+  name: string;
+  safe: boolean;
+  admin: boolean;
+  warn: boolean;
 }
 
 export interface FavoriteHit {
@@ -282,8 +364,7 @@ export const api = {
   cancelScan: () => invoke<void>("cancel_scan"),
   forgetScan: (root: string) => invoke<void>("forget_scan", { root }),
   loadCachedScans: () => invoke<ScanSummary[]>("load_cached_scans"),
-  listChildren: (root: string, id: number, limit?: number) =>
-    invoke<NodeDto[]>("list_children", { root, id, limit }),
+  listChildren: (root: string, id: number, limit?: number) => invoke<NodeDto[]>("list_children", { root, id, limit }),
   nodeDetail: (root: string, id: number) => invoke<NodeDetail>("node_detail", { root, id }),
   treemap: (root: string, id: number, maxNodes?: number) => invoke<TreemapNode>("treemap", { root, id, maxNodes }),
   findFiles: (query: FindFilesQuery) => invoke<FileHit[]>("find_files", { query }),
@@ -302,12 +383,49 @@ export const api = {
   cancelDelete: () => invoke<void>("cancel_delete"),
   history: () => invoke<HistoryEntry[]>("history"),
   restore: (id: number) => invoke<void>("restore", { id }),
-  dupesStart: (minSize: number, includeAppData: boolean) => invoke<void>("dupes_start", { minSize, includeAppData }),
+  dupesStart: (options: DupeOptions) => invoke<void>("dupes_start", { options }),
   dupesCancel: () => invoke<void>("dupes_cancel"),
   dupesResult: () => invoke<DupeGroup[] | null>("dupes_result"),
+  /** Replaces copies with links to the kept file (exact groups of the last result only). */
+  dupesLink: (sets: { keep: string; copies: string[] }[]) =>
+    invoke<{ linked: number; freedBytes: number; errors: number; firstError: string | null }>("dupes_link", { sets }),
+  /** A small preview of a photo in the last duplicate result, as a data: URL. */
+  photoThumbnail: (path: string) => invoke<string | null>("photo_thumbnail", { path }),
   appsList: () => invoke<InstalledApp[]>("apps_list"),
   appUninstall: (id: string) => invoke<void>("app_uninstall", { id }),
   cleanScan: (devAgeDays: number) => invoke<CleanRule[]>("clean_scan", { devAgeDays }),
   cleanRun: (ids: string[], items: Record<string, string[]>, devAgeDays: number) =>
     invoke<CleanOutcome[]>("clean_run", { ids, items, devAgeDays }),
+  customRules: () => invoke<CustomRule[]>("custom_rules"),
+  growthReports: () => invoke<GrowthReport[]>("growth_reports"),
+  /** Big folders with no change for a year that compress well. */
+  oldFolders: () => invoke<{ root: string; id: number; path: string; size: number; newest: number }[]>("old_folders"),
+  /** Windows: NTFS compression in place. macOS and Linux: a .tar.gz archive, then the folder goes to the Trash. */
+  compressFolder: (root: string, id: number) =>
+    invoke<{ freedBytes: number; archive: string | null; summary: ScanSummary | null }>("compress_folder", {
+      root,
+      id,
+    }),
+  /** Big old files in OneDrive or iCloud Drive that can become online-only. */
+  cloudCandidates: () =>
+    invoke<{ provider: string; root: string; files: { path: string; size: number }[] }[]>("cloud_candidates"),
+  cloudFree: () =>
+    invoke<{ files: number; freedBytes: number; errors: number; firstError: string | null }>("cloud_free"),
+  /** Moves a scanned folder into `dest` and leaves a link in its old place. Events: move-progress. */
+  moveFolder: (root: string, id: number, dest: string, appFolders = false) =>
+    invoke<{ files: number; bytes: number; note: string | null; summary: ScanSummary | null }>("move_folder", {
+      root,
+      id,
+      dest,
+      appFolders,
+    }),
+  /** Installers and disk images in Downloads; the old ones are selected. */
+  installersScan: () => invoke<CleanItem[]>("installers_scan"),
+  installersClean: () => invoke<CustomOutcome>("installers_clean"),
+  spaceHistory: () => invoke<DriveHistory[]>("space_history"),
+  cleanRulesList: () => invoke<CleanRuleInfo[]>("clean_rules_list"),
+  /** Saves the whole list and returns it with the ids of new rules. */
+  setCustomRules: (rules: CustomRule[]) => invoke<CustomRule[]>("set_custom_rules", { rules }),
+  customRuleScan: (id: string) => invoke<CleanItem[]>("custom_rule_scan", { id }),
+  customRuleRun: (id: string) => invoke<CustomOutcome>("custom_rule_run", { id }),
 };

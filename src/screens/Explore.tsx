@@ -1,3 +1,5 @@
+import { listen } from "@tauri-apps/api/event";
+import { open } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../components/Icon";
@@ -9,6 +11,7 @@ import { saveExport, scanReportHtml } from "../lib/exporters";
 import { driveIcon, driveName } from "../lib/drives";
 import { formatBytes, formatCount, percent } from "../lib/format";
 import { KIND_ICON, kindColor, sortedBreakdown } from "../lib/kinds";
+import { IS_WINDOWS, isDriveRoot } from "../lib/platform";
 import { rootLabel, scanSummaryText } from "../lib/scanText";
 import { useAppsUnlocked, useStore } from "../store";
 
@@ -16,8 +19,8 @@ const CHILD_LIMIT = 1000;
 const ROW_H = 30;
 
 /** Any folder can be a favourite, except a drive root. */
-function canStar(root: string, n: NodeDto): boolean {
-  return n.isDir && !(n.id === ROOT_ID && /^[A-Z]:\\$/.test(root));
+function canStar(root: string, n: NodeDto, driveRoots: string[]): boolean {
+  return n.isDir && !(n.id === ROOT_ID && isDriveRoot(root, driveRoots));
 }
 
 function ScanProgressView({ root }: { root: string }) {
@@ -34,7 +37,9 @@ function ScanProgressView({ root }: { root: string }) {
           <div className="big">{formatCount(p.files)}</div>
           <p>
             {t("scan.filesFound")} · {t("scan.foldersFound", { count: p.dirs, n: formatCount(p.dirs) })} ·{" "}
-            {p.fast ? t("scan.mftRead", { size: formatBytes(p.bytes) }) : t("scan.bytesFound", { size: formatBytes(p.bytes) })}
+            {p.fast
+              ? t("scan.mftRead", { size: formatBytes(p.bytes) })
+              : t("scan.bytesFound", { size: formatBytes(p.bytes) })}
           </p>
           <p className="mono faint scan-current" title={p.current}>
             {p.fast ? t("scan.method.mft") : p.current || " "}
@@ -135,7 +140,11 @@ function TreePane({
           onChange={(e) => setFilter(e.target.value)}
         />
       </div>
-      <div className="lscroll" ref={scroller} onScroll={(e) => setScroll({ top: e.currentTarget.scrollTop, h: e.currentTarget.clientHeight })}>
+      <div
+        className="lscroll"
+        ref={scroller}
+        onScroll={(e) => setScroll({ top: e.currentTarget.scrollTop, h: e.currentTarget.clientHeight })}
+      >
         <div style={{ height: rows.length * ROW_H, position: "relative" }}>
           {rows.slice(first, last).map((r, k) => {
             const i = first + k;
@@ -191,7 +200,9 @@ function TreePane({
                 ) : (
                   <span />
                 )}
-                <span className={`tsize ${n.denied ? "deny" : ""}`}>{n.denied ? t("scan.needsAdmin") : formatBytes(n.size)}</span>
+                <span className={`tsize ${n.denied ? "deny" : ""}`}>
+                  {n.denied ? t("scan.needsAdmin") : formatBytes(n.size)}
+                </span>
                 <span className="tbar">
                   <i style={{ width: `${percent(n.size, r.parentSize)}%` }} />
                 </span>
@@ -235,6 +246,84 @@ function TypesView({ detail }: { detail: NodeDetail }) {
   );
 }
 
+/** Windows: NTFS compression in place. macOS and Linux: a .tar.gz archive, then the folder goes to the Trash. */
+function CompressButton({ root, detail }: { root: string; detail: NodeDetail }) {
+  const { t } = useTranslation();
+  const { openDialog, showToast, afterDelete } = useStore.getState();
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      className="btn ghost block sm"
+      disabled={busy}
+      onClick={() =>
+        openDialog({
+          title: t(IS_WINDOWS ? "compress.titleWin" : "compress.titleUnix", { name: detail.node.name }),
+          body: [t(IS_WINDOWS ? "compress.bodyWin" : "compress.bodyUnix", { size: formatBytes(detail.node.size) })],
+          confirm: t(IS_WINDOWS ? "compress.confirmWin" : "compress.confirmUnix"),
+          onConfirm: async () => {
+            setBusy(true);
+            try {
+              const r = await api.compressFolder(root, detail.node.id);
+              if (r.summary) afterDelete([r.summary]);
+              showToast(
+                r.archive
+                  ? t("compress.doneUnix", { size: formatBytes(r.freedBytes), archive: r.archive })
+                  : t("compress.doneWin", { size: formatBytes(r.freedBytes) }),
+              );
+            } catch (e) {
+              showToast(String(e), true);
+            }
+            setBusy(false);
+          },
+        })
+      }
+    >
+      <Icon name="archive" />
+      {busy ? t("compress.working") : t(IS_WINDOWS ? "compress.buttonWin" : "compress.buttonUnix")}
+    </button>
+  );
+}
+
+/** "Move to another drive": copy the folder, check it, and leave a link in the old place. */
+function MoveButton({ root, detail }: { root: string; detail: NodeDetail }) {
+  const { t } = useTranslation();
+  const { openDialog, showToast, afterDelete } = useStore.getState();
+  const [moving, setMoving] = useState<number | null>(null);
+
+  const start = async () => {
+    const dest = await open({ directory: true, title: t("move.pick") });
+    if (typeof dest !== "string") return;
+    openDialog({
+      title: t("move.title", { name: detail.node.name }),
+      body: [t("move.body", { size: formatBytes(detail.node.size), dest }), t("move.link")],
+      warn: detail.appFolder ? t("move.appWarn") : undefined,
+      confirm: t("move.confirm"),
+      onConfirm: async () => {
+        setMoving(0);
+        const off = await listen<{ done: number; total: number }>("move-progress", (e) =>
+          setMoving(Math.round(percent(e.payload.done, e.payload.total))),
+        );
+        try {
+          const r = await api.moveFolder(root, detail.node.id, dest, detail.appFolder);
+          if (r.summary) afterDelete([r.summary]);
+          showToast(r.note ?? t("move.done", { size: formatBytes(r.bytes), dest }), !!r.note);
+        } catch (e) {
+          showToast(String(e), true);
+        }
+        off();
+        setMoving(null);
+      },
+    });
+  };
+
+  return (
+    <button className="btn ghost block sm" disabled={moving !== null} onClick={start}>
+      <Icon name="export" />
+      {moving === null ? t("move.button") : t("move.moving", { pct: moving })}
+    </button>
+  );
+}
+
 function DetailPane({
   root,
   detail,
@@ -253,8 +342,15 @@ function DetailPane({
   const { t } = useTranslation();
   const showToast = useStore((s) => s.showToast);
   const isAdmin = useStore((s) => s.info?.isAdmin ?? false);
+  const drives = useStore((s) => s.drives);
+  const driveRoots = drives?.map((d) => d.root) ?? [];
   const appsUnlocked = useAppsUnlocked();
-  if (!detail) return <aside className="detail"><div className="dt muted">{t("explore.selectHint")}</div></aside>;
+  if (!detail)
+    return (
+      <aside className="detail">
+        <div className="dt muted">{t("explore.selectHint")}</div>
+      </aside>
+    );
   const n = detail.node;
   const ent = sortedBreakdown(detail.breakdown);
   const share = percent(n.size, rootSize);
@@ -279,8 +375,18 @@ function DetailPane({
             </span>
           </div>
         )}
-        {n.link && <div className="note"><Icon name="info" /><span>{t("explore.link")}</span></div>}
-        {n.onlineOnly && <div className="note"><Icon name="info" /><span>{t("explore.onlineOnly")}</span></div>}
+        {n.link && (
+          <div className="note">
+            <Icon name="info" />
+            <span>{t("explore.link")}</span>
+          </div>
+        )}
+        {n.onlineOnly && (
+          <div className="note">
+            <Icon name="info" />
+            <span>{t("explore.onlineOnly")}</span>
+          </div>
+        )}
         <div>
           <div className="big">{formatBytes(n.size)}</div>
           <div className="faint">
@@ -299,7 +405,9 @@ function DetailPane({
           {n.modified > 0 && (
             <>
               <dt>{t("explore.modified")}</dt>
-              <dd>{new Date(n.modified).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</dd>
+              <dd>
+                {new Date(n.modified).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+              </dd>
             </>
           )}
           <dt>{t("explore.share", { root: rootLabel(root) })}</dt>
@@ -331,7 +439,10 @@ function DetailPane({
         )}
         <div className="acts">
           <div className="two">
-            <button className="btn sm" onClick={() => api.revealPath(detail.path).catch((e) => showToast(String(e), true))}>
+            <button
+              className="btn sm"
+              onClick={() => api.revealPath(detail.path).catch((e) => showToast(String(e), true))}
+            >
               <Icon name="open" />
               {t("explore.reveal")}
             </button>
@@ -348,7 +459,7 @@ function DetailPane({
               {t("explore.copyPath")}
             </button>
           </div>
-          {canStar(root, n) && (
+          {canStar(root, n, driveRoots) && (
             <button className="btn sm block" onClick={() => onStar(n.id)}>
               <Icon name="star" className={starred ? "fill" : undefined} />
               {t(starred ? "explore.unstar" : "explore.star")}
@@ -379,6 +490,8 @@ function DetailPane({
               <button className="btn ghost danger block sm" onClick={() => onDelete(true)}>
                 {t("del.permanent")}
               </button>
+              {detail.node.isDir && <MoveButton root={root} detail={detail} />}
+              {detail.node.isDir && !detail.appFolder && <CompressButton root={root} detail={detail} />}
             </>
           )}
         </div>
@@ -424,9 +537,15 @@ function ExploreView({ root }: { root: string }) {
     setExpanded(new Set());
     setKids(new Map());
     setProtectedIds(new Set());
-    api.nodeDetail(root, ROOT_ID).then((d) => setRootNode(d.node)).catch(() => {});
+    api
+      .nodeDetail(root, ROOT_ID)
+      .then((d) => setRootNode(d.node))
+      .catch(() => {});
     // Merge, so that a favourite opened at the same time keeps its children.
-    api.listChildren(root, ROOT_ID, CHILD_LIMIT).then((l) => setKids((m) => new Map(m).set(ROOT_ID, l))).catch(() => {});
+    api
+      .listChildren(root, ROOT_ID, CHILD_LIMIT)
+      .then((l) => setKids((m) => new Map(m).set(ROOT_ID, l)))
+      .catch(() => {});
   }, [root, scanVersion]);
 
   // A favourite from the sidebar: zoom into it and select it.
@@ -437,7 +556,10 @@ function ExploreView({ root }: { root: string }) {
     setZoom(target.id);
     setSel(target.id);
     setExpanded((s) => new Set(s).add(target.id));
-    api.listChildren(root, target.id, CHILD_LIMIT).then((l) => setKids((m) => new Map(m).set(target.id, l))).catch(() => {});
+    api
+      .listChildren(root, target.id, CHILD_LIMIT)
+      .then((l) => setKids((m) => new Map(m).set(target.id, l)))
+      .catch(() => {});
   }, [target, root, scanVersion]);
 
   const favorites = useStore((s) => s.favorites);
@@ -463,8 +585,18 @@ function ExploreView({ root }: { root: string }) {
   useEffect(() => {
     if (treeVersion === 0) return;
     const ids = [ROOT_ID, ...expandedRef.current];
-    api.nodeDetail(root, ROOT_ID).then((d) => setRootNode(d.node)).catch(() => {});
-    Promise.all(ids.map((id) => api.listChildren(root, id, CHILD_LIMIT).then((l) => [id, l] as const).catch(() => null)))
+    api
+      .nodeDetail(root, ROOT_ID)
+      .then((d) => setRootNode(d.node))
+      .catch(() => {});
+    Promise.all(
+      ids.map((id) =>
+        api
+          .listChildren(root, id, CHILD_LIMIT)
+          .then((l) => [id, l] as const)
+          .catch(() => null),
+      ),
+    )
       .then((pairs) => setKids(new Map(pairs.filter((p) => p !== null))))
       .catch(() => {});
   }, [root, treeVersion]);
@@ -560,105 +692,122 @@ function ExploreView({ root }: { root: string }) {
 
   return (
     <>
-      <TreePane root={root} rootNode={rootNode} sel={sel} expanded={expanded} kids={kids} favIds={favIds} onSelect={onSelectRow} onToggle={onToggle} onStar={toggleStar} />
+      <TreePane
+        root={root}
+        rootNode={rootNode}
+        sel={sel}
+        expanded={expanded}
+        kids={kids}
+        favIds={favIds}
+        onSelect={onSelectRow}
+        onToggle={onToggle}
+        onStar={toggleStar}
+      />
       <main className="main">
-      <div className="mhead">
-        <button
-          className="btn ghost sm"
-          aria-label={t("scan.up")}
-          disabled={zoom === ROOT_ID}
-          onClick={() => {
-            const parent = crumbs[crumbs.length - 2];
-            if (parent) {
-              setSel(zoom);
-              setZoom(parent.id);
-            }
-          }}
-        >
-          <Icon name="up" />
-        </button>
-        <div className="crumbs">
-          {crumbs.map((c, i) => (
-            <span key={c.id} className="row" style={{ gap: 2, flexWrap: "nowrap" }}>
-              {i > 0 && <Icon name="chev" />}
-              <button
-                onClick={() => {
-                  setZoom(c.id);
-                  setSel(c.id);
-                }}
-              >
-                {c.id === ROOT_ID ? rootLabel(root) : c.name}
-              </button>
-            </span>
-          ))}
-        </div>
-        <div className="seg">
-          <button className={view === "map" ? "on" : ""} onClick={() => setView("map")}>
-            {t("explore.treemap")}
+        <div className="mhead">
+          <button
+            className="btn ghost sm"
+            aria-label={t("scan.up")}
+            disabled={zoom === ROOT_ID}
+            onClick={() => {
+              const parent = crumbs[crumbs.length - 2];
+              if (parent) {
+                setSel(zoom);
+                setZoom(parent.id);
+              }
+            }}
+          >
+            <Icon name="up" />
           </button>
-          <button className={view === "types" ? "on" : ""} onClick={() => setView("types")}>
-            {t("explore.types")}
-          </button>
-        </div>
-        <button
-          className="btn sm"
-          disabled={!summary}
-          title={t("export.report")}
-          aria-label={t("export.report")}
-          onClick={() =>
-            summary &&
-            scanReportHtml(summary)
-              .then((html) => saveExport("html", `Lustro report ${rootLabel(root).replace(/[:\\/]/g, "")}.html`, html))
-              .catch((e) => showToast(String(e), true))
-          }
-        >
-          <Icon name="export" />
-        </button>
-        <button className="btn sm" title={t("drive.rescan")} aria-label={t("drive.rescan")} onClick={() => startScan(root)}>
-          <Icon name="refresh" />
-        </button>
-      </div>
-      {summary && (
-        <div className="scanline">
-          <span className="faint">{scanSummaryText(summary)}</span>
-          {summary.denied > 0 && !isAdmin && (
-            <span className="warn-text">
-              {t("scan.deniedNote", { count: summary.denied })}{" "}
-              <button className="linkbtn" onClick={requestAdmin}>
-                {t("titlebar.runAsAdmin")}
-              </button>
-            </span>
-          )}
-        </div>
-      )}
-      {view === "map" ? (
-        <>
-          <div className="tmwrap">
-            <Treemap
-              data={map}
-              selected={sel}
-              isProtected={isProtected}
-              onSelect={setSel}
-              onZoom={(id) => {
-                setZoom(id);
-                setSel(id);
-              }}
-            />
-          </div>
-          <div className="legend">
-            {legend.map(([k]) => (
-              <span key={k} style={{ ["--c" as string]: kindColor(k) }}>
-                <i />
-                {t(`kind.${k}`)}
+          <div className="crumbs">
+            {crumbs.map((c, i) => (
+              <span key={c.id} className="row" style={{ gap: 2, flexWrap: "nowrap" }}>
+                {i > 0 && <Icon name="chev" />}
+                <button
+                  onClick={() => {
+                    setZoom(c.id);
+                    setSel(c.id);
+                  }}
+                >
+                  {c.id === ROOT_ID ? rootLabel(root) : c.name}
+                </button>
               </span>
             ))}
-            <span style={{ flex: 1 }} />
-            <span className="hint">{t("explore.hint")}</span>
           </div>
-        </>
-      ) : zoomDetail ? (
-        <TypesView detail={zoomDetail} />
-      ) : null}
+          <div className="seg">
+            <button className={view === "map" ? "on" : ""} onClick={() => setView("map")}>
+              {t("explore.treemap")}
+            </button>
+            <button className={view === "types" ? "on" : ""} onClick={() => setView("types")}>
+              {t("explore.types")}
+            </button>
+          </div>
+          <button
+            className="btn sm"
+            disabled={!summary}
+            title={t("export.report")}
+            aria-label={t("export.report")}
+            onClick={() =>
+              summary &&
+              scanReportHtml(summary)
+                .then((html) =>
+                  saveExport("html", `Lustro report ${rootLabel(root).replace(/[:\\/]/g, "")}.html`, html),
+                )
+                .catch((e) => showToast(String(e), true))
+            }
+          >
+            <Icon name="export" />
+          </button>
+          <button
+            className="btn sm"
+            title={t("drive.rescan")}
+            aria-label={t("drive.rescan")}
+            onClick={() => startScan(root)}
+          >
+            <Icon name="refresh" />
+          </button>
+        </div>
+        {summary && (
+          <div className="scanline">
+            <span className="faint">{scanSummaryText(summary)}</span>
+            {summary.denied > 0 && !isAdmin && (
+              <span className="warn-text">
+                {t("scan.deniedNote", { count: summary.denied })}{" "}
+                <button className="linkbtn" onClick={requestAdmin}>
+                  {t("titlebar.runAsAdmin")}
+                </button>
+              </span>
+            )}
+          </div>
+        )}
+        {view === "map" ? (
+          <>
+            <div className="tmwrap">
+              <Treemap
+                data={map}
+                selected={sel}
+                isProtected={isProtected}
+                onSelect={setSel}
+                onZoom={(id) => {
+                  setZoom(id);
+                  setSel(id);
+                }}
+              />
+            </div>
+            <div className="legend">
+              {legend.map(([k]) => (
+                <span key={k} style={{ ["--c" as string]: kindColor(k) }}>
+                  <i />
+                  {t(`kind.${k}`)}
+                </span>
+              ))}
+              <span style={{ flex: 1 }} />
+              <span className="hint">{t("explore.hint")}</span>
+            </div>
+          </>
+        ) : zoomDetail ? (
+          <TypesView detail={zoomDetail} />
+        ) : null}
       </main>
       <DetailPane
         root={root}
@@ -691,27 +840,27 @@ export function Explore() {
 
   return (
     <main className="main">
-    <div className="empty">
-      <span className="ei">
-        <Icon name="map" />
-      </span>
-      <h3>{root ? t("scan.notScannedTitle", { root: rootLabel(root) }) : t("scan.pickTitle")}</h3>
-      <p>{root ? t("scan.notScannedBody") : t("scan.pickBody")}</p>
-      <div className="row" style={{ justifyContent: "center" }}>
-        {root ? (
-          <button className="btn accent" onClick={() => startScan(root)}>
-            {t("drive.scan")}
-          </button>
-        ) : (
-          drives?.map((d) => (
-            <button key={d.letter} className="btn" onClick={() => explore(d.root)}>
-              <Icon name={driveIcon(d)} />
-              {driveName(d)}
+      <div className="empty">
+        <span className="ei">
+          <Icon name="map" />
+        </span>
+        <h3>{root ? t("scan.notScannedTitle", { root: rootLabel(root) }) : t("scan.pickTitle")}</h3>
+        <p>{root ? t("scan.notScannedBody") : t("scan.pickBody")}</p>
+        <div className="row" style={{ justifyContent: "center" }}>
+          {root ? (
+            <button className="btn accent" onClick={() => startScan(root)}>
+              {t("drive.scan")}
             </button>
-          ))
-        )}
+          ) : (
+            drives?.map((d) => (
+              <button key={d.letter} className="btn" onClick={() => explore(d.root)}>
+                <Icon name={driveIcon(d)} />
+                {driveName(d)}
+              </button>
+            ))
+          )}
+        </div>
       </div>
-    </div>
     </main>
   );
 }

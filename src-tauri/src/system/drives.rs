@@ -26,6 +26,8 @@ const DRIVE_FIXED: u32 = 3;
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
+// macOS has no Hdd kind, and Android lists no drives until its port exists.
+#[cfg_attr(not(any(windows, target_os = "linux")), allow(dead_code))]
 pub enum DriveKind {
     Ssd,
     Hdd,
@@ -60,8 +62,17 @@ pub fn list_drives() -> Vec<DriveInfo> {
         .collect()
 }
 
-/// Lists mounted volumes. Linux and macOS come in a later phase.
-#[cfg(not(windows))]
+#[cfg(target_os = "linux")]
+mod linux;
+#[cfg(target_os = "linux")]
+pub use linux::list_drives;
+#[cfg(target_os = "macos")]
+mod macos;
+#[cfg(target_os = "macos")]
+pub use macos::list_drives;
+
+/// Lists mounted volumes. Android comes in a later phase.
+#[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
 pub fn list_drives() -> Vec<DriveInfo> {
     Vec::new()
 }

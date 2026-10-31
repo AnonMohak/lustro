@@ -22,6 +22,15 @@ pub struct Settings {
     pub allow_app_folders: bool,
     /// Favourite folders in the sidebar, in the order the user added them.
     pub favorites: Vec<String>,
+    /// Folders that Lustro never suggests to delete: duplicates, clean items, your rules,
+    /// and large and old files skip them.
+    pub ignore: Vec<String>,
+    /// Ids of "Your rules" that run when a drive with their folder is low on space.
+    pub low_space_rules: Vec<String>,
+    /// Ids of built-in clean rules that run when the drive of the home folder is low.
+    pub low_space_clean: Vec<String>,
+    /// Rescan each scanned drive and folder when its scan is this many days old (0: never).
+    pub rescan_days: u32,
 }
 
 impl Default for Settings {
@@ -34,6 +43,10 @@ impl Default for Settings {
             explorer_menu: false,
             allow_app_folders: false,
             favorites: Vec::new(),
+            ignore: Vec::new(),
+            low_space_rules: Vec::new(),
+            low_space_clean: Vec::new(),
+            rescan_days: 0,
         }
     }
 }
@@ -131,10 +144,147 @@ pub fn registry_matches(s: &Settings) -> bool {
     run_ok == s.start_with_windows && menu_ok == s.explorer_menu
 }
 
-/// Start at login on Linux and macOS comes in a later phase.
-#[cfg(not(windows))]
+/// Start at login on Android comes in a later phase.
+#[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
 pub fn set_start_with_windows(on: bool) -> std::io::Result<()> {
     unsupported(on, "Start at login")
+}
+
+/// `~/Library/LaunchAgents/com.anonmohak.lustro.plist`: launchd starts it at login.
+#[cfg(target_os = "macos")]
+fn launch_agent_file() -> std::io::Result<PathBuf> {
+    let home =
+        std::env::var("HOME").map_err(|_| std::io::Error::other("There is no home folder."))?;
+    Ok(Path::new(&home)
+        .join("Library/LaunchAgents")
+        .join("com.anonmohak.lustro.plist"))
+}
+
+/// Text for an XML plist string.
+#[cfg(any(target_os = "macos", test))]
+fn xml_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+}
+
+#[cfg(any(target_os = "macos", test))]
+fn launch_agent(exe: &str) -> String {
+    format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.anonmohak.lustro</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>{}</string>
+    <string>--tray</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+</dict>
+</plist>
+"#,
+        xml_escape(exe)
+    )
+}
+
+/// Adds or removes the launch agent (current user, no admin needed).
+#[cfg(target_os = "macos")]
+pub fn set_start_with_windows(on: bool) -> std::io::Result<()> {
+    let file = launch_agent_file()?;
+    if on {
+        if let Some(dir) = file.parent() {
+            std::fs::create_dir_all(dir)?;
+        }
+        let exe = std::env::current_exe()?;
+        std::fs::write(&file, launch_agent(&exe.to_string_lossy()))
+    } else {
+        match std::fs::remove_file(&file) {
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            r => r,
+        }
+    }
+}
+
+/// True when the launch agent matches the settings (for example after a move of the app).
+#[cfg(target_os = "macos")]
+pub fn registry_matches(s: &Settings) -> bool {
+    let current = match (launch_agent_file(), std::env::current_exe()) {
+        (Ok(f), Ok(e)) => {
+            std::fs::read_to_string(f).is_ok_and(|t| t == launch_agent(&e.to_string_lossy()))
+        }
+        _ => false,
+    };
+    current == s.start_with_windows && !s.explorer_menu
+}
+
+/// `~/.config/autostart/lustro.desktop`: desktop sessions start the programs in this folder.
+#[cfg(target_os = "linux")]
+fn autostart_file() -> std::io::Result<PathBuf> {
+    let config = std::env::var("XDG_CONFIG_HOME")
+        .ok()
+        .filter(|c| !c.is_empty())
+        .map(PathBuf::from)
+        .or_else(|| {
+            std::env::var("HOME")
+                .ok()
+                .map(|h| Path::new(&h).join(".config"))
+        })
+        .ok_or_else(|| std::io::Error::other("There is no home folder."))?;
+    Ok(config.join("autostart").join("lustro.desktop"))
+}
+
+/// The program to start: the AppImage file when Lustro runs from one (the running
+/// program is then inside a temporary mount).
+#[cfg(target_os = "linux")]
+fn exe() -> std::io::Result<String> {
+    match std::env::var("APPIMAGE") {
+        Ok(a) if !a.is_empty() => Ok(a),
+        _ => Ok(std::env::current_exe()?.to_string_lossy().into_owned()),
+    }
+}
+
+/// One `Exec=` argument: quoted, with the escapes of the Desktop Entry specification.
+#[cfg(target_os = "linux")]
+fn exec_arg(arg: &str) -> String {
+    let mut quoted = String::from("\"");
+    for c in arg.chars() {
+        if matches!(c, '"' | '`' | '$' | '\\') {
+            quoted.push('\\');
+        }
+        quoted.push(c);
+    }
+    quoted.push('"');
+    // The value of a key is a string too, so each backslash is written twice.
+    quoted.replace('\\', "\\\\")
+}
+
+#[cfg(target_os = "linux")]
+fn autostart_entry(exe: &str) -> String {
+    format!(
+        "[Desktop Entry]\nType=Application\nName=Lustro\nComment=Storage manager\nExec={} --tray\nTerminal=false\nX-GNOME-Autostart-enabled=true\n",
+        exec_arg(exe)
+    )
+}
+
+/// Adds or removes the autostart entry (current user, no admin needed).
+#[cfg(target_os = "linux")]
+pub fn set_start_with_windows(on: bool) -> std::io::Result<()> {
+    let file = autostart_file()?;
+    if on {
+        if let Some(dir) = file.parent() {
+            std::fs::create_dir_all(dir)?;
+        }
+        std::fs::write(&file, autostart_entry(&exe()?))
+    } else {
+        match std::fs::remove_file(&file) {
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            r => r,
+        }
+    }
 }
 
 /// A file manager menu on Linux and macOS comes in a later phase.
@@ -143,7 +293,17 @@ pub fn set_explorer_menu(on: bool) -> std::io::Result<()> {
     unsupported(on, "The file manager menu")
 }
 
-#[cfg(not(windows))]
+/// True when the autostart entry matches the settings (for example after a move of the app).
+#[cfg(target_os = "linux")]
+pub fn registry_matches(s: &Settings) -> bool {
+    let current = match (autostart_file(), exe()) {
+        (Ok(f), Ok(e)) => std::fs::read_to_string(f).is_ok_and(|t| t == autostart_entry(&e)),
+        _ => false,
+    };
+    current == s.start_with_windows && !s.explorer_menu
+}
+
+#[cfg(not(any(windows, target_os = "linux", target_os = "macos")))]
 pub fn registry_matches(s: &Settings) -> bool {
     !s.start_with_windows && !s.explorer_menu
 }
@@ -164,6 +324,30 @@ fn unsupported(on: bool, what: &str) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn autostart_exec_is_quoted() {
+        assert_eq!(exec_arg("/opt/Lustro/lustro"), "\"/opt/Lustro/lustro\"");
+        assert_eq!(
+            exec_arg("/home/me/My Apps/lustro"),
+            "\"/home/me/My Apps/lustro\""
+        );
+        // `$` gets one backslash for Exec, and the backslash is doubled for the string.
+        assert_eq!(exec_arg("/a$b"), "\"/a\\\\$b\"");
+        let entry = autostart_entry("/usr/bin/lustro");
+        assert!(entry.contains("Exec=\"/usr/bin/lustro\" --tray\n"));
+    }
+
+    #[test]
+    fn launch_agent_is_escaped() {
+        let plist = launch_agent("/Applications/A&B <1>.app/Contents/MacOS/lustro");
+        assert!(plist.contains(
+            "<string>/Applications/A&amp;B &lt;1&gt;.app/Contents/MacOS/lustro</string>"
+        ));
+        assert!(plist.contains("<string>--tray</string>"));
+        assert!(plist.contains("<key>RunAtLoad</key>\n  <true/>"));
+    }
 
     #[test]
     fn save_and_load() {

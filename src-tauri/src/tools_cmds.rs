@@ -10,6 +10,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use crate::apps;
 use crate::dupes::{self, DupeGroup, DupeProgress};
 use crate::error::{Error, Result};
+use crate::ops::history::Action;
 use crate::state::AppState;
 
 fn all_trees(app: &AppHandle) -> Vec<Arc<crate::scan::model::Tree>> {
@@ -34,9 +35,12 @@ struct DupeProgressEvent {
 pub fn dupes_start(
     app: AppHandle,
     state: State<'_, AppState>,
-    min_size: u64,
-    include_app_data: Option<bool>,
+    mut options: dupes::Options,
 ) -> Result<()> {
+    // The ignore list of Settings counts as more "Skip" folders.
+    options
+        .not_in
+        .extend(crate::desktop::current_settings(&app).ignore);
     let progress = Arc::new(DupeProgress::default());
     {
         let mut active = state.dupes_active.lock().map_err(|_| Error::Busy)?;
@@ -78,12 +82,14 @@ pub fn dupes_start(
         });
     }
     std::thread::spawn(move || {
-        let groups = dupes::find(
-            &trees,
-            min_size,
-            include_app_data.unwrap_or(false),
-            &progress,
-        );
+        let dir = crate::desktop::data_dir(&app);
+        let cache = std::sync::Mutex::new(dupes::cache::HashCache::load(&dir));
+        let groups = dupes::find(&trees, &options, &progress, &cache);
+        if let Ok(mut c) = cache.lock()
+            && let Err(e) = c.save()
+        {
+            log::warn!("Could not save the hash cache: {e}");
+        }
         let state = app.state::<AppState>();
         if let Ok(mut a) = state.dupes_active.lock() {
             *a = None;
@@ -107,6 +113,165 @@ pub fn dupes_cancel(state: State<'_, AppState>) {
     {
         p.cancel();
     }
+}
+
+/// Big old files in OneDrive or iCloud Drive that can become online-only.
+#[tauri::command]
+pub async fn cloud_candidates(app: AppHandle) -> Vec<crate::cloud::CloudFolder> {
+    let trees = all_trees(&app);
+    let ignore = crate::desktop::current_settings(&app).ignore;
+    tauri::async_runtime::spawn_blocking(move || crate::cloud::candidates(&trees, &ignore))
+        .await
+        .unwrap_or_default()
+}
+
+#[derive(Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CloudOutcome {
+    files: u64,
+    freed_bytes: u64,
+    errors: u64,
+    first_error: Option<String>,
+}
+
+/// Makes all current candidates online-only. The UI sends no paths: the backend finds the
+/// files again. Each file goes to History.
+#[tauri::command]
+pub async fn cloud_free(app: AppHandle) -> Result<CloudOutcome> {
+    let trees = all_trees(&app);
+    let ignore = crate::desktop::current_settings(&app).ignore;
+    let app2 = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut out = CloudOutcome::default();
+        for folder in crate::cloud::candidates(&trees, &ignore) {
+            for f in folder.files {
+                let r = crate::cloud::free(&f.path);
+                crate::commands::with_history(&app2, |h| {
+                    h.add(Action::Cloud, &f.path, f.size, r.clone())
+                });
+                match r {
+                    Ok(()) => {
+                        out.files += 1;
+                        out.freed_bytes += f.size;
+                    }
+                    Err(e) => {
+                        out.errors += 1;
+                        out.first_error.get_or_insert(e);
+                    }
+                }
+            }
+        }
+        out
+    })
+    .await
+    .map_err(|e| Error::Io(std::io::Error::other(e.to_string())))
+}
+
+/// Copies to replace with links to the kept file.
+#[derive(serde::Deserialize)]
+pub struct LinkSet {
+    keep: String,
+    copies: Vec<String>,
+}
+
+#[derive(Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LinkOutcome {
+    linked: u64,
+    freed_bytes: u64,
+    errors: u64,
+    first_error: Option<String>,
+}
+
+/// Replaces duplicate copies with links to the kept file. Only files of one exact group of
+/// the last result pass, so the UI cannot link other files. Each link goes to History.
+#[tauri::command]
+pub async fn dupes_link(app: AppHandle, sets: Vec<LinkSet>) -> Result<LinkOutcome> {
+    let groups = app
+        .state::<AppState>()
+        .dupes
+        .lock()
+        .ok()
+        .and_then(|d| d.clone())
+        .unwrap_or_default();
+    let app2 = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut out = LinkOutcome::default();
+        let mut linked = std::collections::HashSet::new();
+        for set in sets {
+            let Some(g) = groups
+                .iter()
+                .find(|g| g.kind == "exact" && g.files.iter().any(|f| f.path == set.keep))
+            else {
+                continue;
+            };
+            for copy in set.copies {
+                if copy == set.keep || !g.files.iter().any(|f| f.path == copy) {
+                    continue;
+                }
+                let r = dupes::link::link_copy(
+                    std::path::Path::new(&set.keep),
+                    std::path::Path::new(&copy),
+                );
+                crate::commands::with_history(&app2, |h| {
+                    h.add(Action::Linked, &copy, g.size, r.clone())
+                });
+                match r {
+                    Ok(()) => {
+                        out.linked += 1;
+                        out.freed_bytes += g.size;
+                        linked.insert(copy);
+                    }
+                    Err(e) => {
+                        out.errors += 1;
+                        out.first_error.get_or_insert(e);
+                    }
+                }
+            }
+        }
+        // The linked paths now share one file: forget their old hashes and drop them
+        // from the saved result.
+        let dir = crate::desktop::data_dir(&app2);
+        let mut cache = dupes::cache::HashCache::load(&dir);
+        for p in &linked {
+            cache.forget(p);
+        }
+        if let Err(e) = cache.save() {
+            log::warn!("Could not save the hash cache: {e}");
+        }
+        if let Ok(mut d) = app2.state::<AppState>().dupes.lock()
+            && let Some(list) = d.as_mut()
+        {
+            for g in list.iter_mut() {
+                g.files.retain(|f| !linked.contains(&f.path));
+            }
+            list.retain(|g| g.files.len() > 1);
+        }
+        out
+    })
+    .await
+    .map_err(|e| Error::Io(std::io::Error::other(e.to_string())))
+}
+
+/// A small preview of a photo in the last duplicate result, as a `data:` URL.
+/// Other paths are refused, so the UI cannot read any file with it.
+#[tauri::command]
+pub async fn photo_thumbnail(state: State<'_, AppState>, path: String) -> Result<Option<String>> {
+    let known = state
+        .dupes
+        .lock()
+        .ok()
+        .and_then(|d| {
+            d.as_ref()
+                .map(|groups| groups.iter().flat_map(|g| &g.files).any(|f| f.path == path))
+        })
+        .unwrap_or(false);
+    if !known {
+        return Ok(None);
+    }
+    tauri::async_runtime::spawn_blocking(move || dupes::photos::thumbnail(&path))
+        .await
+        .map_err(|e| Error::Io(std::io::Error::other(e.to_string())))
 }
 
 /// The last result, if any (for when the screen opens again).

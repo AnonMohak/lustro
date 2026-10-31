@@ -1,11 +1,31 @@
 import { open } from "@tauri-apps/plugin-dialog";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../components/Icon";
 import { requestAdmin } from "../lib/admin";
+import { api, type DriveHistory, type GrowthReport } from "../lib/api";
 import { driveIcon, driveName } from "../lib/drives";
 import { formatBytes, formatCount, formatDuration, percent, timeAgo } from "../lib/format";
 import { kindColor, sortedBreakdown } from "../lib/kinds";
 import { useStore } from "../store";
+
+/** The used space of a drive over time, as a small line. */
+function Spark({ h }: { h: DriveHistory }) {
+  const pts = h.points.slice(-90);
+  if (pts.length < 2) return null;
+  const [w, hgt] = [120, 26];
+  const d0 = pts[0].day;
+  const span = Math.max(1, pts[pts.length - 1].day - d0);
+  const line = pts.map((p) => `${((p.day - d0) / span) * w},${hgt - (p.used / Math.max(1, p.total)) * hgt}`).join(" ");
+  return (
+    <svg width={w} height={hgt} viewBox={`0 0 ${w} ${hgt}`} aria-hidden="true">
+      <polyline points={line} fill="none" stroke="var(--accent)" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+/** "+1.2 GB" or "−300 MB". */
+const signed = (n: number) => (n < 0 ? `−${formatBytes(-n)}` : `+${formatBytes(n)}`);
 
 export function Home() {
   const { t } = useTranslation();
@@ -16,6 +36,19 @@ export function Home() {
   const startScan = useStore((s) => s.startScan);
   const explore = useStore((s) => s.explore);
 
+  const [history, setHistory] = useState<DriveHistory[]>([]);
+  const [growth, setGrowth] = useState<GrowthReport[]>([]);
+  useEffect(() => {
+    api
+      .spaceHistory()
+      .then(setHistory)
+      .catch(() => {});
+    api
+      .growthReports()
+      .then(setGrowth)
+      .catch(() => {});
+  }, [scans]);
+
   const total = drives?.reduce((a, d) => a + d.totalBytes, 0) ?? 0;
   const used = drives?.reduce((a, d) => a + d.totalBytes - d.freeBytes, 0) ?? 0;
 
@@ -25,9 +58,7 @@ export function Home() {
         <div>
           <h2>{t("home.title")}</h2>
           {drives && (
-            <p>
-              {t("home.summary", { count: drives.length, used: formatBytes(used), total: formatBytes(total) })}
-            </p>
+            <p>{t("home.summary", { count: drives.length, used: formatBytes(used), total: formatBytes(total) })}</p>
           )}
         </div>
         <button
@@ -66,6 +97,7 @@ export function Home() {
           const pct = Math.round(percent(usedBytes, d.totalBytes));
           const scan = scans[d.root];
           const busy = scanning?.root === d.root;
+          const hist = history.find((h) => h.root === d.root);
           return (
             <div key={d.letter} className="card drive">
               <div className="dhead">
@@ -87,12 +119,24 @@ export function Home() {
               <div className="dbar" role="img" aria-label={t("drive.full", { pct })}>
                 {scan ? (
                   sortedBreakdown(scan.breakdown).map(([k, v]) => (
-                    <i key={k} title={`${t(`kind.${k}`)}: ${formatBytes(v)}`} style={{ ["--c" as string]: kindColor(k), width: `${percent(v, d.totalBytes)}%` }} />
+                    <i
+                      key={k}
+                      title={`${t(`kind.${k}`)}: ${formatBytes(v)}`}
+                      style={{ ["--c" as string]: kindColor(k), width: `${percent(v, d.totalBytes)}%` }}
+                    />
                   ))
                 ) : (
                   <i className={pct > 85 ? "warn" : ""} style={{ width: `${pct}%` }} />
                 )}
               </div>
+              {hist && hist.points.length > 1 && (
+                <div className="row" style={{ justifyContent: "space-between" }}>
+                  <Spark h={hist} />
+                  <span className={hist.daysLeft !== null && hist.daysLeft < 30 ? "pill warn" : "faint"}>
+                    {hist.daysLeft === null ? t("home.notGrowing") : t("home.fullIn", { count: hist.daysLeft })}
+                  </span>
+                </div>
+              )}
               {scan && (
                 <div className="leg">
                   {sortedBreakdown(scan.breakdown)
@@ -135,6 +179,33 @@ export function Home() {
           );
         })}
       </div>
+
+      {growth.some((g) => g.changes.length > 0) && (
+        <>
+          <h3 className="sec">{t("home.grewTitle")}</h3>
+          {growth
+            .filter((g) => g.changes.length > 0)
+            .map((g) => (
+              <div key={g.root} className="card" style={{ marginBottom: 10 }}>
+                <div className="srow">
+                  <div>
+                    <div className="mono">{g.root}</div>
+                    <div className="sd">{t("home.grewSince", { ago: timeAgo(g.from * 1000) })}</div>
+                  </div>
+                  <span className={`pill ${g.after > g.before ? "warn" : "good"}`}>{signed(g.after - g.before)}</span>
+                </div>
+                {g.changes.slice(0, 8).map((c) => (
+                  <div key={c.path} className="srow">
+                    <div className="mono" style={{ overflowWrap: "anywhere" }}>
+                      {c.path}
+                    </div>
+                    <span className="num">{signed(c.after - c.before)}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+        </>
+      )}
     </div>
   );
 }

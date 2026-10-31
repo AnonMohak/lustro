@@ -1,14 +1,15 @@
-// The Linux and macOS stubs leave shared scan code unused until those ports exist.
-#![cfg_attr(not(windows), allow(dead_code))]
-
 mod apps;
 mod clean;
 mod clean_cmds;
+pub mod cli;
+mod cloud;
 mod commands;
+mod custom_cmds;
 mod desktop;
 mod dupes;
 mod error;
 mod favorites;
+mod growth;
 #[cfg(windows)]
 mod live;
 #[cfg(not(windows))]
@@ -17,6 +18,7 @@ mod live {
     pub fn watch(_app: &tauri::AppHandle, _root: &str) {}
 }
 mod ops;
+mod paths;
 mod scan;
 mod settings;
 mod state;
@@ -25,6 +27,7 @@ mod tools_cmds;
 
 use tauri::Manager;
 
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let args: Vec<String> = std::env::args().collect();
     // After "Run as admin", give the old copy time to exit, so the single-instance check passes.
@@ -33,14 +36,18 @@ pub fn run() {
     }
     let start_hidden = args.iter().any(|a| a == "--tray");
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    // Desktop only: the tray, one running copy, and the updater (Android updates from the APK).
+    #[cfg(desktop)]
+    let builder = builder
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             desktop::on_second_instance(app, args)
         }))
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init());
+    builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_process::init())
         .manage(state::AppState {
             startup_scan: std::sync::Mutex::new(commands::startup_scan_arg(
                 args.clone().into_iter(),
@@ -53,8 +60,10 @@ pub fn run() {
             if let Ok(mut s) = app.state::<state::AppState>().settings.lock() {
                 *s = loaded;
             }
+            #[cfg(desktop)]
             desktop::setup_tray(&handle)?;
             desktop::start_space_monitor(handle.clone());
+            custom_cmds::start_timer(handle.clone());
             if !start_hidden {
                 desktop::show_main(&handle);
             }
@@ -79,12 +88,28 @@ pub fn run() {
             commands::take_startup_scan,
             commands::delete_items,
             commands::history,
+            commands::growth_reports,
+            commands::move_folder,
+            commands::old_folders,
+            commands::compress_folder,
+            commands::space_history,
             commands::restore,
             clean_cmds::clean_scan,
             clean_cmds::clean_run,
+            clean_cmds::clean_rules_list,
+            custom_cmds::custom_rules,
+            custom_cmds::set_custom_rules,
+            custom_cmds::custom_rule_scan,
+            custom_cmds::custom_rule_run,
+            custom_cmds::installers_scan,
+            custom_cmds::installers_clean,
             tools_cmds::dupes_start,
             tools_cmds::dupes_cancel,
             tools_cmds::dupes_result,
+            tools_cmds::photo_thumbnail,
+            tools_cmds::dupes_link,
+            tools_cmds::cloud_candidates,
+            tools_cmds::cloud_free,
             tools_cmds::apps_list,
             tools_cmds::app_uninstall,
             desktop::get_settings,

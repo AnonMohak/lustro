@@ -16,7 +16,7 @@ pub fn file_name(root: &str) -> String {
         return format!("{letter}.bin");
     }
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
-    for b in root.to_lowercase().bytes() {
+    for b in crate::paths::key(root).bytes() {
         h = (h ^ b as u64).wrapping_mul(0x100_0000_01b3);
     }
     format!("folder-{h:016x}.bin")
@@ -155,10 +155,10 @@ mod tests {
         tree.usn = Some((7, 99));
         tree.frn = vec![crate::scan::model::NONE, 0, 1];
         let path = save(&tree, &dir).unwrap();
-        assert!(path.ends_with("C.bin"));
+        assert!(path.ends_with(file_name(&tree.root_path)));
         let back = load(&path).unwrap();
         assert_eq!(back.total_size(), tree.total_size());
-        assert_eq!(back.root_path, "C:\\");
+        assert_eq!(back.root_path, crate::paths::os("C:\\"));
         assert_eq!(back.nodes.len(), tree.nodes.len());
         let first = back.children(0).next().unwrap();
         assert_eq!(back.name(first), "Users");
@@ -180,6 +180,7 @@ mod tests {
         fs::remove_dir_all(dir).unwrap();
     }
 
+    #[cfg(windows)]
     #[test]
     fn file_names() {
         assert_eq!(file_name("C:\\"), "C.bin");

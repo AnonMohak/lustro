@@ -15,6 +15,7 @@ import { Clean } from "./screens/Clean";
 import { Dupes } from "./screens/Dupes";
 import { Explore } from "./screens/Explore";
 import { Files } from "./screens/Files";
+import { FreeSpace } from "./screens/FreeSpace";
 import { History } from "./screens/History";
 import { Search } from "./screens/Search";
 import { Home } from "./screens/Home";
@@ -74,7 +75,8 @@ export default function App() {
       })
       .catch(() => {});
     // Quietly look for a new version a few seconds after start (release builds only).
-    const updateTimer = import.meta.env.PROD && autoUpdateOn() ? setTimeout(() => checkForUpdates(false), 5000) : undefined;
+    const updateTimer =
+      import.meta.env.PROD && autoUpdateOn() ? setTimeout(() => checkForUpdates(false), 5000) : undefined;
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -101,6 +103,7 @@ export default function App() {
         {!["explore", "files", "clean", "dupes", "apps"].includes(screen) && (
           <main className="main">
             {screen === "home" && <Home />}
+            {screen === "free" && <FreeSpace />}
             {screen === "settings" && <Settings />}
             {screen === "history" && <History />}
             {screen === "search" && <Search />}

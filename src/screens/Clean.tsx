@@ -4,10 +4,13 @@ import { Icon, type IconName } from "../components/Icon";
 import { requestAdmin } from "../lib/admin";
 import { api, type CleanRule } from "../lib/api";
 import { formatBytes, formatCount, timeAgo } from "../lib/format";
+import { sepOf } from "../lib/platform";
 import { useStore } from "../store";
+import { CustomRules } from "./CustomRules";
 
 const GROUPS: { id: CleanRule["group"]; icon: IconName }[] = [
   { id: "sys", icon: "windows" },
+  { id: "cache", icon: "archive" },
   { id: "web", icon: "globe" },
   { id: "dev", icon: "code" },
   { id: "docker", icon: "box" },
@@ -16,8 +19,9 @@ const GROUPS: { id: CleanRule["group"]; icon: IconName }[] = [
 
 /** The last three parts of a path, for example "…\\app\\web\\node_modules". */
 function shortPath(path: string): string {
-  const parts = path.split("\\");
-  return parts.length > 4 ? `…\\${parts.slice(-3).join("\\")}` : path;
+  const sep = sepOf();
+  const parts = path.split(sep);
+  return parts.length > 4 ? `…${sep}${parts.slice(-3).join(sep)}` : path;
 }
 
 function ageText(days: number | null, t: (k: string, o?: Record<string, unknown>) => string): string {
@@ -38,7 +42,8 @@ export function Clean() {
   /** Picked item paths of rules that have items. */
   const [picks, setPicks] = useState<Record<string, Set<string>>>({});
   const [open, setOpen] = useState<Set<string>>(new Set());
-  const [group, setGroup] = useState<CleanRule["group"]>("sys");
+  /** A group of built-in rules, or "custom" for the user's own rules. */
+  const [group, setGroup] = useState<CleanRule["group"] | "custom">("sys");
   const [busy, setBusy] = useState(false);
   const [reload, setReload] = useState(0);
 
@@ -55,7 +60,8 @@ export function Clean() {
         setRules(list);
         setSelected(new Set(list.filter((r) => r.safe && r.bytes > 0 && !hasItems(r)).map((r) => r.id)));
         const p: Record<string, Set<string>> = {};
-        for (const r of list) if (hasItems(r)) p[r.id] = new Set(r.safe ? r.items.filter((i) => i.selected).map((i) => i.path) : []);
+        for (const r of list)
+          if (hasItems(r)) p[r.id] = new Set(r.safe ? r.items.filter((i) => i.selected).map((i) => i.path) : []);
         setPicks(p);
       })
       .catch((e) => showToast(String(e), true));
@@ -103,7 +109,8 @@ export function Clean() {
     });
     setPicks((p) => {
       const n = { ...p };
-      for (const r of items.filter(hasItems)) n[r.id] = new Set(safeOnly && r.safe ? r.items.filter((i) => i.selected).map((i) => i.path) : []);
+      for (const r of items.filter(hasItems))
+        n[r.id] = new Set(safeOnly && r.safe ? r.items.filter((i) => i.selected).map((i) => i.path) : []);
       return n;
     });
   };
@@ -139,7 +146,8 @@ export function Clean() {
             const freed = res.reduce((a, r) => a + r.freedBytes, 0);
             const inUse = res.reduce((a, r) => a + r.skippedFiles, 0);
             const skipped = res.filter((r) => r.skipped);
-            if (skipped.length > 0) showToast(t("clean.skippedRule", { name: skipped[0].name, reason: skipped[0].skipped }), true);
+            if (skipped.length > 0)
+              showToast(t("clean.skippedRule", { name: skipped[0].name, reason: skipped[0].skipped }), true);
             else if (inUse > 0) showToast(t("clean.doneSkipped", { size: formatBytes(freed), n: formatCount(inUse) }));
             return { freed, errors: skipped.length };
           },
@@ -195,118 +203,133 @@ export function Clean() {
               </button>
             );
           })}
+          <button className={`grow-row ${group === "custom" ? "sel" : ""}`} onClick={() => setGroup("custom")}>
+            <span className="t1">
+              <b>
+                <Icon name="clean" />
+                {t("custom.title")}
+              </b>
+            </span>
+            <span className="t2">
+              <span>{t("custom.rowHint")}</span>
+            </span>
+          </button>
         </div>
       </section>
       <main className="main">
-        <div className="page">
-          <div className="phead">
-            <div>
-              <h2>{t(`clean.groups.${group}`)}</h2>
-              <p>{t("clean.groupHint")}</p>
+        {group === "custom" ? (
+          <CustomRules />
+        ) : (
+          <div className="page">
+            <div className="phead">
+              <div>
+                <h2>{t(`clean.groups.${group}`)}</h2>
+                <p>{t("clean.groupHint")}</p>
+              </div>
+              <div className="row">
+                <button className="btn sm ghost" onClick={() => selectGroup(false, items)}>
+                  {t("clean.selectNone")}
+                </button>
+                <button className="btn sm" onClick={() => selectGroup(true, items)}>
+                  {t("clean.selectSafe")}
+                </button>
+              </div>
             </div>
-            <div className="row">
-              <button className="btn sm ghost" onClick={() => selectGroup(false, items)}>
-                {t("clean.selectNone")}
-              </button>
-              <button className="btn sm" onClick={() => selectGroup(true, items)}>
-                {t("clean.selectSafe")}
-              </button>
-            </div>
-          </div>
-          <div className="card">
-            {items.map((r) => {
-              const ok = usable(r);
-              const expanded = open.has(r.id);
-              return (
-                <div key={r.id} className={`citem ${ok ? "" : "off"}`}>
-                  <input
-                    type="checkbox"
-                    id={`rule-${r.id}`}
-                    checked={isOn(r)}
-                    disabled={!ok}
-                    aria-label={r.name}
-                    onChange={() => toggleRule(r)}
-                  />
-                  <label className="cn" htmlFor={`rule-${r.id}`}>
-                    {r.name}
-                    {r.admin && (
-                      <span className={`pill ${isAdmin ? "good" : "warn"}`}>
-                        <Icon name="shield" />
-                        {isAdmin ? t("clean.admin") : t("clean.needsAdmin")}
-                      </span>
-                    )}
-                    {r.running.map((p) => (
-                      <span key={p} className="pill warn">
-                        {t("clean.isOpen", { app: p.replace(/\.exe$/i, "") })}
-                      </span>
-                    ))}
-                    {r.warn && (
-                      <span className="pill warn">
-                        <Icon name="warn" />
-                        {t("clean.readFirst")}
-                      </span>
-                    )}
-                    {r.service && <span className="cmd">{t("clean.pausesService", { service: r.service })}</span>}
-                  </label>
-                  <div className="cs">
-                    {formatBytes(hasItems(r) && ok ? ruleBytes(r) || r.bytes : r.bytes)}
-                    <div className="faint" style={{ fontSize: 11.5, fontWeight: 400, textAlign: "right" }}>
-                      {hasItems(r)
-                        ? t("clean.folders", { count: r.items.length })
-                        : r.files > 0
-                          ? t("clean.files", { count: r.files, n: formatCount(r.files) })
-                          : ""}
-                    </div>
-                  </div>
-                  <div className="cd">
-                    {r.unavailable ?? r.desc}{" "}
-                    {hasItems(r) && (
-                      <button
-                        className="linkbtn"
-                        onClick={() =>
-                          setOpen((s) => {
-                            const n = new Set(s);
-                            if (n.has(r.id)) n.delete(r.id);
-                            else n.add(r.id);
-                            return n;
-                          })
-                        }
-                      >
-                        {expanded ? t("clean.hideFolders") : t("clean.showFolders")}
-                      </button>
-                    )}{" "}
-                    {r.admin && !isAdmin && (
-                      <button className="linkbtn" onClick={requestAdmin}>
-                        {t("titlebar.runAsAdmin")}
-                      </button>
-                    )}
-                  </div>
-                  {hasItems(r) && expanded && (
-                    <div className="subs">
-                      {r.items.map((i) => (
-                        <label key={i.path} className="sub">
-                          <input
-                            type="checkbox"
-                            checked={picks[r.id]?.has(i.path) ?? false}
-                            disabled={!ok}
-                            onChange={() => toggleItem(r, i.path)}
-                          />
-                          <span className="sub-name">
-                            <span className="mono" title={i.path}>
-                              {shortPath(i.path)}
-                            </span>
-                            <span className="faint">{ageText(i.ageDays, t)}</span>
-                          </span>
-                          <span className="num">{formatBytes(i.bytes)}</span>
-                        </label>
+            <div className="card">
+              {items.map((r) => {
+                const ok = usable(r);
+                const expanded = open.has(r.id);
+                return (
+                  <div key={r.id} className={`citem ${ok ? "" : "off"}`}>
+                    <input
+                      type="checkbox"
+                      id={`rule-${r.id}`}
+                      checked={isOn(r)}
+                      disabled={!ok}
+                      aria-label={r.name}
+                      onChange={() => toggleRule(r)}
+                    />
+                    <label className="cn" htmlFor={`rule-${r.id}`}>
+                      {r.name}
+                      {r.admin && (
+                        <span className={`pill ${isAdmin ? "good" : "warn"}`}>
+                          <Icon name="shield" />
+                          {isAdmin ? t("clean.admin") : t("clean.needsAdmin")}
+                        </span>
+                      )}
+                      {r.running.map((p) => (
+                        <span key={p} className="pill warn">
+                          {t("clean.isOpen", { app: p.replace(/\.exe$/i, "") })}
+                        </span>
                       ))}
+                      {r.warn && (
+                        <span className="pill warn">
+                          <Icon name="warn" />
+                          {t("clean.readFirst")}
+                        </span>
+                      )}
+                      {r.service && <span className="cmd">{t("clean.pausesService", { service: r.service })}</span>}
+                    </label>
+                    <div className="cs">
+                      {formatBytes(hasItems(r) && ok ? ruleBytes(r) || r.bytes : r.bytes)}
+                      <div className="faint" style={{ fontSize: 11.5, fontWeight: 400, textAlign: "right" }}>
+                        {hasItems(r)
+                          ? t("clean.folders", { count: r.items.length })
+                          : r.files > 0
+                            ? t("clean.files", { count: r.files, n: formatCount(r.files) })
+                            : ""}
+                      </div>
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                    <div className="cd">
+                      {r.unavailable ?? r.desc}{" "}
+                      {hasItems(r) && (
+                        <button
+                          className="linkbtn"
+                          onClick={() =>
+                            setOpen((s) => {
+                              const n = new Set(s);
+                              if (n.has(r.id)) n.delete(r.id);
+                              else n.add(r.id);
+                              return n;
+                            })
+                          }
+                        >
+                          {expanded ? t("clean.hideFolders") : t("clean.showFolders")}
+                        </button>
+                      )}{" "}
+                      {r.admin && !isAdmin && (
+                        <button className="linkbtn" onClick={requestAdmin}>
+                          {t("titlebar.runAsAdmin")}
+                        </button>
+                      )}
+                    </div>
+                    {hasItems(r) && expanded && (
+                      <div className="subs">
+                        {r.items.map((i) => (
+                          <label key={i.path} className="sub">
+                            <input
+                              type="checkbox"
+                              checked={picks[r.id]?.has(i.path) ?? false}
+                              disabled={!ok}
+                              onChange={() => toggleItem(r, i.path)}
+                            />
+                            <span className="sub-name">
+                              <span className={i.label ? "" : "mono"} title={i.path}>
+                                {i.label ?? shortPath(i.path)}
+                              </span>
+                              <span className="faint">{ageText(i.ageDays, t)}</span>
+                            </span>
+                            <span className="num">{formatBytes(i.bytes)}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </main>
       <aside className="detail">
         <div className="dt">

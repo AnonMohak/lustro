@@ -29,8 +29,11 @@ pub struct Favorite {
 
 /// `D:/Photos/` becomes `D:\Photos`. Drive roots give None: they are not favourites.
 fn normalize(path: &str) -> Option<String> {
+    #[cfg(windows)]
     let p = path.replace('/', "\\");
-    let p = p.trim_end_matches('\\');
+    #[cfg(not(windows))]
+    let p = path;
+    let p = p.trim_end_matches(crate::paths::SEP);
     if p.is_empty() || crate::scan::is_drive_root(p).is_some() {
         return None;
     }
@@ -39,11 +42,11 @@ fn normalize(path: &str) -> Option<String> {
 
 /// Adds or removes a path. The order of the other paths does not change.
 fn toggle(list: &mut Vec<String>, path: &str, on: bool) {
-    let has = list.iter().any(|p| p.eq_ignore_ascii_case(path));
+    let has = list.iter().any(|p| crate::paths::same(p, path));
     if on && !has {
         list.push(path.to_string());
     } else if !on {
-        list.retain(|p| !p.eq_ignore_ascii_case(path));
+        list.retain(|p| !crate::paths::same(p, path));
     }
 }
 
@@ -100,7 +103,9 @@ pub fn set_favorite(app: AppHandle, path: String, on: bool) -> Result<Vec<Favori
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::paths::{IGNORE_CASE, os};
 
+    #[cfg(windows)]
     #[test]
     fn paths_are_normalized() {
         assert_eq!(normalize("D:/Photos/"), Some("D:\\Photos".into()));
@@ -109,24 +114,42 @@ mod tests {
         assert_eq!(normalize("c:"), None);
     }
 
+    #[cfg(not(windows))]
     #[test]
-    fn toggle_keeps_order_and_ignores_case() {
-        let mut l = vec!["C:\\a".to_string(), "C:\\b".to_string()];
-        toggle(&mut l, "c:\\A", true);
-        assert_eq!(l, ["C:\\a", "C:\\b"]);
-        toggle(&mut l, "C:\\c", true);
-        assert_eq!(l, ["C:\\a", "C:\\b", "C:\\c"]);
-        toggle(&mut l, "c:\\B", false);
-        assert_eq!(l, ["C:\\a", "C:\\c"]);
+    fn paths_are_normalized() {
+        assert_eq!(
+            normalize("/home/me/Photos/"),
+            Some("/home/me/Photos".into())
+        );
+        assert_eq!(normalize("/"), None);
+    }
+
+    #[test]
+    fn toggle_keeps_order() {
+        let (a, b, c) = (os("C:\\a"), os("C:\\b"), os("C:\\c"));
+        let mut l = vec![a.clone(), b.clone()];
+        toggle(&mut l, &a, true);
+        assert_eq!(l, [a.clone(), b.clone()]);
+        toggle(&mut l, &c, true);
+        assert_eq!(l, [a.clone(), b.clone(), c.clone()]);
+        toggle(&mut l, &b, false);
+        assert_eq!(l, [a, c]);
+    }
+
+    #[test]
+    fn toggle_ignores_case_where_the_file_system_does() {
+        let mut l = vec![os("C:\\a")];
+        toggle(&mut l, &os("C:\\A"), true);
+        assert_eq!(l.len(), if IGNORE_CASE { 1 } else { 2 });
     }
 
     #[test]
     fn resolve_finds_folders_only() {
         let trees = [Arc::new(crate::scan::model::tests::sample())];
-        let paths = ["C:\\Users\\me", "C:\\pagefile.sys", "D:\\x"].map(String::from);
+        let paths = ["C:\\Users\\me", "C:\\pagefile.sys", "D:\\x"].map(os);
         let f = resolve(paths.into(), &trees);
         assert_eq!(f[0].hits.len(), 1);
-        assert_eq!(f[0].hits[0].root, "C:\\");
+        assert_eq!(f[0].hits[0].root, os("C:\\"));
         assert_eq!(f[0].hits[0].size, 110);
         assert!(f[1].hits.is_empty(), "a file is not a favourite folder");
         assert!(f[2].hits.is_empty(), "no scan holds D:");

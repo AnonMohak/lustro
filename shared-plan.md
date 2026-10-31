@@ -1,4 +1,4 @@
-# Lustro on Linux and macOS
+# Lustro on Linux, macOS, Android and iOS
 
 This plan ports Lustro from Windows 11 to Linux and to macOS on Apple silicon. Windows stays the main platform. Each phase must keep Windows behavior the same.
 
@@ -16,7 +16,7 @@ This plan ports Lustro from Windows 11 to Linux and to macOS on Apple silicon. W
 2. Put the OS-specific code behind `cfg` gates, with one interface for each area: drives, elevation, protected paths, fast scan, live updates, apps, clean rules, desktop integration and the window effect.
 3. Keep the Windows code. Its behavior must not change.
 4. Add stubs for Linux and macOS, so that `cargo check` passes for both targets. A stub returns an empty list or a clear "not supported" error.
-5. Add CI jobs on `ubuntu-latest` and `macos-14` that compile the backend and run the tests.
+5. Add CI jobs on `ubuntu-latest` and `macos-15` that compile the backend and run the tests.
 
 This phase has low risk because Windows stays the same.
 
@@ -32,7 +32,7 @@ Done on branch `cross-platform`:
 - `reveal_path` uses `open -R` on macOS and `xdg-open` on Linux.
 - History restore uses `trash::os_limited` on Windows and Linux. On macOS the stub reports that nothing is in the Trash.
 - `lib.rs` allows dead code on non-Windows targets until the stubs become real code. Remove this line in Phases 2 and 3.
-- CI job `unix-check` runs `cargo clippy --all-targets` on `ubuntu-22.04` and `macos-14`.
+- CI job `unix-check` runs `cargo clippy --all-targets` on `ubuntu-22.04` and `macos-15`.
 
 Not done yet:
 
@@ -99,8 +99,14 @@ A Developer ID certificate and notarization stay optional for later. They remove
 ## Phase 4: Shared work
 
 - **Frontend:** Remove the Windows assumptions in `drives.ts`, `admin.ts`, the path display and `en.json` (drive letters, `\`, "Program Files"). Get the OS from the backend and hide features that an OS does not have.
+  - Done (Linux): `lib/platform.ts` finds the platform from the WebView user agent and has the path helpers (`sepOf`, `baseName`, `dirName`, `pathParts`, `isDriveRoot`). `rootLabel` and `normalizeRoot` follow the platform. The Clean, Dupes, History, Explore and sidebar code use the helpers in place of `\`.
+  - Done (Linux): `i18n/en-linux.json` replaces the texts that name Windows features (Recycle Bin → Trash, Program Files → /opt, admin → root, Explorer → file manager, Store → Snap and Flatpak). A test checks that each replaced key exists in `en.json`.
+  - Done (Linux): "Run as admin" and the File Explorer menu setting are hidden on other platforms. Other buttons that ask for admin rights say how to start Lustro as root. Drive names show the mount point ("Local Disk (/)").
+  - Done (macOS): `i18n/en-macos.json` goes on top of the Linux texts (Trash, root) and replaces the texts that differ on macOS: Finder, `/Applications`, Full Disk Access, "Open at login", the menu bar, Spotlight and "Macintosh HD" for the system volume. A test checks that each key exists in `en.json`.
+  - Done (macOS): the title bar hides its own window buttons and leaves space for the native ones. `tauri.macos.conf.json` gives the window a native title bar in "Overlay" style, with the traffic lights in the Lustro title bar, and a solid background. Vibrancy needs the private macOS API of Tauri, so it is not used.
+  - To do: Android texts, and the mobile layout (Phase 5).
 - **Release:** Change `release.yml` to a matrix. `latest.json` must list all platforms. The `setup/` installer stays Windows only.
-- **Branding:** Change "Storage manager for Windows 11" in `Cargo.toml`, `tauri.conf.json`, the README and the app text.
+- **Branding:** Done: `package.json`, `Cargo.toml` and `tauri.conf.json` say "Storage manager", and the README names Windows 11 and Linux. The app text had no platform name. The `setup/` installer keeps "for Windows 11", because it is Windows only.
 
 ## Phase 5: Android
 
@@ -123,43 +129,152 @@ Tauri 2 builds Android apps. The Rust backend runs as a native library in the ap
 | Admin, tray, start with Windows, Explorer menu | Not applicable. Remove them from the Android UI. |
 | Export | Save the CSV and HTML files through the Android file picker. |
 
-### Work items
+### Steps
 
-1. **Entry point:** Add `#[cfg_attr(mobile, tauri::mobile_entry_point)]` to `run()` in `lib.rs`. The crate already builds as `cdylib`.
-2. **Desktop-only plugins:** Put the tray, `tauri-plugin-single-instance`, `tauri-plugin-updater` and `tauri-plugin-process` behind `cfg(desktop)`. The dialog and notification plugins support Android.
-3. **Android plugin (Kotlin):** Write one Tauri mobile plugin for the Android APIs: permission requests, storage volumes, `StorageStatsManager`, the installed app list, the uninstall screen, the app settings page and the MediaStore trash. The Rust backend calls it through the Tauri plugin bridge.
-4. **Permissions screen:** On the first start, explain and request "All files access", then "Usage access". The app must work with less access: without "All files access" it scans only folders that the user picks.
-5. **Scan code:** Reuse the Unix walk and the portable paths from Phase 2. Add `cfg(target_os = "android")` where Android differs from Linux (protected paths, clean rules, no `/proc/self/mountinfo` drives).
-6. **Mobile UI:** This is the largest item. The desktop layout needs a width of 960 px or more. Android needs:
-   - a bottom navigation bar in place of the sidebar,
-   - one pane at a time in place of tree, treemap and details next to each other,
-   - touch gestures for the treemap (tap to zoom, back to zoom out),
-   - no hover tooltips,
-   - the Android back button.
-7. **Updates:** The Tauri updater does not support Android. Use Google Play updates, or a check that opens the GitHub release page.
-8. **Build and CI:** Install Java 17, the Android SDK and the NDK, and the Rust targets `aarch64-linux-android`, `armv7-linux-androideabi` and `x86_64-linux-android` (for the emulator). Run `npm run tauri android init` one time, and then `npm run tauri android build`. Add an Android job on `ubuntu-latest` to CI and to `release.yml`.
+The first release is an APK on GitHub that users install from the web. Google Play comes last.
+
+#### Step 0: Tools (one time)
+
+1. Install Android Studio, with the Android SDK, the NDK and Java 17.
+2. Set `ANDROID_HOME`, `NDK_HOME` and `JAVA_HOME`.
+3. Add the Rust targets `aarch64-linux-android` (phones) and `x86_64-linux-android` (emulator).
+4. Make an emulator with Android 11 (API 30) or later. The emulator runs on the Windows PC, so Android tests do not need WSL.
+
+#### Step 1: Shared Unix core
+
+This is Phase 2a (see "Order"). Android needs the portable paths, the Unix walk and `cargo test` in `unix-check`.
+
+#### Step 2: The app starts on Android
+
+1. Add `#[cfg_attr(mobile, tauri::mobile_entry_point)]` to `run()` in `lib.rs`. The crate already builds as `cdylib`.
+2. Put the tray, `tauri-plugin-single-instance`, `tauri-plugin-updater` and `tauri-plugin-process` behind `cfg(desktop)`. The dialog and notification plugins support Android.
+3. Run `npm run tauri android init`. Set `minSdkVersion` to 30. Commit `src-tauri/gen/android`.
+4. Goal: the app opens in the emulator and shows the UI with no data.
+
+#### Step 3: Android plugin (Kotlin)
+
+1. Write one Tauri mobile plugin for the Android APIs. The Rust backend calls it through the Tauri plugin bridge.
+2. Permissions: "All files access" (open the system screen with `ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION`) and "Usage access".
+3. Storage volumes: internal storage, SD card and USB drives. Each volume is a "drive" in the UI.
+4. A first-start screen explains each permission before the app asks for it. Without "All files access", the app scans only folders that the user picks.
+
+#### Step 4: Scan and explore
+
+1. Walk `/storage/emulated/0` and the other volumes with the Unix walk.
+2. Add `cfg(target_os = "android")` where Android differs from Linux: protected paths (the volume root, `Android/data`, `Android/obb`), clean rules, and drives (no `/proc/self/mountinfo`).
+3. Goal: scan, treemap, large files, search and duplicates work in the emulator.
+
+#### Step 5: Mobile UI
+
+This is the largest step. The desktop layout needs a width of 960 px or more. Android needs:
+
+- a bottom navigation bar in place of the sidebar,
+- one pane at a time in place of tree, treemap and details next to each other,
+- touch gestures for the treemap (tap to zoom, back to zoom out),
+- no hover tooltips,
+- the Android back button.
+
+Hide the desktop-only features: admin mode, tray, the Explorer menu and start with Windows.
+
+#### Step 6: Delete, clean up and apps
+
+1. Delete: a direct delete works with "All files access". For media, use the MediaStore trash, so that the user can restore items for 30 days. Other files get a permanent delete, with a confirmation each time.
+2. Clean up: the Android rules from the table above.
+3. Apps: app, data and cache size from `StorageStatsManager`. "Uninstall" opens the system uninstall screen. "Clear cache" opens the app's settings page.
+
+#### Step 7: Sign and release on GitHub
+
+1. Make a release key with `keytool`. Put the keystore and its password in GitHub secrets.
+2. Add an Android job to CI and to `release.yml` on `ubuntu-latest`. It runs `npm run tauri android build -- --apk` and uploads the signed APK to the GitHub release.
+3. Build for `arm64-v8a` only. Almost all phones with Android 11 or later use it, and the APK stays small.
+
+**Warning:** Back up the keystore. Without it, users cannot install updates over the old app.
+
+#### Step 8: Updates without the Tauri updater
+
+The Tauri updater does not support Android. The app checks the latest GitHub release and opens the APK download. The new APK installs over the old one, because both have the same key.
+
+#### Step 9: Install from the web
+
+The README tells users to:
+
+1. Download the APK in the browser.
+2. Let the browser install unknown apps (one time).
+3. Accept the Play Protect warning about an unknown app.
+
+**Caution:** Google started developer verification for apps that are installed from outside Google Play. It started in September 2026 in some countries and comes to all countries in 2027. On certified phones, an app from a developer that is not registered can be blocked. Check the current rules and register in the Android Developer Console before the first public APK.
+
+#### Step 10: Google Play (last)
+
+1. Set up Play App Signing with your own key, so that the GitHub APK and the Play version have the same signature.
+2. Send the "All files access" declaration. Play can refuse it (see "Open questions").
 
 ### Signing and distribution
 
-- An Android app must have a signature, but you make the key yourself with `keytool`. It costs nothing. Keep the keystore and its password in GitHub secrets.
-- **Warning:** Back up the keystore. If you lose it, you cannot publish updates to the same app.
-- **GitHub releases (APK):** This is the easiest start. Users allow "Install unknown apps" one time.
-- **Google Play:** The account costs a one-time fee. Play reviews "All files access" and the full app list (`QUERY_ALL_PACKAGES`). A storage manager can qualify, but you must send a declaration, and Play can refuse it.
-- **F-Droid:** It is free and open source friendly. F-Droid builds the app from source with its own key. Not chosen for now.
-- **Chosen:** GitHub releases and Google Play. A user can move between the APK and the Play version without an uninstall only when both have the same signature. New Play apps use Play App Signing, where Google signs the app. When you set up Play App Signing, give Google your own key (do not let Google make a new one). Then the GitHub APK and the Play version have the same signature.
+- An Android app must have a signature, but you make the key yourself with `keytool`. It costs nothing.
+- **GitHub releases (APK):** First. Users allow "Install unknown apps" one time.
+- **Google Play:** Last. The account costs a one-time fee. Play reviews "All files access" and the full app list (`QUERY_ALL_PACKAGES`). A storage manager can qualify, but you must send a declaration, and Play can refuse it.
+- **F-Droid:** Free and open source friendly. F-Droid builds the app from source with its own key. Not chosen for now.
+- A user can move between the APK and the Play version without an uninstall only when both have the same signature. When you set up Play App Signing, give Google your own key (do not let Google make a new one).
 
 ### Tests
 
-- Use the Android emulator on the Windows PC (Android Studio) for most tests.
+- Use the Android emulator on the Windows PC for most tests.
 - Test on one real phone before a release. Emulators do not show real storage speed, SD cards or the vendor's own storage rules.
+
+## Phase 6: iOS and iPadOS
+
+Tauri 2 builds iOS apps. The Rust backend runs as a library in the app, and the UI runs in WKWebView. The mobile layout of Phase 5 also fits iPhone and iPad (iPad can show two panes next to each other).
+
+### What iOS allows
+
+Apple's sandbox does not let an app see other apps or the whole storage. iOS Lustro is a "files and photos" app, not a system cleaner.
+
+| Desktop feature | iOS and iPadOS |
+|---|---|
+| Scan a drive | Not possible. The app scans folders that the user picks in the Files app (On My iPhone, iCloud Drive, USB drives, other file providers), with security-scoped bookmarks, so the pick stays after a restart. |
+| Drives | One "device" entry with total, used and free space (`volumeAvailableCapacityForImportantUsage`). |
+| Photos | PhotoKit, with the user's permission (full or limited library): duplicate photos (same size, then a content hash), large videos, old screenshots, burst photos. Delete with `PHAssetChangeRequest`: iOS asks the user each time, and the items go to "Recently Deleted" for 30 days. |
+| Duplicates, large files, treemap, search | Work in the picked folders, as on desktop. |
+| Delete files | Files in picked folders: a permanent delete with a confirmation (there is no Trash for files). |
+| Clean up, app caches, apps, uninstall | Not possible. Do not show them. Apple rejects apps that claim to clean the system or other apps. |
+| Admin, tray, start at login, file manager menu, updater | Not applicable. |
+
+### Status
+
+- Done (step 1): the Rust backend compiles for `aarch64-apple-ios`. iOS uses the Android fallbacks: every path is protected, there is no Trash, and the lists of drives, rules and apps are empty. CI job `ios-check` runs `cargo clippy --target aarch64-apple-ios` on `macos-15`.
+
+### Steps
+
+1. Done: the backend compiles for iOS (see Status).
+2. `npm run tauri ios init` on a Mac (or in CI), with the bundle id `com.anonmohak.lustro` and iOS 16 as the minimum version. Commit `src-tauri/gen/apple`. A CI job builds the app for the iOS Simulator (`aarch64-apple-ios-sim`). A Simulator build needs no signature.
+3. A Swift plugin (Tauri mobile plugin) for the iOS APIs: the folder picker with security-scoped bookmarks, the device space, and PhotoKit. The Rust backend calls it through the plugin bridge.
+4. Storage overview and Files scan: the device entry, "Add a folder", and the Unix walk on the picked folders.
+5. Photos clean-up: duplicate photos, large videos, screenshots, delete to "Recently Deleted".
+6. Mobile UI (shared with Phase 5): bottom navigation on iPhone, a sidebar on iPad, touch gestures for the treemap, no hover tooltips, safe areas.
+7. Signing and distribution (needs the Apple Developer Program, $99 per year): TestFlight first, then the App Store. App Store text must describe the app as a files and photos tool.
+
+### Decisions (2026-10-31)
+
+- No Apple Developer Program for now. Steps 1 to 6 need none: CI builds for the Simulator only. Decide on the account before the first device install (step 7).
+- No Mac for now. CI builds only; nothing runs until someone tests on a Mac or a device. Same status as the macOS preview.
+- The first version has the Photos clean-up, the Files scan and the storage overview.
 
 ## Order
 
-1. Phase 1. Release it as Windows only.
-2. Phase 2 (Linux). Test in a VM or in WSLg on the Windows PC.
-3. Phase 3 (macOS). Test on a real Mac. CI alone cannot prove TCC, APFS and signing.
-4. Phase 4 runs next to Phases 2 and 3.
-5. Phase 5 (Android) starts after Phase 2 and the frontend part of Phase 4, because it reuses the Unix walk and the portable paths.
+Phase 2 has two parts. Android needs only the first part.
+
+- **Phase 2a, shared Unix core:** portable paths, the Unix walk, `cargo test` in `unix-check`. Linux, macOS and Android all use it.
+- **Phase 2b, Linux only:** drives from `/proc/self/mountinfo`, trash and restore, clean rules, protected paths, apps, autostart, `.deb` and AppImage.
+
+1. Phase 1. Done.
+2. Phase 2a (shared Unix core).
+3. Phase 2b (Linux). It is small after 2a, and it tests the Unix code on a desktop before the mobile UI work. Test in WSLg or a Linux VM.
+4. Phase 5 (Android), with the frontend part of Phase 4.
+5. Phase 3 (macOS). CI checks the build only, because no Mac is available.
+6. Phase 4 runs next to the other phases.
+
+Android can start right after Phase 2a if it is more important than Linux. Phase 2b does not block Android.
 
 ## Open questions
 
@@ -168,17 +283,72 @@ Tauri 2 builds Android apps. The Rust backend runs as a native library in the ap
 ## Decisions
 
 - **macOS signing:** Ad-hoc signature, no Apple certificate.
-- **macOS tests:** No Mac is available. CI on `macos-14` checks the build only. The TCC, APFS, Gatekeeper and Full Disk Access items in Phase 3 stay untested until someone tests on a real Mac. Mark the first macOS release as a preview.
+- **macOS tests:** No Mac is available. CI on `macos-15` checks the build only. The TCC, APFS, Gatekeeper and Full Disk Access items in Phase 3 stay untested until someone tests on a real Mac. Mark the first macOS release as a preview.
 - **Feature parity:** Not needed. Each platform gets the features that fit it. A feature that a platform does not have is hidden in the UI on that platform (for example the Explorer menu, the MFT scan and admin mode).
 - **Linux distros:** Ubuntu and Debian first (`.deb` and AppImage). Other distros come later.
-- **Android distribution:** GitHub releases (APK) and Google Play.
+- **Android distribution:** GitHub releases (APK, install from the web) first. Google Play last.
 - **Android minimum version:** Android 11 (API 30). Set `minSdkVersion` to 30.
 
 ## Next steps
 
-1. Push `cross-platform` and let CI run `unix-check` on Linux and macOS.
-2. Merge into `master` when CI passes. Windows behavior does not change.
-3. Install a Linux test system: run `wsl --install -d Ubuntu` (needs admin rights), or use a Linux VM.
-4. Start Phase 2 with portable paths: the tree code, `normalize_root` and the tests use `C:\` and `\`. Everything else in Phase 2 depends on this.
-5. Then add the Unix folder walk, the drive list from `/proc/self/mountinfo`, and `cargo test` in `unix-check`. Remove the dead-code line in `lib.rs`.
-6. Then port trash and restore, clean rules, protected paths, the app list and autostart for Linux.
+1. Done: PR #1 passed CI on Windows, Linux and macOS and is merged into `master`.
+2. Install a Linux test system: run `wsl --install -d Ubuntu` (needs admin rights), or use a Linux VM.
+3. Done: portable paths. `paths.rs` has the separator (`SEP`) and the case rule (`IGNORE_CASE`, `same`, `key`). The tree code, `normalize_root`, `is_drive_root`, the cache name, favorites and the delete checks use it. Tests use `paths::os` to write `C:\` paths in the platform form. `unix-check` now runs `cargo test`.
+   These tests stay Windows-only until the Phase 2b protected paths exist (until then every Unix path is protected, so deletes fail safely): `dupes::tests`, the `clean::dev` project tests, `clean::tests::measures_and_cleans_matching_files_only`, `ops::delete::tests`.
+4. Done: the Unix folder walk. `scan/walk.rs` has the shared walk; `walk/win.rs` (the old Windows code, moved) and `walk/unix.rs` list one folder each. The Unix listing:
+   - stays on the file system of the root (like `du -x`) and does not go into `/proc`, `/sys`, `/dev` and `/run`,
+   - does not follow symbolic links (a link to a folder shows as a folder with the link flag),
+   - counts each hard-linked file once (later links count 0 bytes),
+   - marks dot files as hidden, and uses `st_blocks` for the size on disk.
+   The dead-code line in `lib.rs` is gone. Items that only Windows or a later step uses have their own `cfg` or `allow(dead_code)` with a note.
+   Known limits: names that are not UTF-8 get replacement characters. On macOS, the firmlinked Data volume can count as another file system (Phase 3).
+5. Done (Phase 2b, part 1): the Linux drive list and protected paths.
+   - `system/drives/linux.rs` reads `/proc/self/mountinfo`. It keeps file systems on a disk (`/dev/...`, not loop) and ZFS, and skips network, memory, kernel, snap and Docker mounts. A bind mount of the same device and folder shows once. SSD, HDD and removable come from `/sys/dev/block`, and the space from `statvfs` (new dependency `libc` on Unix). `letter` holds the mount point until the frontend work of Phase 4.
+   - `ops/protect.rs` picks the rules of the platform: `protect/win.rs` (the old rules, moved) and `protect/linux.rs`. Linux protects `/`, the system folders (`/usr`, `/etc`, `/var`, `/opt`, ...) with their contents, `/home`, `/tmp`, `/media/<user>` and the home folders themselves, the standard folders in a home folder (but not their contents), and `.ssh`, `.gnupg` and `.pki` with their contents. Apps in `/opt` work like Program Files. macOS and Android still protect every path.
+   - The delete, duplicate and clean tests now run on Linux too.
+6. Done (Phase 2b, part 2): trash, clean rules, apps and autostart for Linux.
+   - Trash and restore use the freedesktop.org Trash through the `trash` crate (this already worked from Phase 1). New: a Linux test that moves a file to the Trash and restores it.
+   - `clean/rules-linux.toml` has the Linux rules (thumbnails, shader caches, Trash, apt packages, `/var/tmp`, crash reports, browser caches and history, dev caches, Docker, VS Code, old JetBrains data). `rules()` loads the file of the platform. Glob matches are case-sensitive where the file system is.
+   - Done later: `clean/linux.rs` adds two root rules. "Old snap revisions" removes the disabled revisions with `snap remove <name> --revision=<rev>`. "Old system logs" measures the archived journal files older than 14 days and runs `journalctl --vacuum-time=14d`. Unused Flatpak runtimes are not a rule: `flatpak uninstall --unused` has no dry run, so Lustro cannot measure them before it runs.
+   - `clean/system_unix.rs`: running programs from `/proc/<pid>/comm`, the Trash size (the home Trash only) and "empty the Trash" (all Trash folders).
+   - Admin rights on Unix mean that Lustro runs as root (`geteuid`). "Run as admin" still says that it is not available.
+   - `apps/linux.rs` lists deb packages with a menu entry, snaps and Flatpak apps. It is read-only: "Uninstall" shows the command to run (`sudo apt remove ...`, `sudo snap remove ...`, `flatpak uninstall ...`). Until Phase 4, deb apps use the source "desktop", and snaps and Flatpak apps use "store".
+   - Start at login writes `~/.config/autostart/lustro.desktop` (with the AppImage path when Lustro runs from one). The file manager menu is not available yet.
+7. Phase 2b, part 3: Linux packages.
+   - Done: `src-tauri/tauri.linux.conf.json` (Tauri merges it on Linux): `.deb` and AppImage, the deb needs `libayatana-appindicator3-1` (tray), and the window has no transparency and a solid dark background (`#1c1e22`), because Linux has no Acrylic.
+   - Done: CI job `linux-bundle` builds both packages on `ubuntu-22.04` and keeps them as the artifact `lustro-linux`, for manual tests.
+   - Done: `release.yml` makes one draft release first, then builds Windows and Linux one after the other (so the two jobs do not overwrite each other's entry in `latest.json`). It runs only on a `v*` tag, so it is not tested yet.
+   - To do: a manual test of the AppImage and the `.deb` on a Linux desktop (WSLg or a VM).
+8. Phase 3 (macOS), part 1: drives, protected paths and the walk. CI checks the build and runs the tests on `macos-15`. Nobody tested it on a Mac.
+   - `system/drives/macos.rs` lists the volumes from `getmntinfo`: local volumes that the Finder shows (not "nobrowse", not a read-only disk image). `statfs` gives the space of the APFS container. `/` is an SSD, a volume with the removable flag is removable, other volumes are "unknown". Purgeable space and Time Machine snapshots are not shown yet.
+   - `ops/protect/unix.rs` has the protected path check for Linux and macOS. `protect/linux.rs` and `protect/macos.rs` only give the tables, and their tests run on every platform. macOS protects `/System`, `/usr` (also `/usr/local`), `/opt` (Homebrew), `/private` with `/etc` and `/var`, `/Library` and `/Applications` with their contents, the home folders, the standard folders in a home folder, `~/Library` and some folders in it, and `.ssh`, `.gnupg` and `~/Library/Keychains`. The cleaner may delete in `/Library/Caches`, `/Library/Logs` and `/var/folders` (the temp folders). Apps in `/Applications` work like Program Files. The check ignores case.
+   - The walk: when the scan starts on the system volume, the Data volume counts as the same disk, so the firmlinks (`/Users`, `/Applications`, ...) are part of the scan. `/System/Volumes` is skipped, so the Data volume does not count twice. APFS clones still count once for each copy.
+   - The delete, duplicate and clean tests stay off on macOS: they work in the temp folder, which is under the protected `/var/folders`.
+9. Phase 3 (macOS), part 2: clean up, running programs and the Trash. Not tested on a Mac.
+   - `clean/rules-macos.toml`: the Trash, logs and crash reports (7 days old), Quick Look thumbnails, iPhone backups (warn) and update files, browser caches and history, Xcode DerivedData and device support, old simulators, Simulator caches, Homebrew, npm, Yarn, pnpm, pip, Go, CocoaPods, Cargo, Gradle and Maven caches, Docker, VS Code and old JetBrains data. There is no rule for all of `~/Library/Caches`, because it holds the folders of the other rules, and one rule would count them twice. Most folders in `~/Library` need Full Disk Access; without it, a rule measures 0 bytes.
+   - `clean/macos.rs`: "Simulators of old Xcode versions" measures the simulators that `xcrun simctl list devices unavailable` lists and runs `xcrun simctl delete unavailable`.
+   - All three rules files are in every build, and one test checks all of them on every platform.
+   - Running programs come from `ps -Axco comm=` (for example "google chrome").
+   - `ops/trash_mac.rs`: the Trash size and "empty the Trash" use `~/.Trash` and `/Volumes/<disk>/.Trashes/<uid>`. History finds a deleted item by its name in the Trash of its volume and moves it back. It does not read the `.DS_Store` of the Finder, so an item that the Finder renamed (`photo 2.jpg`) cannot be restored.
+10. Phase 3 (macOS), part 3: apps and start at login. Not tested on a Mac.
+   - `apps/macos.rs` lists the `.app` bundles in `/Applications` and `~/Applications` (also one folder deeper). Name and version come from `Info.plist` (new macOS dependency `plist`, which Tauri already used), the size from the bundle folder, the install date from the creation time, and the last start from Spotlight (`mdls -name kMDItemLastUsedDate`, one call for all apps). An app with a Mac App Store receipt has the source "store".
+   - Uninstall moves the bundle to the Trash, then its data in `~/Library` that has the exact bundle id in its name (Application Support, Caches, Containers, HTTPStorages, Logs, Preferences, Saved Application State, WebKit). A bundle id that is not like `com.example.app` gives no data folders.
+   - Start at login writes `~/Library/LaunchAgents/com.anonmohak.lustro.plist` (the program with `--tray`, `RunAtLoad`).
+11. Phase 3 (macOS), part 4: packages, CI, release and README. Not tested on a Mac.
+   - `tauri.macos.conf.json` builds `Lustro.app` and a `.dmg` for macOS 11 and later, with an ad-hoc signature (`signingIdentity` `-`). `src-tauri/Info.plist` adds the texts for the macOS prompts (Desktop, Documents, Downloads, removable and network disks).
+   - Delete on macOS uses `NSFileManager` (`ops/trash_mac.rs::to_trash`), not the Finder through AppleScript, so Lustro needs no Automation permission. The Finder then has no "Put Back" for these items; History restores them.
+   - CI job `macos-bundle` builds the app and the `.dmg` on `macos-15`, checks the signature with `codesign --verify --deep --strict` and keeps the `.dmg` as the artifact `lustro-macos`.
+   - `release.yml` builds macOS after Windows and Linux, and the release text tells users how to pass Gatekeeper. Not tested yet (it runs only on a `v*` tag).
+   - The README has the macOS install steps (Gatekeeper, Full Disk Access), the differences, the protected paths and the build steps.
+   - Not done: purgeable space and Time Machine snapshots in the drive list, FSEvents live updates, `getattrlistbulk` for a faster walk, a Finder menu entry, Cmd shortcuts. The manual test on a Mac is open.
+12. Phase 5 (Android), Step 2 code part (no emulator yet):
+   - `run()` has `#[cfg_attr(mobile, tauri::mobile_entry_point)]`.
+   - The tray, `tauri-plugin-single-instance`, `tauri-plugin-updater`, `tauri-plugin-process` and the `trash` crate are desktop only (`cfg(desktop)` and target dependencies). Their permissions moved to `capabilities/desktop.json` (`platforms`: Linux, macOS, Windows), because the Android build refuses permissions of plugins that it does not have.
+   - On Android, "move to Trash" reports that it is not available yet, and History restores nothing. Every path is still protected, so nothing is deleted. Drives, rules and apps are empty lists.
+   - CI job `android-check` runs `cargo clippy --target aarch64-linux-android` with the NDK of the runner. It does not link or run the app.
+   - To do: `npm run tauri android init` (needs Android Studio, Step 0), and the frontend must not call the updater and process plugins on Android.
+13. CI: GitHub retires the `macos-14` runner image on 2026-11-02, so all macOS jobs use `macos-15`.
+14. Phase 5 (Android), Step 4 code part: protected paths and clean rules. The tests run on every platform; nothing ran on a phone yet.
+   - `ops/protect/android.rs`: the system (`/system`, `/data`, `/vendor`, `/sdcard`, ...), `/storage` and each volume root, the user folders in `/storage/emulated`, the standard folders in them (DCIM, Download, ...) and `Android/data` and `Android/obb` with their contents. The check ignores case, like the shared storage. The shared check has a new table `volume_trees`, so `Android/data` and `Android/obb` stay protected on SD cards too.
+   - `clean/rules-android.toml`: thumbnail caches, APK files in Download (30 days old), old downloads (6 months, warn), the gallery Trash (`.trashed-*`, warn), `LOST.DIR`, viewed WhatsApp statuses, WhatsApp media that you sent (warn) and Telegram downloads (warn).
+15. Phase 6 (iOS and iPadOS), step 1: the backend compiles for iOS, and CI job `ios-check` checks it on `macos-15`. See "Phase 6" for the plan and the decisions.
