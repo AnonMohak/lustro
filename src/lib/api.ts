@@ -177,6 +177,8 @@ export interface CustomRule {
   id: string;
   name: string;
   root: string;
+  /** "folders": targets are folder names; "files": targets are file patterns like *.iso. */
+  kind: "folders" | "files";
   targets: string[];
   ageDays: number;
   schedule: "off" | "start" | "daily" | "weekly";

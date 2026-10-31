@@ -84,7 +84,7 @@
     "off": "Live updates are not available on Linux yet"
   },
   "custom": {
-    "hint": "In a folder that you choose, Lustro finds folders with the names that you type (for example node_modules). It moves them to the Trash when nothing else in their project changed for the number of days.",
+    "hint": "In a folder that you choose, Lustro finds folders with the names that you type (for example node_modules), or files that match a pattern (for example *.iso). It moves them to the Trash when they had no change for the number of days.",
     "runBody_one": "Lustro moves the folders named {{names}} to the Trash when their project had no change for 1 day. You can restore them from History.",
     "runBody_other": "Lustro moves the folders named {{names}} to the Trash when their project had no change for {{count}} days. You can restore them from History.",
     "done_one": "Moved 1 folder to the Trash ({{size}}).",

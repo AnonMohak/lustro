@@ -1,3 +1,4 @@
+import { downloadDir } from "@tauri-apps/api/path";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -5,6 +6,7 @@ import { Icon } from "../components/Icon";
 import { Select } from "../components/Select";
 import { api, type CleanItem, type CustomRule } from "../lib/api";
 import { formatBytes, timeAgo } from "../lib/format";
+import { PLATFORM } from "../lib/platform";
 import { useStore } from "../store";
 
 const SCHEDULES: CustomRule["schedule"][] = ["off", "start", "daily", "weekly"];
@@ -13,10 +15,19 @@ const NEW_RULE: CustomRule = {
   id: "",
   name: "",
   root: "",
+  kind: "folders",
   targets: ["node_modules"],
   ageDays: 30,
   schedule: "off",
   lastRun: 0,
+};
+
+/** Installer and disk image types of each platform, for the "Old installers" preset. */
+const INSTALLERS: Record<string, string[]> = {
+  windows: ["*.exe", "*.msi", "*.msix", "*.iso"],
+  macos: ["*.dmg", "*.pkg", "*.iso"],
+  linux: ["*.deb", "*.rpm", "*.AppImage", "*.iso"],
+  android: ["*.apk", "*.apks", "*.xapk"],
 };
 
 /** The form for a new or changed rule. `targets` is edited as text: "node_modules, target". */
@@ -61,8 +72,21 @@ function RuleForm({
       </div>
       <div className="srow">
         <div>
-          <div>{t("custom.targets")}</div>
-          <div className="sd">{t("custom.targetsHint")}</div>
+          <div>{t("custom.match")}</div>
+        </div>
+        <div className="seg">
+          <button className={r.kind === "folders" ? "on" : ""} onClick={() => setR({ ...r, kind: "folders" })}>
+            {t("custom.matchFolders")}
+          </button>
+          <button className={r.kind === "files" ? "on" : ""} onClick={() => setR({ ...r, kind: "files" })}>
+            {t("custom.matchFiles")}
+          </button>
+        </div>
+      </div>
+      <div className="srow">
+        <div>
+          <div>{r.kind === "files" ? t("custom.patterns") : t("custom.targets")}</div>
+          <div className="sd">{r.kind === "files" ? t("custom.patternsHint") : t("custom.targetsHint")}</div>
         </div>
         <input
           className="text mono"
@@ -75,7 +99,7 @@ function RuleForm({
       <div className="srow">
         <div>
           <div>{t("custom.age")}</div>
-          <div className="sd">{t("custom.ageHint")}</div>
+          <div className="sd">{r.kind === "files" ? t("custom.ageHintFiles") : t("custom.ageHint")}</div>
         </div>
         <input
           className="text"
@@ -242,6 +266,22 @@ export function CustomRules() {
           <p>{t("custom.hint")}</p>
         </div>
         <div className="row">
+          <button
+            className="btn sm"
+            disabled={editing !== null}
+            onClick={async () =>
+              setEditing({
+                ...NEW_RULE,
+                name: t("custom.installersName"),
+                root: await downloadDir().catch(() => ""),
+                kind: "files",
+                targets: INSTALLERS[PLATFORM] ?? INSTALLERS.windows,
+                ageDays: 14,
+              })
+            }
+          >
+            {t("custom.presetInstallers")}
+          </button>
           <button className="btn sm accent" disabled={editing !== null} onClick={() => setEditing(NEW_RULE)}>
             {t("custom.add")}
           </button>
@@ -270,7 +310,11 @@ export function CustomRules() {
                 <div className="cn">
                   {r.name}
                   <span className="pill acc">{t(`custom.schedules.${r.schedule}`)}</span>
-                  <span className="pill">{t("custom.olderThan", { count: r.ageDays })}</span>
+                  <span className="pill">
+                    {r.kind === "files"
+                      ? t("custom.olderThanFiles", { count: r.ageDays })
+                      : t("custom.olderThan", { count: r.ageDays })}
+                  </span>
                 </div>
                 <div className="row">
                   <button className="btn sm ghost" onClick={() => preview(r)} disabled={items === "loading"}>
@@ -319,7 +363,11 @@ export function CustomRules() {
                             {i.path}
                           </span>
                           <span className="faint">
-                            {i.ageDays === null ? t("custom.ageUnknown") : t("custom.untouched", { count: i.ageDays })}
+                            {i.ageDays === null
+                              ? t("custom.ageUnknown")
+                              : r.kind === "files"
+                                ? t("custom.fileAge", { count: i.ageDays })
+                                : t("custom.untouched", { count: i.ageDays })}
                           </span>
                         </span>
                         <span className="num">{formatBytes(i.bytes)}</span>

@@ -318,7 +318,7 @@
   "custom": {
     "title": "Your rules",
     "rowHint": "Old build folders, by your own rules",
-    "hint": "In a folder that you choose, Lustro finds folders with the names that you type (for example node_modules). It moves them to the Recycle Bin when nothing else in their project changed for the number of days.",
+    "hint": "In a folder that you choose, Lustro finds folders with the names that you type (for example node_modules), or files that match a pattern (for example *.iso). It moves them to the Recycle Bin when they had no change for the number of days.",
     "add": "Add rule",
     "emptyTitle": "No rules yet",
     "emptyBody": "Add a rule, for example: in your projects folder, remove node_modules from projects that nobody changed for 30 days.",
@@ -368,7 +368,19 @@
     "doneErrors_one": "Moved 1 folder ({{size}}). {{errors}} could not move: History shows why.",
     "doneErrors_other": "Moved {{count}} folders ({{size}}). {{errors}} could not move: History shows why.",
     "deleteTitle": "Delete the rule “{{name}}”?",
-    "deleteBody": "Only the rule goes. Lustro deletes no folder now."
+    "deleteBody": "Only the rule goes. Lustro deletes no folder now.",
+    "match": "Match",
+    "matchFolders": "Folders by name",
+    "matchFiles": "Files by pattern",
+    "patterns": "File patterns",
+    "patternsHint": "Separate the patterns with commas. * stands for any text, ? for one character, for example: *.iso, Screen Recording*.mov",
+    "ageHintFiles": "A file is selected when it had no change for this time.",
+    "olderThanFiles_one": "older than 1 day",
+    "olderThanFiles_other": "older than {{count}} days",
+    "fileAge_one": "changed 1 day ago",
+    "fileAge_other": "changed {{count}} days ago",
+    "presetInstallers": "Old installers in Downloads",
+    "installersName": "Old installers in Downloads"
   },
   "dupes": {
     "title": "Duplicates",

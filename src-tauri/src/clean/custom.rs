@@ -30,6 +30,16 @@ pub enum Schedule {
     Weekly,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Target {
+    /// Folders by name, in projects with no change (for example `node_modules`).
+    #[default]
+    Folders,
+    /// Files by name pattern, with no change themselves (for example `*.iso` in Downloads).
+    Files,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CustomRule {
@@ -37,9 +47,13 @@ pub struct CustomRule {
     pub name: String,
     /// The parent folder.
     pub root: String,
-    /// Folder names to delete, for example `node_modules`.
+    /// What `targets` match: folder names, or file name patterns.
+    #[serde(default)]
+    pub kind: Target,
+    /// Folder names (`node_modules`), or file patterns with `*` and `?` (`*.iso`).
     pub targets: Vec<String>,
-    /// A project counts as untouched after this many days with no change.
+    /// Folders: their project counts as untouched after this many days with no change.
+    /// Files: the file itself had no change for this many days.
     pub age_days: u32,
     #[serde(default)]
     pub schedule: Schedule,
@@ -73,15 +87,36 @@ pub fn invalid(r: &CustomRule) -> Option<String> {
         return Some(format!("The folder {} does not exist.", r.root));
     }
     if r.targets.is_empty() {
-        return Some("Type at least one folder name.".into());
+        return Some(match r.kind {
+            Target::Folders => "Type at least one folder name.".into(),
+            Target::Files => "Type at least one file pattern.".into(),
+        });
     }
-    if let Some(bad) = r.targets.iter().find(|t| {
-        let t = t.trim();
-        t.is_empty() || t == "." || t == ".." || t.contains(['/', '\\', '*', '?'])
-    }) {
-        return Some(format!(
-            "\"{bad}\" is not a folder name. Type names only, for example node_modules."
-        ));
+    match r.kind {
+        Target::Folders => {
+            if let Some(bad) = r.targets.iter().find(|t| {
+                let t = t.trim();
+                t.is_empty() || t == "." || t == ".." || t.contains(['/', '\\', '*', '?'])
+            }) {
+                return Some(format!(
+                    "\"{bad}\" is not a folder name. Type names only, for example node_modules."
+                ));
+            }
+        }
+        Target::Files => {
+            // A pattern that matches every file ("*") is too easy to get wrong.
+            if let Some(bad) = r.targets.iter().find(|t| {
+                let t = t.trim();
+                t.is_empty()
+                    || t.contains(['/', '\\'])
+                    || t.chars().all(|c| c == '*' || c == '?' || c == '.')
+                    || glob::Pattern::new(t).is_err()
+            }) {
+                return Some(format!(
+                    "\"{bad}\" is not a file pattern. Type patterns like *.iso or Screen Recording*.mov."
+                ));
+            }
+        }
     }
     if r.age_days == 0 {
         return Some("The number of days must be 1 or more.".into());
@@ -159,6 +194,9 @@ pub fn newest_change(project: &Path, targets: &[String]) -> i64 {
 /// The matches of a rule. A match is selected when its project had no change for
 /// `age_days`. Protected paths never show.
 pub fn scan(rule: &CustomRule, now_ms: i64) -> Vec<RuleItem> {
+    if rule.kind == Target::Files {
+        return scan_files(rule, now_ms);
+    }
     let matches = find_matches(Path::new(&rule.root), &rule.targets);
     matches
         .par_iter()
@@ -177,6 +215,57 @@ pub fn scan(rule: &CustomRule, now_ms: i64) -> Vec<RuleItem> {
             }
         })
         .collect()
+}
+
+/// The files under the rule's folder (at any depth, not through links) whose name matches a
+/// pattern. A file is selected when it had no change for `age_days`.
+fn scan_files(rule: &CustomRule, now_ms: i64) -> Vec<RuleItem> {
+    let patterns: Vec<glob::Pattern> = rule
+        .targets
+        .iter()
+        .filter_map(|t| glob::Pattern::new(t.trim()).ok())
+        .collect();
+    let opts = glob::MatchOptions {
+        case_sensitive: !crate::paths::IGNORE_CASE,
+        require_literal_separator: true,
+        require_literal_leading_dot: false,
+    };
+    let mut out = Vec::new();
+    let mut stack = vec![(PathBuf::from(&rule.root), 0usize)];
+    while let Some((dir, depth)) = stack.pop() {
+        for e in fs::read_dir(&dir).into_iter().flatten().flatten() {
+            let Ok(meta) = fs::symlink_metadata(e.path()) else {
+                continue;
+            };
+            let attrs = file_attributes(&meta);
+            if attrs & ATTR_REPARSE_POINT != 0 {
+                continue;
+            }
+            if attrs & ATTR_DIRECTORY != 0 {
+                if depth < MAX_DEPTH {
+                    stack.push((e.path(), depth + 1));
+                }
+                continue;
+            }
+            let name = e.file_name().to_string_lossy().into_owned();
+            let path = e.path().to_string_lossy().into_owned();
+            if !patterns.iter().any(|p| p.matches_with(&name, opts)) || is_protected(&path) {
+                continue;
+            }
+            let changed = mtime_ms(&meta);
+            let age_days = (changed > 0).then(|| ((now_ms - changed).max(0) / DAY_MS) as u32);
+            out.push(RuleItem {
+                label: None,
+                path,
+                bytes: meta.len(),
+                files: 1,
+                age_days,
+                selected: age_days.is_some_and(|a| a >= rule.age_days),
+            });
+        }
+    }
+    out.sort_by_key(|i| std::cmp::Reverse(i.bytes));
+    out
 }
 
 /// True when an automatic run of the rule is due. `ran_this_start` says that the rule
@@ -219,11 +308,56 @@ mod tests {
             id: "r1".into(),
             name: "Old node_modules".into(),
             root: root.to_string_lossy().into_owned(),
+            kind: Target::Folders,
             targets: vec!["node_modules".into()],
             age_days: 30,
             schedule: Schedule::Off,
             last_run: 0,
         }
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    #[test]
+    fn file_rules_match_patterns_and_age() {
+        let root = temp("files");
+        fs::create_dir_all(root.join("sub")).unwrap();
+        for (name, days) in [
+            ("old.ISO", 40),
+            ("new.iso", 1),
+            ("sub/setup.exe", 20),
+            ("keep.txt", 90),
+        ] {
+            let f = root.join(name);
+            fs::write(&f, vec![0u8; 10]).unwrap();
+            set_age(&f, days);
+        }
+        let r = CustomRule {
+            kind: Target::Files,
+            targets: vec!["*.iso".into(), "*.exe".into()],
+            age_days: 14,
+            ..rule(&root)
+        };
+        assert_eq!(invalid(&r), None);
+        let items = scan(&r, crate::ops::history::now_ms());
+        let picked: Vec<&str> = items
+            .iter()
+            .filter(|i| i.selected)
+            .map(|i| i.path.rsplit(crate::paths::SEP).next().unwrap())
+            .collect();
+        let mut names: Vec<&str> = items
+            .iter()
+            .map(|i| i.path.rsplit(crate::paths::SEP).next().unwrap())
+            .collect();
+        names.sort();
+        if crate::paths::IGNORE_CASE {
+            assert_eq!(names, ["new.iso", "old.ISO", "setup.exe"]);
+            assert!(picked.contains(&"old.ISO"));
+        } else {
+            assert_eq!(names, ["new.iso", "setup.exe"]);
+        }
+        assert!(picked.contains(&"setup.exe"));
+        assert!(!picked.contains(&"new.iso"));
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
@@ -311,6 +445,21 @@ mod tests {
             },
             CustomRule {
                 age_days: 0,
+                ..ok.clone()
+            },
+            CustomRule {
+                kind: Target::Files,
+                targets: vec!["*".into()],
+                ..ok.clone()
+            },
+            CustomRule {
+                kind: Target::Files,
+                targets: vec!["*.*".into()],
+                ..ok.clone()
+            },
+            CustomRule {
+                kind: Target::Files,
+                targets: vec!["sub/*.iso".into()],
                 ..ok.clone()
             },
         ] {
