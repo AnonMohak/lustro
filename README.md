@@ -164,6 +164,22 @@ cd src-tauri && cargo test
 
 Tauri adds `src-tauri/tauri.macos.conf.json` and `src-tauri/Info.plist` on macOS. The build signs the app ad hoc (`signingIdentity` is `-`).
 
+## Command line
+
+The same `lustro` program runs without a window when the first argument is a command. It shares the scans, rules, hash cache, ignore list and History with the window app.
+
+```sh
+lustro scan D:\ --top 20          # scan, show the biggest items, save the scan
+lustro clean --list               # clean-up items and their sizes
+lustro clean --safe --dry-run     # what the safe items would free
+lustro clean user-temp thumbnails # run two items (permanent delete)
+lustro dupes D:\Photos --mode similar --min-size 64k
+lustro rules run "Old node_modules" --dry-run
+lustro scan D:\ --json            # JSON for scripts
+```
+
+`dupes` only reports. Exit codes: 0 ok, 1 error, 2 wrong arguments. On Windows, pipe the output (for example `lustro scan D:\ | more` or `> report.json`) so that the shell waits for it. Use it from Task Scheduler, cron or launchd for your own schedules.
+
 ## Screenshots
 
 The README screenshots show a demo folder, not real user data. `scripts/make-demo.ps1 -Root "C:\Users\you\Lustro Demo"` makes that folder from sparse files: about 117 GB in size, but almost no space on the disk. Scan it with "Scan a folder", then delete it.

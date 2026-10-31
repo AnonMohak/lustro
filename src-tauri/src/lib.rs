@@ -1,6 +1,7 @@
 mod apps;
 mod clean;
 mod clean_cmds;
+pub mod cli;
 mod cloud;
 mod commands;
 mod custom_cmds;
