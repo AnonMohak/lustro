@@ -1,4 +1,4 @@
-# Lustro on Linux and macOS
+# Lustro on Linux, macOS, Android and iOS
 
 This plan ports Lustro from Windows 11 to Linux and to macOS on Apple silicon. Windows stays the main platform. Each phase must keep Windows behavior the same.
 
@@ -222,6 +222,44 @@ The README tells users to:
 - Use the Android emulator on the Windows PC for most tests.
 - Test on one real phone before a release. Emulators do not show real storage speed, SD cards or the vendor's own storage rules.
 
+## Phase 6: iOS and iPadOS
+
+Tauri 2 builds iOS apps. The Rust backend runs as a library in the app, and the UI runs in WKWebView. The mobile layout of Phase 5 also fits iPhone and iPad (iPad can show two panes next to each other).
+
+### What iOS allows
+
+Apple's sandbox does not let an app see other apps or the whole storage. iOS Lustro is a "files and photos" app, not a system cleaner.
+
+| Desktop feature | iOS and iPadOS |
+|---|---|
+| Scan a drive | Not possible. The app scans folders that the user picks in the Files app (On My iPhone, iCloud Drive, USB drives, other file providers), with security-scoped bookmarks, so the pick stays after a restart. |
+| Drives | One "device" entry with total, used and free space (`volumeAvailableCapacityForImportantUsage`). |
+| Photos | PhotoKit, with the user's permission (full or limited library): duplicate photos (same size, then a content hash), large videos, old screenshots, burst photos. Delete with `PHAssetChangeRequest`: iOS asks the user each time, and the items go to "Recently Deleted" for 30 days. |
+| Duplicates, large files, treemap, search | Work in the picked folders, as on desktop. |
+| Delete files | Files in picked folders: a permanent delete with a confirmation (there is no Trash for files). |
+| Clean up, app caches, apps, uninstall | Not possible. Do not show them. Apple rejects apps that claim to clean the system or other apps. |
+| Admin, tray, start at login, file manager menu, updater | Not applicable. |
+
+### Status
+
+- Done (step 1): the Rust backend compiles for `aarch64-apple-ios`. iOS uses the Android fallbacks: every path is protected, there is no Trash, and the lists of drives, rules and apps are empty. CI job `ios-check` runs `cargo clippy --target aarch64-apple-ios` on `macos-15`.
+
+### Steps
+
+1. Done: the backend compiles for iOS (see Status).
+2. `npm run tauri ios init` on a Mac (or in CI), with the bundle id `com.anonmohak.lustro` and iOS 16 as the minimum version. Commit `src-tauri/gen/apple`. A CI job builds the app for the iOS Simulator (`aarch64-apple-ios-sim`). A Simulator build needs no signature.
+3. A Swift plugin (Tauri mobile plugin) for the iOS APIs: the folder picker with security-scoped bookmarks, the device space, and PhotoKit. The Rust backend calls it through the plugin bridge.
+4. Storage overview and Files scan: the device entry, "Add a folder", and the Unix walk on the picked folders.
+5. Photos clean-up: duplicate photos, large videos, screenshots, delete to "Recently Deleted".
+6. Mobile UI (shared with Phase 5): bottom navigation on iPhone, a sidebar on iPad, touch gestures for the treemap, no hover tooltips, safe areas.
+7. Signing and distribution (needs the Apple Developer Program, $99 per year): TestFlight first, then the App Store. App Store text must describe the app as a files and photos tool.
+
+### Decisions (2026-10-31)
+
+- No Apple Developer Program for now. Steps 1 to 6 need none: CI builds for the Simulator only. Decide on the account before the first device install (step 7).
+- No Mac for now. CI builds only; nothing runs until someone tests on a Mac or a device. Same status as the macOS preview.
+- The first version has the Photos clean-up, the Files scan and the storage overview.
+
 ## Order
 
 Phase 2 has two parts. Android needs only the first part.
@@ -313,3 +351,4 @@ Android can start right after Phase 2a if it is more important than Linux. Phase
 14. Phase 5 (Android), Step 4 code part: protected paths and clean rules. The tests run on every platform; nothing ran on a phone yet.
    - `ops/protect/android.rs`: the system (`/system`, `/data`, `/vendor`, `/sdcard`, ...), `/storage` and each volume root, the user folders in `/storage/emulated`, the standard folders in them (DCIM, Download, ...) and `Android/data` and `Android/obb` with their contents. The check ignores case, like the shared storage. The shared check has a new table `volume_trees`, so `Android/data` and `Android/obb` stay protected on SD cards too.
    - `clean/rules-android.toml`: thumbnail caches, APK files in Download (30 days old), old downloads (6 months, warn), the gallery Trash (`.trashed-*`, warn), `LOST.DIR`, viewed WhatsApp statuses, WhatsApp media that you sent (warn) and Telegram downloads (warn).
+15. Phase 6 (iOS and iPadOS), step 1: the backend compiles for iOS, and CI job `ios-check` checks it on `macos-15`. See "Phase 6" for the plan and the decisions.

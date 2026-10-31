@@ -51,3 +51,19 @@ pub fn cleaner_may_delete(path: &str) -> bool {
 pub fn is_app_folder(path: &str) -> bool {
     unix::is_app_folder(&RULES, path)
 }
+
+/// iOS has no rules yet, so every path is protected and nothing is deleted.
+#[cfg(target_os = "ios")]
+pub fn is_protected(_path: &str) -> bool {
+    true
+}
+
+#[cfg(target_os = "ios")]
+pub fn cleaner_may_delete(_path: &str) -> bool {
+    false
+}
+
+#[cfg(target_os = "ios")]
+pub fn is_app_folder(_path: &str) -> bool {
+    false
+}

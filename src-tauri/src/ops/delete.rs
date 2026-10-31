@@ -52,7 +52,7 @@ pub fn recycle(path: &Path, allow_app: bool) -> Result<(), DeleteError> {
 }
 
 /// Moves `path` to the Recycle Bin (the Trash on Linux and macOS), with no checks.
-#[cfg(not(any(target_os = "macos", target_os = "android")))]
+#[cfg(not(any(target_os = "macos", target_os = "android", target_os = "ios")))]
 pub fn to_trash(path: &Path) -> Result<(), String> {
     trash::delete(path).map_err(|e| e.to_string())
 }
@@ -62,10 +62,11 @@ pub fn to_trash(path: &Path) -> Result<(), String> {
     super::trash_mac::to_trash(path).map_err(|e| e.to_string())
 }
 
-/// Android gets the MediaStore trash in a later phase.
-#[cfg(target_os = "android")]
+/// Android gets the MediaStore trash in a later phase. iOS deletes photos to "Recently
+/// Deleted" through PhotoKit (later); other files have no Trash.
+#[cfg(any(target_os = "android", target_os = "ios"))]
 pub fn to_trash(_path: &Path) -> Result<(), String> {
-    Err("The Trash is not available on Android yet. Use a permanent delete.".into())
+    Err("The Trash is not available on this system yet. Use a permanent delete.".into())
 }
 
 /// Deletes one file or folder permanently. A junction or symbolic link is removed

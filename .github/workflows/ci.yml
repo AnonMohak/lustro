@@ -130,6 +130,26 @@ jobs:
           export AR_aarch64_linux_android="$bin/llvm-ar"
           cargo clippy --target aarch64-linux-android --all-targets -- -D warnings
 
+  # shared-plan.md Phase 6: the backend compiles for iOS and iPadOS (devices, arm64).
+  # It does not link or run there yet. The runner has Xcode and the iOS SDK.
+  ios-check:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Rust lint (iOS)
+        working-directory: src-tauri
+        run: cargo clippy --target aarch64-apple-ios --all-targets -- -D warnings
+
   # The Linux packages (.deb and AppImage), for manual tests. Like the Windows build,
   # it skips the update package (pull requests cannot read the signing key).
   linux-bundle:

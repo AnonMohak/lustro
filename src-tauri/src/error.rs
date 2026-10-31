@@ -15,8 +15,8 @@ pub enum Error {
     #[error("This item is no longer in the Recycle Bin.")]
     NotInBin,
     #[error("Lustro could not restore the item: {0}")]
-    // Android has no Trash yet, so it never restores.
-    #[cfg_attr(target_os = "android", allow(dead_code))]
+    // Android and iOS have no Trash yet, so they never restore.
+    #[cfg_attr(any(target_os = "android", target_os = "ios"), allow(dead_code))]
     Restore(String),
     #[error("{0}")]
     Uninstall(String),
