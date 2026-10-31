@@ -1,3 +1,4 @@
+import { open } from "@tauri-apps/plugin-dialog";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../components/Icon";
@@ -24,7 +25,10 @@ export function Settings() {
   const showToast = useStore((s) => s.showToast);
   const [backend, setBackend] = useState<BackendSettings | null>(null);
   useEffect(() => {
-    api.getSettings().then(setBackend).catch((e) => showToast(String(e), true));
+    api
+      .getSettings()
+      .then(setBackend)
+      .catch((e) => showToast(String(e), true));
   }, [showToast]);
   const isAdmin = useStore((s) => s.info?.isAdmin ?? false);
   const setAllowAppFolders = useStore((s) => s.setAllowAppFolders);
@@ -37,7 +41,10 @@ export function Settings() {
       .then(setBackend)
       .catch((e) => {
         showToast(String(e), true);
-        api.getSettings().then(setBackend).catch(() => {});
+        api
+          .getSettings()
+          .then(setBackend)
+          .catch(() => {});
       });
   };
   const [autoUpdate, setAuto] = useState(autoUpdateOn());
@@ -127,6 +134,41 @@ export function Settings() {
             onChange={setDevAgeDays}
           />
         </div>
+        {backend && (
+          <>
+            <div className="srow">
+              <div>
+                <div>{t("settings.ignore")}</div>
+                <div className="sd">{t("settings.ignoreHint")}</div>
+              </div>
+              <button
+                className="btn sm"
+                onClick={async () => {
+                  const dir = await open({ directory: true, title: t("settings.ignorePick") });
+                  if (typeof dir === "string" && !backend.ignore.includes(dir))
+                    update({ ignore: [...backend.ignore, dir] });
+                }}
+              >
+                <Icon name="folder" />
+                {t("settings.ignoreAdd")}
+              </button>
+            </div>
+            {backend.ignore.map((f) => (
+              <div key={f} className="srow">
+                <div className="mono" style={{ overflowWrap: "anywhere" }}>
+                  {f}
+                </div>
+                <button
+                  className="btn ghost sm"
+                  aria-label={t("settings.ignoreRemove", { path: f })}
+                  onClick={() => update({ ignore: backend.ignore.filter((x) => x !== f) })}
+                >
+                  <Icon name="x" />
+                </button>
+              </div>
+            ))}
+          </>
+        )}
       </div>
 
       <h3 className="sec">{t("settings.windows")}</h3>

@@ -295,6 +295,8 @@ fn clean_path(path: &Path, meta: &fs::Metadata, age: Option<Duration>, out: &mut
 pub struct Ctx {
     pub trees: Vec<Arc<Tree>>,
     pub dev_age_days: u32,
+    /// The ignore list of Settings: items in these folders never show.
+    pub ignore: Vec<String>,
 }
 
 pub struct Scanned {
@@ -314,10 +316,16 @@ fn sum(items: &[RuleItem]) -> Measure {
 
 /// Measures a rule, including the special rules.
 pub fn scan_rule(rule: &Rule, ctx: &Ctx) -> Scanned {
-    let with_items = |items: Vec<RuleItem>, unavailable: Option<String>| Scanned {
-        measure: sum(&items),
-        items,
-        unavailable,
+    let with_items = |items: Vec<RuleItem>, unavailable: Option<String>| {
+        let items: Vec<RuleItem> = items
+            .into_iter()
+            .filter(|i| !crate::paths::ignored(&ctx.ignore, &i.path))
+            .collect();
+        Scanned {
+            measure: sum(&items),
+            items,
+            unavailable,
+        }
     };
     match rule.special.as_deref() {
         Some("dev-projects") => with_items(

@@ -105,7 +105,12 @@
     "startWithWindows": "Start with Windows",
     "startWithWindowsHint": "Starts in the tray, without admin rights.",
     "explorerMenu": "“Analyze with Lustro” in File Explorer",
-    "explorerMenuHint": "Adds the command to the right-click menu of folders and drives (under “Show more options”)."
+    "explorerMenuHint": "Adds the command to the right-click menu of folders and drives (under “Show more options”).",
+    "ignore": "Never suggest these folders",
+    "ignoreHint": "Duplicates, clean-up items, your rules, and large and old files skip these folders and everything inside them.",
+    "ignoreAdd": "Add folder",
+    "ignorePick": "Never suggest this folder",
+    "ignoreRemove": "Remove {{path}}"
   },
   "common": {
     "cancel": "Cancel",

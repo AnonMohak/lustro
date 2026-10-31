@@ -27,6 +27,19 @@ pub fn key(path: &str) -> String {
     }
 }
 
+/// True when `path` is `folder` or lies inside it (a whole folder name must match).
+pub fn inside(path: &str, folder: &str) -> bool {
+    let (p, f) = (key(path), key(folder.trim_end_matches(SEP)));
+    p == f
+        || p.strip_prefix(f.as_str())
+            .is_some_and(|r| r.starts_with(SEP))
+}
+
+/// True when `path` is in one of the folders of the ignore list (Settings).
+pub fn ignored(list: &[String], path: &str) -> bool {
+    list.iter().any(|f| inside(path, f))
+}
+
 /// Writes a Windows test path in the form of this platform. On other platforms, `C:\` becomes
 /// `/` and other drives become a folder (`D:\x` becomes `/d/x`), so drives stay different.
 #[cfg(test)]
@@ -53,6 +66,17 @@ pub fn os(path: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn inside_needs_a_whole_folder_name() {
+        let (photos, file) = (os(r"D:\Photos"), os(r"D:\Photos\a.jpg"));
+        assert!(inside(&file, &photos));
+        assert!(inside(&photos, &photos));
+        assert!(inside(&file, &format!("{photos}{SEP}")));
+        assert!(!inside(&os(r"D:\Photos2\a.jpg"), &photos));
+        assert!(ignored(&[os(r"E:\x"), photos.clone()], &file));
+        assert!(!ignored(&[], &file));
+    }
 
     #[test]
     fn test_paths_follow_the_platform() {

@@ -45,6 +45,7 @@ fn ctx(app: &AppHandle, dev_age_days: Option<u32>) -> clean::Ctx {
     clean::Ctx {
         trees,
         dev_age_days: dev_age_days.unwrap_or(30),
+        ignore: crate::desktop::current_settings(app).ignore,
     }
 }
 

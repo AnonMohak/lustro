@@ -290,6 +290,8 @@ export interface BackendSettings {
   startWithWindows: boolean;
   explorerMenu: boolean;
   allowAppFolders: boolean;
+  /** Folders that Lustro never suggests to delete. */
+  ignore: string[];
 }
 
 export interface FavoriteHit {

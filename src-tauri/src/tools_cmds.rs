@@ -35,8 +35,12 @@ struct DupeProgressEvent {
 pub fn dupes_start(
     app: AppHandle,
     state: State<'_, AppState>,
-    options: dupes::Options,
+    mut options: dupes::Options,
 ) -> Result<()> {
+    // The ignore list of Settings counts as more "Skip" folders.
+    options
+        .not_in
+        .extend(crate::desktop::current_settings(&app).ignore);
     let progress = Arc::new(DupeProgress::default());
     {
         let mut active = state.dupes_active.lock().map_err(|_| Error::Busy)?;

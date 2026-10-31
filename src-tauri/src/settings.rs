@@ -22,6 +22,9 @@ pub struct Settings {
     pub allow_app_folders: bool,
     /// Favourite folders in the sidebar, in the order the user added them.
     pub favorites: Vec<String>,
+    /// Folders that Lustro never suggests to delete: duplicates, clean items, your rules,
+    /// and large and old files skip them.
+    pub ignore: Vec<String>,
 }
 
 impl Default for Settings {
@@ -34,6 +37,7 @@ impl Default for Settings {
             explorer_menu: false,
             allow_app_folders: false,
             favorites: Vec::new(),
+            ignore: Vec::new(),
         }
     }
 }

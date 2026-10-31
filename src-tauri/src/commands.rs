@@ -472,7 +472,8 @@ pub async fn find_files(app: AppHandle, query: FindFilesQuery) -> Result<Vec<Fil
     };
     tauri::async_runtime::spawn_blocking(move || {
         let limit = query.limit.unwrap_or(200).min(5000);
-        let filter = query::FileFilter {
+        let ignore = crate::desktop::current_settings(&app).ignore;
+        let mut filter = query::FileFilter {
             sort: query.sort,
             min_size: query.min_size.unwrap_or(0),
             older_than: query.older_than.map(unix_ms_to_filetime).unwrap_or(0),
@@ -483,9 +484,15 @@ pub async fn find_files(app: AppHandle, query: FindFilesQuery) -> Result<Vec<Fil
                 .filter_map(|k| kind_from_str(k))
                 .collect(),
             limit,
+            skip_dirs: Vec::new(),
         };
         let mut hits: Vec<FileHit> = Vec::new();
         for t in &trees {
+            // The ignore list of Settings: a whole scan, or folders in it.
+            if crate::paths::ignored(&ignore, &t.root_path) {
+                continue;
+            }
+            filter.skip_dirs = ignore.iter().filter_map(|d| t.find_path(d)).collect();
             for id in query::find_files(t, &filter) {
                 let n = t.node(id);
                 let path = t.path(id);

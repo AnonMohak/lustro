@@ -43,9 +43,10 @@ fn find(app: &AppHandle, id: &str) -> Result<CustomRule> {
 fn run_rule(app: &AppHandle, rule: &CustomRule) -> CustomOutcome {
     let _guard = LOCK.lock();
     let mut out = CustomOutcome::default();
+    let ignore = crate::desktop::current_settings(app).ignore;
     for item in custom::scan(rule, now_ms())
         .into_iter()
-        .filter(|i| i.selected)
+        .filter(|i| i.selected && !crate::paths::ignored(&ignore, &i.path))
     {
         let result = delete::recycle(std::path::Path::new(&item.path), false);
         let action = match &result {
@@ -123,9 +124,14 @@ pub async fn set_custom_rules(app: AppHandle, rules: Vec<CustomRule>) -> Result<
 #[tauri::command]
 pub async fn custom_rule_scan(app: AppHandle, id: String) -> Result<Vec<RuleItem>> {
     let rule = find(&app, &id)?;
-    tauri::async_runtime::spawn_blocking(move || custom::scan(&rule, now_ms()))
-        .await
-        .map_err(|e| Error::Rule(e.to_string()))
+    let ignore = crate::desktop::current_settings(&app).ignore;
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut items = custom::scan(&rule, now_ms());
+        items.retain(|i| !crate::paths::ignored(&ignore, &i.path));
+        items
+    })
+    .await
+    .map_err(|e| Error::Rule(e.to_string()))
 }
 
 #[tauri::command]
