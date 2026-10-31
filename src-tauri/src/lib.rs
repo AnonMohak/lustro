@@ -88,6 +88,7 @@ pub fn run() {
             commands::restore,
             clean_cmds::clean_scan,
             clean_cmds::clean_run,
+            clean_cmds::clean_rules_list,
             custom_cmds::custom_rules,
             custom_cmds::set_custom_rules,
             custom_cmds::custom_rule_scan,

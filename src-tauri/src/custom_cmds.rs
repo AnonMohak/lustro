@@ -40,7 +40,7 @@ fn find(app: &AppHandle, id: &str) -> Result<CustomRule> {
 
 /// Moves the selected matches of `rule` to the Recycle Bin, logs them in History, and
 /// takes them out of the scans. Then it saves the time of the run.
-fn run_rule(app: &AppHandle, rule: &CustomRule) -> CustomOutcome {
+pub fn run_rule(app: &AppHandle, rule: &CustomRule) -> CustomOutcome {
     let _guard = LOCK.lock();
     let mut out = CustomOutcome::default();
     let ignore = crate::desktop::current_settings(app).ignore;

@@ -25,6 +25,10 @@ pub struct Settings {
     /// Folders that Lustro never suggests to delete: duplicates, clean items, your rules,
     /// and large and old files skip them.
     pub ignore: Vec<String>,
+    /// Ids of "Your rules" that run when a drive with their folder is low on space.
+    pub low_space_rules: Vec<String>,
+    /// Ids of built-in clean rules that run when the drive of the home folder is low.
+    pub low_space_clean: Vec<String>,
 }
 
 impl Default for Settings {
@@ -38,6 +42,8 @@ impl Default for Settings {
             allow_app_folders: false,
             favorites: Vec::new(),
             ignore: Vec::new(),
+            low_space_rules: Vec::new(),
+            low_space_clean: Vec::new(),
         }
     }
 }

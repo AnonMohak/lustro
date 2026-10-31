@@ -294,6 +294,20 @@ export interface BackendSettings {
   allowAppFolders: boolean;
   /** Folders that Lustro never suggests to delete. */
   ignore: string[];
+  /** Ids of "Your rules" that run when their drive is low on space. */
+  lowSpaceRules: string[];
+  /** Ids of built-in clean rules that run when the home drive is low on space. */
+  lowSpaceClean: string[];
+}
+
+/** A built-in clean rule without its size. */
+export interface CleanRuleInfo {
+  id: string;
+  group: CleanRule["group"];
+  name: string;
+  safe: boolean;
+  admin: boolean;
+  warn: boolean;
 }
 
 export interface FavoriteHit {
@@ -362,6 +376,7 @@ export const api = {
   cleanRun: (ids: string[], items: Record<string, string[]>, devAgeDays: number) =>
     invoke<CleanOutcome[]>("clean_run", { ids, items, devAgeDays }),
   customRules: () => invoke<CustomRule[]>("custom_rules"),
+  cleanRulesList: () => invoke<CleanRuleInfo[]>("clean_rules_list"),
   /** Saves the whole list and returns it with the ids of new rules. */
   setCustomRules: (rules: CustomRule[]) => invoke<CustomRule[]>("set_custom_rules", { rules }),
   customRuleScan: (id: string) => invoke<CleanItem[]>("custom_rule_scan", { id }),

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "../components/Icon";
 import { Select } from "../components/Select";
-import { api, type BackendSettings } from "../lib/api";
+import { api, type BackendSettings, type CleanRuleInfo, type CustomRule } from "../lib/api";
 import { IS_WINDOWS } from "../lib/platform";
 import { autoUpdateOn, checkForUpdates, setAutoUpdate } from "../lib/updates";
 
@@ -24,6 +24,23 @@ export function Settings() {
   const setDeleteMode = useStore((s) => s.setDeleteMode);
   const showToast = useStore((s) => s.showToast);
   const [backend, setBackend] = useState<BackendSettings | null>(null);
+  /** Choices for the low space actions: the user's rules and the safe built-in rules. */
+  const [myRules, setMyRules] = useState<CustomRule[]>([]);
+  const [cleanRules, setCleanRules] = useState<CleanRuleInfo[]>([]);
+  useEffect(() => {
+    api
+      .customRules()
+      .then(setMyRules)
+      .catch(() => {});
+    api
+      .cleanRulesList()
+      .then((l) => setCleanRules(l.filter((r) => r.safe && !r.admin && !r.warn)))
+      .catch(() => {});
+  }, []);
+  /** Adds or removes `id` in a list of the backend settings. */
+  const toggleIn = (key: "lowSpaceRules" | "lowSpaceClean", id: string) =>
+    backend &&
+    update({ [key]: backend[key].includes(id) ? backend[key].filter((x) => x !== id) : [...backend[key], id] });
   useEffect(() => {
     api
       .getSettings()
@@ -196,6 +213,38 @@ export function Settings() {
             />
             <Switch id="setLow" on={backend.lowSpaceAlert} onChange={(v) => update({ lowSpaceAlert: v })} />
           </div>
+          {backend.lowSpaceAlert && (myRules.length > 0 || cleanRules.length > 0) && (
+            <div className="srow">
+              <div>
+                <div>{t("settings.lowSpaceActions")}</div>
+                <div className="sd">{t("settings.lowSpaceActionsHint")}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+                  {myRules.map((r) => (
+                    <label key={r.id} className="row" style={{ cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={backend.lowSpaceRules.includes(r.id)}
+                        onChange={() => toggleIn("lowSpaceRules", r.id)}
+                      />
+                      <span>{r.name}</span>
+                      <span className="faint">{t("settings.yourRule")}</span>
+                    </label>
+                  ))}
+                  {cleanRules.map((r) => (
+                    <label key={r.id} className="row" style={{ cursor: "pointer" }}>
+                      <input
+                        type="checkbox"
+                        checked={backend.lowSpaceClean.includes(r.id)}
+                        onChange={() => toggleIn("lowSpaceClean", r.id)}
+                      />
+                      <span>{r.name}</span>
+                      <span className="faint">{t(`clean.groups.${r.group}`)}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
           <div className="srow">
             <div>
               <div>{t("settings.startWithWindows")}</div>

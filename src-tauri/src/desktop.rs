@@ -92,6 +92,25 @@ fn drive_full_title(letter: &str) -> String {
     }
 }
 
+/// Runs the low space actions of Settings for drive `d`: each chosen rule whose folder is
+/// on the drive, and the chosen clean items when the drive holds the home folder.
+/// Returns the freed bytes.
+fn low_space_actions(app: &AppHandle, s: &Settings, d: &drives::DriveInfo) -> u64 {
+    let mut freed = 0;
+    if !s.low_space_rules.is_empty() {
+        for rule in crate::clean::custom::load(&data_dir(app)) {
+            if s.low_space_rules.contains(&rule.id) && crate::paths::inside(&rule.root, &d.root) {
+                freed += crate::custom_cmds::run_rule(app, &rule).freed_bytes;
+            }
+        }
+    }
+    let home = std::env::var(if cfg!(windows) { "USERPROFILE" } else { "HOME" });
+    if !s.low_space_clean.is_empty() && home.is_ok_and(|h| crate::paths::inside(&h, &d.root)) {
+        freed += crate::clean_cmds::run_quietly(app, &s.low_space_clean);
+    }
+    freed
+}
+
 /// Checks free space every 15 minutes and sends one notification per drive per day.
 pub fn start_space_monitor(app: AppHandle) {
     std::thread::spawn(move || {
@@ -111,14 +130,29 @@ pub fn start_space_monitor(app: AppHandle) {
                     let pct = d.free_bytes as f64 * 100.0 / d.total_bytes as f64;
                     if pct < s.low_space_percent as f64 && alerted.get(&d.letter) != Some(&today) {
                         alerted.insert(d.letter.clone(), today);
-                        let free_gb = d.free_bytes as f64 / 1024f64.powi(3);
+                        let gb = |b: u64| b as f64 / 1024f64.powi(3);
+                        let freed = low_space_actions(&app, &s, &d);
+                        let body = if freed > 0 {
+                            let now_free = drives::list_drives()
+                                .into_iter()
+                                .find(|x| x.letter == d.letter)
+                                .map_or(d.free_bytes + freed, |x| x.free_bytes);
+                            format!(
+                                "Your low space actions freed {:.1} GB. Now {:.1} GB free.",
+                                gb(freed),
+                                gb(now_free)
+                            )
+                        } else {
+                            format!(
+                                "{pct:.0}% free ({:.1} GB). Open Lustro to free space.",
+                                gb(d.free_bytes)
+                            )
+                        };
                         let _ = app
                             .notification()
                             .builder()
                             .title(drive_full_title(&d.letter))
-                            .body(format!(
-                                "{pct:.0}% free ({free_gb:.1} GB). Open Lustro to free space."
-                            ))
+                            .body(body)
                             .show();
                     }
                 }

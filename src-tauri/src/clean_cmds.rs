@@ -98,6 +98,59 @@ pub struct RuleOutcome {
     skipped: Option<String>,
 }
 
+/// A built-in rule without its size, for lists in Settings.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RuleInfo {
+    id: String,
+    group: String,
+    name: String,
+    safe: bool,
+    admin: bool,
+    warn: bool,
+}
+
+/// The built-in rules of this platform, not measured.
+#[tauri::command]
+pub fn clean_rules_list() -> Vec<RuleInfo> {
+    clean::rules()
+        .into_iter()
+        .map(|r| RuleInfo {
+            id: r.id,
+            group: r.group,
+            name: r.name,
+            safe: r.safe,
+            admin: r.admin,
+            warn: r.warn,
+        })
+        .collect()
+}
+
+/// Runs built-in rules with no UI (the low space actions). Only safe rules run, never
+/// one that needs admin rights it does not have or whose program is open. Rules with items
+/// clean the items that Lustro selects itself. Returns the freed bytes.
+pub fn run_quietly(app: &AppHandle, ids: &[String]) -> u64 {
+    let ctx = ctx(app, None);
+    let admin = elevation::is_elevated();
+    let running = system::running_processes();
+    let mut freed = 0;
+    for rule in clean::rules().iter().filter(|r| ids.contains(&r.id)) {
+        let open = rule
+            .process
+            .iter()
+            .any(|p| running.contains(&p.to_lowercase()));
+        if !rule.safe || rule.warn || (rule.admin && !admin) || open {
+            continue;
+        }
+        let r = clean::clean_rule(rule, &ctx, None);
+        with_history(app, |h| {
+            h.add(Action::Cleaner, &rule.name, r.freed_bytes, Ok(()))
+        });
+        freed += r.freed_bytes;
+    }
+    freed
+}
+
 /// Runs the chosen rules and logs each one in the history.
 /// `items` holds the picked paths of rules that have items.
 #[tauri::command]

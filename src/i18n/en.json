@@ -110,7 +110,10 @@
     "ignoreHint": "Duplicates, clean-up items, your rules, and large and old files skip these folders and everything inside them.",
     "ignoreAdd": "Add folder",
     "ignorePick": "Never suggest this folder",
-    "ignoreRemove": "Remove {{path}}"
+    "ignoreRemove": "Remove {{path}}",
+    "lowSpaceActions": "When a drive is low, also run",
+    "lowSpaceActionsHint": "Once a day for a low drive, Lustro runs what you check here, then tells you what it freed. A rule runs when its folder is on that drive; clean-up items run when the drive holds your home folder. Lustro skips items whose program is open.",
+    "yourRule": "Your rule"
   },
   "common": {
     "cancel": "Cancel",
