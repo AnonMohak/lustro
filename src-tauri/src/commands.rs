@@ -234,6 +234,101 @@ fn report_growth(app: &AppHandle, old: &Tree, new: &Tree, scheduled: bool) {
     }
 }
 
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct MoveProgress {
+    done: u64,
+    total: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MoveResult {
+    files: u64,
+    bytes: u64,
+    /// Set when the old copy could not be removed after the move.
+    note: Option<String>,
+    /// The scan after the move, for the views.
+    summary: Option<ScanSummary>,
+}
+
+/// Moves a scanned folder into `dest` and leaves a link in its old place. The same rules
+/// as for a delete apply: protected folders are refused, and app folders pass only with
+/// `app_folders`, as admin, with the setting on. Events: `move-progress`.
+#[tauri::command]
+pub async fn move_folder(
+    app: AppHandle,
+    root: String,
+    id: u32,
+    dest: String,
+    app_folders: Option<bool>,
+) -> Result<MoveResult> {
+    let allow_app = app_folders == Some(true)
+        && elevation::is_elevated()
+        && crate::desktop::current_settings(&app).allow_app_folders;
+    let root = normalize_root(&root);
+    let path = {
+        let state = app.state::<AppState>();
+        let trees = state.trees.read().map_err(|_| Error::NoScan)?;
+        let t = trees.get(&root).ok_or(Error::NoScan)?;
+        if id == Tree::ROOT {
+            return Err(Error::ScanRoot);
+        }
+        if !t.node(id).is_dir() {
+            return Err(Error::Move(
+                "Only folders can move to another drive.".into(),
+            ));
+        }
+        t.path(id)
+    };
+    delete::check(std::path::Path::new(&path), allow_app)
+        .map_err(|e| Error::Move(e.to_string()))?;
+    if !std::path::Path::new(&dest).is_dir() {
+        return Err(Error::Move(format!("{dest} is not a folder.")));
+    }
+    let app2 = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let last = std::cell::Cell::new(0u64);
+        let progress = |done: u64, total: u64| {
+            // At most one event for each percent.
+            if total == 0 || (done - last.get()) * 100 >= total || done == total {
+                last.set(done);
+                let _ = app2.emit("move-progress", MoveProgress { done, total });
+            }
+        };
+        let r = crate::ops::relocate::relocate(
+            std::path::Path::new(&path),
+            std::path::Path::new(&dest),
+            &progress,
+        );
+        let size = r.as_ref().map(|(t, _)| t.bytes).unwrap_or(0);
+        with_history(&app2, |h| {
+            h.add(
+                Action::Moved,
+                &path,
+                size,
+                r.as_ref().map(|_| ()).map_err(|e| e.clone()),
+            )
+        });
+        let (t, note) = r.map_err(Error::Move)?;
+        let mut summary_after = None;
+        if let Ok(mut trees) = app2.state::<AppState>().trees.write()
+            && let Some(tree) = trees.get_mut(&root)
+        {
+            Arc::make_mut(tree).remove(id);
+            summary_after = Some(summary(tree));
+        }
+        Ok(MoveResult {
+            files: t.files,
+            bytes: t.bytes,
+            note,
+            summary: summary_after,
+        })
+    })
+    .await
+    .map_err(|e| Error::Io(std::io::Error::other(e.to_string())))?
+}
+
 /// The "what grew" report of each root (the change between its last two scans).
 #[tauri::command]
 pub fn growth_reports(app: AppHandle) -> Vec<crate::growth::Report> {

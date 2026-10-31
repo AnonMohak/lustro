@@ -26,7 +26,7 @@ pub enum DeleteError {
 
 /// `allow_app`: the user confirmed the warning for app folders, runs as admin and turned on
 /// the setting. Only then an app folder in Program Files passes.
-fn check(path: &Path, allow_app: bool) -> Result<fs::Metadata, DeleteError> {
+pub(crate) fn check(path: &Path, allow_app: bool) -> Result<fs::Metadata, DeleteError> {
     let s = path.to_string_lossy();
     if is_protected(&s) {
         if !is_app_folder(&s) {

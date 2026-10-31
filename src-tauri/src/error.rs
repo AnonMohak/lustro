@@ -23,6 +23,9 @@ pub enum Error {
     /// A clean rule of the user that cannot be saved or run.
     #[error("{0}")]
     Rule(String),
+    /// A folder that could not move to another drive.
+    #[error("{0}")]
+    Move(String),
     #[cfg(not(windows))]
     #[error("{0} is not available on this system yet.")]
     Unsupported(&'static str),

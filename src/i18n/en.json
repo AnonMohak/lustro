@@ -284,7 +284,8 @@
       "permanent": "Permanent",
       "cleaner": "Cleaner",
       "blocked": "Blocked",
-      "linked": "Linked"
+      "linked": "Linked",
+      "moved": "Moved"
     }
   },
   "clean": {
@@ -613,5 +614,16 @@
     "cleanBody": "These items are deleted permanently. Apps make caches and temp files again when they need them.",
     "freed": "Freed {{size}}.",
     "note": "Junk files, app caches and the Recycle Bin are deleted permanently. Old installers go to the Recycle Bin. For duplicates and large files, you choose on their screens."
+  },
+  "move": {
+    "button": "Move to another drive…",
+    "pick": "Move the folder into this folder",
+    "title": "Move “{{name}}”?",
+    "body": "Lustro copies the folder ({{size}}) into {{dest}}, checks the copy, and then deletes the old folder.",
+    "link": "In the old place, a link points to the new place, so apps that use the old path keep working. Do not delete the new folder while that link exists.",
+    "appWarn": "This is an app folder. Close the app first. Some apps and their updaters do not work through a link.",
+    "confirm": "Move",
+    "moving": "Moving… {{pct}}%",
+    "done": "Moved {{size}} to {{dest}}. The old path links there now."
   }
 }

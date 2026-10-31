@@ -129,7 +129,7 @@ export interface DeleteResult {
   summaries: ScanSummary[];
 }
 
-export type HistoryAction = "recycle" | "permanent" | "cleaner" | "blocked" | "linked";
+export type HistoryAction = "recycle" | "permanent" | "cleaner" | "blocked" | "linked" | "moved";
 
 export interface HistoryEntry {
   id: number;
@@ -397,6 +397,14 @@ export const api = {
     invoke<CleanOutcome[]>("clean_run", { ids, items, devAgeDays }),
   customRules: () => invoke<CustomRule[]>("custom_rules"),
   growthReports: () => invoke<GrowthReport[]>("growth_reports"),
+  /** Moves a scanned folder into `dest` and leaves a link in its old place. Events: move-progress. */
+  moveFolder: (root: string, id: number, dest: string, appFolders = false) =>
+    invoke<{ files: number; bytes: number; note: string | null; summary: ScanSummary | null }>("move_folder", {
+      root,
+      id,
+      dest,
+      appFolders,
+    }),
   /** Installers and disk images in Downloads; the old ones are selected. */
   installersScan: () => invoke<CleanItem[]>("installers_scan"),
   installersClean: () => invoke<CustomOutcome>("installers_clean"),

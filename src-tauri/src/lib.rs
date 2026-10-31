@@ -87,6 +87,7 @@ pub fn run() {
             commands::delete_items,
             commands::history,
             commands::growth_reports,
+            commands::move_folder,
             commands::space_history,
             commands::restore,
             clean_cmds::clean_scan,

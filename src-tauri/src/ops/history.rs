@@ -16,6 +16,8 @@ pub enum Action {
     Blocked,
     /// A duplicate became a link to the kept copy ("link instead of delete").
     Linked,
+    /// A folder moved to another drive, with a link in its old place.
+    Moved,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
